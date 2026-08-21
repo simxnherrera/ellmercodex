@@ -1,4 +1,4 @@
-# ellmercodex 0.1.1
+# ellmercodex 0.1.2
 
 * Added authenticated Codex model discovery with per-model reasoning-effort
   metadata; the package no longer invents a static model catalog.
@@ -11,6 +11,11 @@
   local tool errors/rejections, streaming content, and tool-preserving
   conversation history. Structured-output requests intentionally continue to
   disable registered tools, matching ellmer.
+* Added asynchronous ellmer chat, structured-output, and content-streaming
+  methods, including sequential/concurrent tool modes, tool callbacks,
+  cancellation controllers, and terminal assistant-turn repair.
+* Preserved ellmer image/PDF input serialization and terminal image content
+  while repairing streamed assistant text.
 * Added offline fixtures for model discovery, effort propagation, and
   structured-output conversion; updated the experimental compatibility notes.
 

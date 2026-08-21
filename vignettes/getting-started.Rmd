@@ -95,11 +95,11 @@ chat$chat("What was the codeword?")
 ```
 
 The returned object is an `ellmer` `Chat`. This release supports ordinary text
-`$chat()`, text or content `$stream()`, ellmer `chat_structured()`, reasoning
-effort, model parameters, registered function tools, and multi-turn history
-with `ellmer` versions from 0.4.2 up to, but not including, 0.5.0.
-Asynchronous methods and a native provider subclass are not part of the
-supported surface.
+`$chat()`, text or content `$stream()`, ellmer structured output, reasoning
+effort, model parameters, registered function tools, asynchronous chat and
+streaming, rich image/PDF content, and multi-turn history with `ellmer`
+versions from 0.4.2 up to, but not including, 0.5.0. A native provider subclass
+is not part of the supported surface.
 
 ## Tool calling
 

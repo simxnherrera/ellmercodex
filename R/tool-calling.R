@@ -50,7 +50,8 @@ codex_ellmer_chat_tool_compatibility <- function(chat) {
       function(name) {
         if (!exists(name, envir = private, inherits = FALSE)) return(FALSE)
         manager <- get(name, envir = private, inherits = FALSE)
-        is.environment(manager) && is.function(manager$invoke)
+        is.environment(manager) && is.function(manager$invoke) &&
+          is.function(manager$invoke_async)
       },
       logical(1)
     )

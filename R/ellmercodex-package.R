@@ -17,10 +17,11 @@
 #' [codex_account()], [codex_models()], [codex_available()], and
 #' [chat_codex()]. The chat compatibility layer is version-gated for the
 #' ellmer 0.4.x public API and supports text streaming, model parameters,
-#' per-model reasoning effort, structured output, and ordinary multi-turn
-#' history. Registered ellmer function tools are supported through a
-#' version-gated Codex Responses compatibility loop. Asynchronous methods are
-#' not promised by this experimental package.
+#' per-model reasoning effort, structured output, ordinary multi-turn history,
+#' rich image/PDF content, and ellmer's asynchronous chat and streaming
+#' methods. Registered ellmer function tools are supported through a
+#' version-gated Codex Responses compatibility loop, including asynchronous
+#' tool modes.
 #'
 #' @keywords internal
 #' @docType package

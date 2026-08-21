@@ -1,0 +1,5 @@
+data: {"type":"response.output_text.delta","delta":"Here is the image."}
+
+data: {"type":"response.completed","response":{"status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"Here is the image."}]},{"type":"image_generation_call","id":"img_1","output_format":"png","result":"aGVsbG8="}]}}
+
+data: [DONE]

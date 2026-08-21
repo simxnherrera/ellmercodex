@@ -163,8 +163,10 @@ avoids subclassing unexported provider generics while returning a genuine
 
 Live `$chat()` tests returned `acknowledged` on the first turn, recalled `amber`
 on the second, and retained four user/assistant turns. `$stream()` and terminal
-history repair, structured conversion, and an offline end-to-end registered
-ellmer tool loop are also covered. Async methods remain outside this PoC.
+history repair, structured conversion, an offline end-to-end registered
+ellmer tool loop, and the asynchronous Chat methods are also covered. Async
+tool modes delegate to ellmer's async tool loop; the package still gates the
+whole adapter to ellmer 0.4.x.
 
 ## Risks and assumptions
 

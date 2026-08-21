@@ -6,8 +6,9 @@ This design began with the proof of concept and now covers the experimental R
 package: `chat_codex()`, explicit Pi-style browser login, secure persistence and
 refresh, SSE Responses calls, offline availability diagnostics, account-specific
 model discovery, reasoning effort, ellmer structured output, and registered
-ellmer function tools. It deliberately excludes a native `ellmer` provider and
-async methods.
+ellmer function tools. It deliberately excludes a native `ellmer` provider;
+the Chat instance compatibility layer now covers ellmer's asynchronous methods
+and rich image/PDF content.
 
 Live testing resolved a key assumption: the subscription backend returns HTTP
 400 for `stream: false` and requires streaming. The authorized next phase added
@@ -37,6 +38,10 @@ transport.R: refresh if due -> stream=true request -> SSE events -> text
 chat_codex() -> ellmer::chat_openai() -> public stream deltas
                                       -> repair terminal assistant turn
                                       -> genuine ellmer Chat
+
+chat$stream_async() -> ellmer async stream -> per-turn text repair
+chat$chat_async() -> async stream collection -> ellmer_output promise
+chat$chat_structured_async() -> typed async stream -> ContentJson repair
 
 registered tools -> Responses function-call events -> local ToolDef execution
                  -> ContentToolResult input -> next Responses round
@@ -182,6 +187,11 @@ public Chat, delegates requests to its public `$stream()`, accumulates emitted
 text, and replaces only the empty terminal assistant content. It returns normal
 `ellmer_output` values and retains correct multi-turn history.
 
+Rich input content remains on ellmer's provider serialization path, which maps
+`ContentImage*` and `ContentPDF` to Responses input items. Text repair replaces
+only existing text content in a completed assistant turn, preserving terminal
+image content and other non-text objects already produced by ellmer.
+
 Structured output uses ellmer's public `Chat$chat_structured()` entry point but
 forces its request into streaming mode. The streamed JSON is captured, turned
 into ellmer's `ContentJson`, and installed as the final assistant content before
@@ -189,6 +199,16 @@ ellmer's normal schema conversion runs. This fallback relies on a small set of
 ellmer 0.4.x internal conversion symbols and is therefore separately checked
 and version-gated. Offline tests cover `$chat()`, `$stream()`, structured
 conversion, and repaired turns.
+
+Async methods use the same instance seam. `$stream_async()` delegates the
+provider request and ellmer's own async tool loop, preserving sequential and
+concurrent tool modes, callbacks, and controller cancellation. The wrapper
+tracks completed assistant-turn indices so streamed text repairs stay attached
+to the correct round when tools cause multiple Responses requests. Structured
+async output uses ellmer's typed async submission method with `stream = TRUE`,
+then installs `ContentJson` before the normal schema extractor runs. Offline
+fixtures cover plain async chat, content streaming, both tool modes, callbacks,
+cancellation, structured output, and the empty-terminal response shape.
 
 This is deliberately an instance compatibility layer, not a custom provider. In
 ellmer 0.4.2 a native provider requires unexported generics and the unexported

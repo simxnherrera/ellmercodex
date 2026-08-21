@@ -14,7 +14,7 @@ Install the current tagged release from GitHub with [`pak`](https://pak.r-lib.or
 
 ```r
 install.packages("pak")
-pak::pak("simxnherrera/ellmercodex@v0.1.1")
+pak::pak("simxnherrera/ellmercodex@v0.1.2")
 ```
 
 ## Quick start
@@ -71,6 +71,23 @@ arguments, tool errors and `ellmer::tool_reject()`, calls with no preceding
 assistant text, and streamed content through `$stream(stream = "content")`.
 Tool requests and results remain `ellmer::ContentToolRequest` and
 `ellmer::ContentToolResult` objects in the conversation history.
+
+Image and PDF content uses ellmer's normal constructors and is serialized as
+Codex Responses input. Terminal image content is retained when the adapter
+repairs streamed text, so multimodal turns do not collapse to text-only
+history:
+
+```r
+chat$chat(
+  ellmer::content_image_url("https://example.com/diagram.png"),
+  ellmer::ContentPDF("application/pdf", "<base64-data>", "report.pdf"),
+  "Explain these files."
+)
+```
+
+Tool-aware turns currently preserve text and tool request/result content; rich
+output items produced inside the custom tool loop and response-usage metadata
+are not normalized yet.
 
 ## Choose a model
 
@@ -155,11 +172,38 @@ As in ellmer, `$chat_structured()` intentionally disables registered tools for
 that request. Use `$chat()` first to gather tool-assisted context, then call
 `$chat_structured()` to extract structured data from the conversation.
 
+## Async chat and cancellation
+
+The returned chat supports ellmer's asynchronous methods. `$chat_async()`
+returns a promise, while `$stream_async()` returns an async generator of
+promises. Tool-aware async calls accept `tool_mode = "sequential"` or
+`"concurrent"` and preserve the registered tool callbacks:
+
+```r
+chat$chat_async("Summarize the conversation.")
+
+controller <- ellmer::stream_controller()
+stream <- chat$stream_async(
+  "Write a short story.",
+  stream = "content",
+  controller = controller
+)
+# Pass `stream` to an async consumer such as a Shiny chat component.
+# Call `controller$cancel()` from the UI to stop generation.
+```
+
 ## Current scope
 
 The current release supports ordinary text chats, text streaming, structured
 output, registered function tools, model parameters, reasoning effort, and
-multi-turn history with `ellmer >= 0.4.2` and `< 0.5.0`. Asynchronous chat
-methods remain outside this compatibility layer. The Codex subscription
-endpoint and its Responses event names are undocumented compatibility
-surfaces, so upstream protocol changes may require a package update.
+multi-turn history, plus asynchronous chat, structured output, streaming, tool
+callbacks, tool concurrency modes, and cancellation with `ellmer >= 0.4.2` and
+`< 0.5.0`. The Codex subscription endpoint and its Responses event names are
+undocumented compatibility surfaces, so upstream protocol changes may require
+a package update.
+
+The remaining compatibility gaps are exact `echo = "all"` semantics, complete
+tokens/cost/duration/finish-reason metadata after streamed and tool turns,
+`parallel_chat()`/`batch_chat()`, and provider-native tools such as
+`openai_tool_web_search()`. This release supports user-defined
+`ellmer::tool()` functions only.

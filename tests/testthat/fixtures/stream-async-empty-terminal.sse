@@ -1,0 +1,5 @@
+data: {"type":"response.output_text.delta","delta":"Hello async"}
+
+data: {"type":"response.completed","response":{"status":"completed","output":[]}}
+
+data: [DONE]

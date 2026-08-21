@@ -53,8 +53,10 @@ assistant turn because the observed Codex terminal event can omit the output
 that was present in its preceding deltas. Structured output uses ellmer's
 JSON-schema method and the same streamed-text repair. Registered ellmer
 tools use the Codex Responses function-call protocol and are executed in a
-complete loop until a final assistant response is produced. Asynchronous
-methods remain outside this experimental interface.
+complete loop until a final assistant response is produced. The returned chat
+also supports \code{chat_async()}, \code{stream_async()} with ellmer's
+sequential/concurrent tool modes and cancellation controller, and
+\code{chat_structured_async()}.
 
 \verb{$chat_structured()} intentionally follows ellmer's semantics and disables
 registered tools for that request. Call \verb{$chat()} first when tool-assisted

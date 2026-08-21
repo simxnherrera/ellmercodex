@@ -85,8 +85,9 @@ codex_ellmer_structured_compatibility <- function() {
 
 codex_ellmer_chat_methods <- function(chat) {
   required <- c(
-    "stream", "chat_structured", "get_turns", "set_turns", "get_tools",
-    "register_tool", "register_tools", "on_tool_request", "on_tool_result"
+    "stream", "stream_async", "chat_structured", "chat_structured_async",
+    "chat_async", "get_turns", "set_turns", "get_tools", "register_tool",
+    "register_tools", "on_tool_request", "on_tool_result"
   )
   available <- tryCatch(
     vapply(required, function(name) is.function(chat[[name]]), logical(1)),

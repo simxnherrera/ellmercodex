@@ -1,11 +1,9 @@
 ## R CMD check results
 
-0 errors | 0 warnings | 2 notes
+0 errors | 0 warnings | 0 notes
 
-* This is a new submission.
-* The local macOS check skipped HTML validation because Apple's bundled
-  `/usr/bin/tidy` is the 2006 release. Package HTML and vignette generation
-  completed successfully; this is a limitation of the local system utility.
+* The local macOS check completed successfully, including package vignette
+  generation and re-building of vignette outputs.
 
 ## Test environments
 

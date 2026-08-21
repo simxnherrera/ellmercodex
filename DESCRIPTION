@@ -1,6 +1,6 @@
 Package: ellmercodex
 Title: Experimental Codex Integration for 'ellmer'
-Version: 0.1.1
+Version: 0.1.2
 Authors@R: person("Simon", "Herrera", email = "simxnherrera@gmail.com", role = c("aut", "cre"))
 Author: Simon Herrera [aut, cre]
 Maintainer: Simon Herrera <simxnherrera@gmail.com>
@@ -9,8 +9,9 @@ BugReports: https://github.com/simxnherrera/ellmercodex/issues
 Description: Connects 'ellmer' text chats to observed subscription-backed
     'Codex' authentication and streaming response behavior. Provides explicit
     browser sign-in, package-scoped credential storage, redacted diagnostics,
-    multi-turn text, structured-output, and function-tool chat, account-specific
-    model discovery, and reasoning-effort selection. This independent third-party
+    multi-turn text, structured-output, function-tool, asynchronous, and
+    multimodal chat, account-specific model discovery, and reasoning-effort
+    selection. This independent third-party
     integration uses an undocumented compatibility transport, is not endorsed
     by OpenAI, and may
     stop working without notice.
@@ -27,9 +28,11 @@ Imports:
     jsonlite,
     keyring,
     openssl,
+    promises,
     rlang
 Suggests:
     knitr,
+    later,
     rmarkdown,
     testthat (>= 3.0.0)
 VignetteBuilder: knitr
