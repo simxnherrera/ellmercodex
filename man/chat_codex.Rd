@@ -51,8 +51,14 @@ The returned chat supports ordinary text \verb{$chat()}, text or content
 compatibility layer buffers the public ellmer stream and repairs the final
 assistant turn because the observed Codex terminal event can omit the output
 that was present in its preceding deltas. Structured output uses ellmer's
-JSON-schema method and the same streamed-text repair. Asynchronous methods
-and tool calling remain outside this experimental interface.
+JSON-schema method and the same streamed-text repair. Registered ellmer
+tools use the Codex Responses function-call protocol and are executed in a
+complete loop until a final assistant response is produced. Asynchronous
+methods remain outside this experimental interface.
+
+\verb{$chat_structured()} intentionally follows ellmer's semantics and disables
+registered tools for that request. Call \verb{$chat()} first when tool-assisted
+context is needed, then use \verb{$chat_structured()} to extract structured data.
 }
 \section{Conditions}{
 
@@ -70,5 +76,14 @@ chat <- chat_codex(
   model = Sys.getenv("ELLMERCODEX_MODEL", "gpt-5.6-luna")
 )
 chat$chat("Hello")
+
+weather_tool <- ellmer::tool(
+  function(city) paste("Sunny in", city),
+  name = "get_weather",
+  description = "Get the current weather for a city.",
+  arguments = list(city = ellmer::type_string())
+)
+chat$register_tool(weather_tool)
+chat$chat("What is the weather in Montevideo?")
 \dontshow{\}) # examplesIf}
 }

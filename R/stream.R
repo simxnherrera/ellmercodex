@@ -262,9 +262,16 @@ codex_parse_sse_response <- function(events) {
       codex_sse_error(event, "Codex generation failed.")
     } else if (identical(type, "error")) {
       codex_sse_error(event)
+    } else if (grepl("function_call|tool_call", type, fixed = FALSE)) {
+      codex_sse_protocol_error(
+        paste0(
+          "The Codex SSE stream contained a tool-call event (", type,
+          "); use the ellmer tool-aware chat path to handle it."
+        )
+      )
     }
-    # Unknown event names are intentionally ignored.  Codex can add progress,
-    # tool, or metadata events without breaking this text-oriented client.
+    # Unknown non-tool event names are intentionally ignored. Codex can add
+    # progress or metadata events without breaking this text-oriented client.
   }
 
   if (is.null(terminal_type)) {

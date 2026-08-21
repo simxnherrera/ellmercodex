@@ -21,7 +21,10 @@ test_that("the public OpenAI factory creates an offline-compatible Chat", {
     list(access_token = "fixture-access-token", account_id = "fixture-account"),
     class = c("codex_auth", "list")
   )
-  local_mocked_bindings(codex_auth = function() auth, .package = "ellmercodex")
+  local_mocked_bindings(
+    codex_auth = function(...) stop("fixture test must not read credentials"),
+    .package = "ellmercodex"
+  )
   chat <- codex_ellmer_chat_openai(model = "fixture-model", auth = auth)
 
   expect_s3_class(chat, "Chat")
@@ -30,6 +33,7 @@ test_that("the public OpenAI factory creates an offline-compatible Chat", {
   expect_true(grepl("/backend-api/codex$", provider@base_url))
   expect_identical(provider@extra_headers[["ChatGPT-Account-Id"]], "fixture-account")
   expect_identical(provider@extra_headers[["originator"]], "ellmercodex")
+  expect_identical(provider@credentials(), "fixture-access-token")
 })
 
 test_that("ellmer reasoning effort is forwarded without translation", {

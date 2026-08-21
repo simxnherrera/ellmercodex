@@ -1,0 +1,12 @@
+data: {"type":"response.output_item.added","item":{"type":"function_call","id":"fc_one","call_id":"call_one","name":"get_weather","arguments":"{\"city\":\"Montevideo\"}"}}
+
+data: {"type":"response.output_item.added","item":{"type":"function_call","id":"fc_two","call_id":"call_two","name":"get_weather","arguments":"{\"city\":\"Salto\"}"}}
+
+data: {"type":"response.output_item.done","item":{"type":"function_call","id":"fc_one","call_id":"call_one","name":"get_weather","arguments":"{\"city\":\"Montevideo\"}"}}
+
+data: {"type":"response.output_item.done","item":{"type":"function_call","id":"fc_two","call_id":"call_two","name":"get_weather","arguments":"{\"city\":\"Salto\"}"}}
+
+data: {"type":"response.completed","response":{"status":"completed","output":[{"type":"function_call","id":"fc_one","call_id":"call_one","name":"get_weather","arguments":"{\"city\":\"Montevideo\"}"},{"type":"function_call","id":"fc_two","call_id":"call_two","name":"get_weather","arguments":"{\"city\":\"Salto\"}"}]}}
+
+data: [DONE]
+

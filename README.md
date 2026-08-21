@@ -46,6 +46,32 @@ If you have already signed in and the credential is still available, you can
 skip `codex_login()` and call `chat_codex()` directly. The package refreshes a
 stored credential when needed.
 
+## Tool calling
+
+Registered `ellmer::tool()` definitions work with the normal ellmer Chat API.
+`chat_codex()` sends the definitions using the Codex Responses function-call
+protocol, executes each returned call locally, sends the result back, and
+continues until Codex produces its final response:
+
+```r
+weather_tool <- ellmer::tool(
+  function(city) paste("Sunny in", city),
+  name = "get_weather",
+  description = "Get the current weather for a city.",
+  arguments = list(city = ellmer::type_string())
+)
+
+chat <- chat_codex()
+chat$register_tool(weather_tool)
+chat$chat("What is the weather in Montevideo?")
+```
+
+The loop supports multiple and sequential calls, fragmented streaming
+arguments, tool errors and `ellmer::tool_reject()`, calls with no preceding
+assistant text, and streamed content through `$stream(stream = "content")`.
+Tool requests and results remain `ellmer::ContentToolRequest` and
+`ellmer::ContentToolResult` objects in the conversation history.
+
 ## Choose a model
 
 Model availability depends on your account and workspace. Once authenticated,
@@ -125,9 +151,15 @@ chat$chat_structured(
 )
 ```
 
+As in ellmer, `$chat_structured()` intentionally disables registered tools for
+that request. Use `$chat()` first to gather tool-assisted context, then call
+`$chat_structured()` to extract structured data from the conversation.
+
 ## Current scope
 
 The current release supports ordinary text chats, text streaming, structured
-output, model parameters, reasoning effort, and multi-turn history with
-`ellmer >= 0.4.2` and `< 0.5.0`. Tool calls and asynchronous chat methods are
-not supported by the Codex compatibility layer yet.
+output, registered function tools, model parameters, reasoning effort, and
+multi-turn history with `ellmer >= 0.4.2` and `< 0.5.0`. Asynchronous chat
+methods remain outside this compatibility layer. The Codex subscription
+endpoint and its Responses event names are undocumented compatibility
+surfaces, so upstream protocol changes may require a package update.

@@ -269,6 +269,8 @@ codex_patch_chat <- function(chat, default_echo = "none") {
   }
   codex_ellmer_chat_methods(chat)
   codex_ellmer_structured_compatibility()
+  codex_ellmer_tool_compatibility()
+  codex_ellmer_chat_tool_compatibility(chat)
   default_echo <- codex_echo(default_echo)
 
   if (identical(attr(chat, "ellmercodex_compatibility"), "buffered-terminal-output")) {
@@ -292,6 +294,9 @@ codex_patch_chat <- function(chat, default_echo = "none") {
 
   patched_chat <- function(..., echo = NULL) {
     echo <- codex_echo(echo, default = default_echo)
+    if (codex_tool_has_tools(chat)) {
+      return(codex_tool_chat(chat, list(...), echo = echo))
+    }
     chunks <- tryCatch(
       coro::collect(original_stream(..., stream = "text")),
       error = codex_chat_error
@@ -314,6 +319,22 @@ codex_patch_chat <- function(chat, default_echo = "none") {
     controller = NULL
   ) {
     stream <- match.arg(stream)
+    if (codex_tool_has_tools(chat)) {
+      delegate <- codex_tool_stream(
+        chat,
+        list(...),
+        stream = stream,
+        controller = controller,
+        warn_errors = TRUE
+      )
+      return(coro::generator(function() {
+        repeat {
+          chunk <- tryCatch(delegate(), error = codex_chat_error)
+          if (coro::is_exhausted(chunk)) break
+          coro::yield(chunk)
+        }
+      })())
+    }
     delegate <- tryCatch(
       original_stream(..., stream = stream, controller = controller),
       error = codex_chat_error
@@ -406,8 +427,14 @@ codex_patch_chat <- function(chat, default_echo = "none") {
 #' compatibility layer buffers the public ellmer stream and repairs the final
 #' assistant turn because the observed Codex terminal event can omit the output
 #' that was present in its preceding deltas. Structured output uses ellmer's
-#' JSON-schema method and the same streamed-text repair. Asynchronous methods
-#' and tool calling remain outside this experimental interface.
+#' JSON-schema method and the same streamed-text repair. Registered ellmer
+#' tools use the Codex Responses function-call protocol and are executed in a
+#' complete loop until a final assistant response is produced. Asynchronous
+#' methods remain outside this experimental interface.
+#'
+#' `$chat_structured()` intentionally follows ellmer's semantics and disables
+#' registered tools for that request. Call `$chat()` first when tool-assisted
+#' context is needed, then use `$chat_structured()` to extract structured data.
 #'
 #' @param system_prompt Optional system prompt passed to ellmer.
 #' @param model Optional Codex model name. If omitted, the package default is
@@ -437,6 +464,15 @@ codex_patch_chat <- function(chat, default_echo = "none") {
 #'   model = Sys.getenv("ELLMERCODEX_MODEL", "gpt-5.6-luna")
 #' )
 #' chat$chat("Hello")
+#'
+#' weather_tool <- ellmer::tool(
+#'   function(city) paste("Sunny in", city),
+#'   name = "get_weather",
+#'   description = "Get the current weather for a city.",
+#'   arguments = list(city = ellmer::type_string())
+#' )
+#' chat$register_tool(weather_tool)
+#' chat$chat("What is the weather in Montevideo?")
 #' @export
 chat_codex <- function(
   system_prompt = NULL,

@@ -163,8 +163,8 @@ avoids subclassing unexported provider generics while returning a genuine
 
 Live `$chat()` tests returned `acknowledged` on the first turn, recalled `amber`
 on the second, and retained four user/assistant turns. `$stream()` and terminal
-history repair and structured conversion are also covered offline. Async
-methods and tool calling remain outside this PoC.
+history repair, structured conversion, and an offline end-to-end registered
+ellmer tool loop are also covered. Async methods remain outside this PoC.
 
 ## Risks and assumptions
 

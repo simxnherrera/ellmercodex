@@ -1,0 +1,8 @@
+data: {"type":"response.output_item.added","item":{"type":"function_call","id":"fc_no_text","call_id":"call_no_text","name":"get_weather","arguments":"{\"city\":\"Montevideo\"}"}}
+
+data: {"type":"response.function_call_arguments.done","item_id":"fc_no_text","arguments":"{\"city\":\"Montevideo\"}"}
+
+data: {"type":"response.completed","response":{"status":"completed","output":[{"type":"function_call","id":"fc_no_text","call_id":"call_no_text","name":"get_weather","arguments":"{\"city\":\"Montevideo\"}"}]}}
+
+data: [DONE]
+

@@ -9,8 +9,8 @@ BugReports: https://github.com/simxnherrera/ellmercodex/issues
 Description: Connects 'ellmer' text chats to observed subscription-backed
     'Codex' authentication and streaming response behavior. Provides explicit
     browser sign-in, package-scoped credential storage, redacted diagnostics,
-    multi-turn text and structured-output chat, account-specific model
-    discovery, and reasoning-effort selection. This independent third-party
+    multi-turn text, structured-output, and function-tool chat, account-specific
+    model discovery, and reasoning-effort selection. This independent third-party
     integration uses an undocumented compatibility transport, is not endorsed
     by OpenAI, and may
     stop working without notice.

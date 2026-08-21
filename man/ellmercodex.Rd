@@ -25,8 +25,9 @@ The public API is deliberately small: \code{\link[=codex_login]{codex_login()}},
 \code{\link[=chat_codex]{chat_codex()}}. The chat compatibility layer is version-gated for the
 ellmer 0.4.x public API and supports text streaming, model parameters,
 per-model reasoning effort, structured output, and ordinary multi-turn
-history. Asynchronous methods and tool calling are not promised by this
-experimental package.
+history. Registered ellmer function tools are supported through a
+version-gated Codex Responses compatibility loop. Asynchronous methods are
+not promised by this experimental package.
 }
 \seealso{
 Useful links:

@@ -2,8 +2,8 @@
 # than implementing an ellmer Provider subclass. In ellmer 0.4.2 the provider
 # generics and Chat constructor are internal, and relying on them would make
 # this package tightly coupled to an unstable implementation seam. Structured
-# output needs a small, separately-gated compatibility fallback in
-# `chat-codex.R`; the ordinary text path remains on exported methods.
+# output and Codex Responses tool calling each use a small, separately-gated
+# compatibility fallback; ordinary text chat remains on exported methods.
 
 #' Check the exported ellmer compatibility seam
 #'
@@ -35,7 +35,10 @@ codex_ellmer_compatibility <- function() {
     )
   }
 
-  required <- c("chat_openai", "AssistantTurn", "ContentText", "params")
+  required <- c(
+    "chat_openai", "AssistantTurn", "ContentText", "ContentToolRequest",
+    "ContentToolResult", "UserTurn", "params", "tool"
+  )
   available <- vapply(
     required,
     function(name) name %in% getNamespaceExports("ellmer"),
@@ -81,7 +84,10 @@ codex_ellmer_structured_compatibility <- function() {
 }
 
 codex_ellmer_chat_methods <- function(chat) {
-  required <- c("stream", "chat_structured", "get_turns", "set_turns")
+  required <- c(
+    "stream", "chat_structured", "get_turns", "set_turns", "get_tools",
+    "register_tool", "register_tools", "on_tool_request", "on_tool_result"
+  )
   available <- tryCatch(
     vapply(required, function(name) is.function(chat[[name]]), logical(1)),
     error = function(error) rep(FALSE, length(required))
@@ -118,7 +124,11 @@ codex_ellmer_chat_openai <- function(
     ellmer::chat_openai(
       system_prompt = system_prompt,
       base_url = sub("/responses$", "", codex_responses_url()),
-      credentials = function() codex_auth()$access_token,
+      # Capture the already validated/refreshable auth supplied by
+      # `chat_codex()`. Calling `codex_auth()` here would make ellmer's
+      # construction-time credential probe consult the user's keyring again,
+      # and would make fixture-authenticated chats non-deterministic.
+      credentials = function() auth$access_token,
       model = model,
       params = params,
       api_args = api_args,

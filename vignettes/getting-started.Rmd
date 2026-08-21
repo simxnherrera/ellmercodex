@@ -96,9 +96,41 @@ chat$chat("What was the codeword?")
 
 The returned object is an `ellmer` `Chat`. This release supports ordinary text
 `$chat()`, text or content `$stream()`, ellmer `chat_structured()`, reasoning
-effort, model parameters, and multi-turn history with `ellmer` versions from
-0.4.2 up to, but not including, 0.5.0. Tools, asynchronous methods, and a
-native provider subclass are not part of the supported surface.
+effort, model parameters, registered function tools, and multi-turn history
+with `ellmer` versions from 0.4.2 up to, but not including, 0.5.0.
+Asynchronous methods and a native provider subclass are not part of the
+supported surface.
+
+## Tool calling
+
+Tools use the normal `ellmer` API. Codex can request one or more calls, the
+package executes the registered functions locally, and the results are sent
+back through the Responses protocol until Codex returns a final answer:
+
+```{r, eval = FALSE}
+weather_tool <- ellmer::tool(
+  function(city) paste("Sunny in", city),
+  name = "get_weather",
+  description = "Get the current weather for a city.",
+  arguments = list(city = ellmer::type_string())
+)
+
+chat <- chat_codex(model = Sys.getenv("ELLMERCODEX_MODEL"))
+chat$register_tool(weather_tool)
+chat$chat("What is the weather in Montevideo?")
+```
+
+Tool calls can be streamed as content, including their request and result
+objects:
+
+```{r, eval = FALSE}
+coro::collect(chat$stream("Check the weather again.", stream = "content"))
+```
+
+Tool-containing turns stay in the history as `ellmer::ContentToolRequest` and
+`ellmer::ContentToolResult` objects. `$chat_structured()` follows ellmer's
+semantics and disables registered tools for that request; use `$chat()` first
+when structured extraction needs tool-assisted context.
 
 Structured output uses the normal ellmer type system:
 

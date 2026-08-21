@@ -1,0 +1,12 @@
+data: {"type":"response.output_item.added","item":{"type":"function_call","id":"fc_weather","call_id":"call_weather","name":"get_weather","arguments":""}}
+
+data: {"type":"response.function_call_arguments.delta","item_id":"fc_weather","delta":"{\"city\":\"Montevideo\"}"}
+
+data: {"type":"response.function_call_arguments.done","item_id":"fc_weather","arguments":"{\"city\":\"Montevideo\"}"}
+
+data: {"type":"response.output_item.done","item":{"type":"function_call","id":"fc_weather","call_id":"call_weather","name":"get_weather","arguments":"{\"city\":\"Montevideo\"}"}}
+
+data: {"type":"response.completed","response":{"status":"completed","output":[{"type":"function_call","id":"fc_weather","call_id":"call_weather","name":"get_weather","arguments":"{\"city\":\"Montevideo\"}"}]}}
+
+data: [DONE]
+

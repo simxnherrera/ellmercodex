@@ -5,8 +5,9 @@
 This design began with the proof of concept and now covers the experimental R
 package: `chat_codex()`, explicit Pi-style browser login, secure persistence and
 refresh, SSE Responses calls, offline availability diagnostics, account-specific
-model discovery, reasoning effort, and ellmer structured output. It deliberately
-excludes a native `ellmer` provider, async methods, and tools.
+model discovery, reasoning effort, ellmer structured output, and registered
+ellmer function tools. It deliberately excludes a native `ellmer` provider and
+async methods.
 
 Live testing resolved a key assumption: the subscription backend returns HTTP
 400 for `stream: false` and requires streaming. The authorized next phase added
@@ -36,6 +37,9 @@ transport.R: refresh if due -> stream=true request -> SSE events -> text
 chat_codex() -> ellmer::chat_openai() -> public stream deltas
                                       -> repair terminal assistant turn
                                       -> genuine ellmer Chat
+
+registered tools -> Responses function-call events -> local ToolDef execution
+                 -> ContentToolResult input -> next Responses round
 
 codex_models() -> authenticated Codex model catalog + effort metadata
 chat$chat_structured() -> streamed JSON -> repaired ellmer ContentJson turn
@@ -112,6 +116,9 @@ made the second successful request.
 - `codex_parse_sse()` handles CRLF/LF framing, `data:` fields, `[DONE]`, and
   bounded JSON parsing. `codex_parse_sse_response()` assembles output deltas and
   requires a terminal event.
+- `tool-calling.R` assembles Responses function-call item and argument-delta
+  events, preserves `call_id`, executes registered ellmer tools, and appends
+  `ContentToolRequest`/`ContentToolResult` turns until a final response.
 - `codex_parse_response()` remains as a fallback for ordinary JSON terminal
   payloads.
 - `codex_generate()` coordinates auth/refresh, request, and parsing but contains

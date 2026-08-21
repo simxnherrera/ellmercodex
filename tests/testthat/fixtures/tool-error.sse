@@ -1,0 +1,8 @@
+data: {"type":"response.output_item.added","item":{"type":"function_call","id":"fc_error","call_id":"call_error","name":"fail_tool","arguments":"{}"}}
+
+data: {"type":"response.output_item.done","item":{"type":"function_call","id":"fc_error","call_id":"call_error","name":"fail_tool","arguments":"{}"}}
+
+data: {"type":"response.completed","response":{"status":"completed","output":[{"type":"function_call","id":"fc_error","call_id":"call_error","name":"fail_tool","arguments":"{}"}]}}
+
+data: [DONE]
+

@@ -1,0 +1,13 @@
+{
+  "id": "resp_tool_fixture",
+  "status": "completed",
+  "output": [
+    {
+      "type": "function_call",
+      "id": "fc_json",
+      "call_id": "call_json",
+      "name": "get_weather",
+      "arguments": "{\"city\":\"Montevideo\"}"
+    }
+  ]
+}

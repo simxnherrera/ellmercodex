@@ -6,6 +6,11 @@
   Reasoning effort is forwarded using ellmer's Responses-compatible mapping.
 * Added streamed structured output through `Chat$chat_structured()`, including
   repair of the terminal assistant turn into ellmer `ContentJson`.
+* Added first-class ellmer function-tool calling through `chat_codex()`,
+  including fragmented Responses arguments, multiple/sequential calls,
+  local tool errors/rejections, streaming content, and tool-preserving
+  conversation history. Structured-output requests intentionally continue to
+  disable registered tools, matching ellmer.
 * Added offline fixtures for model discovery, effort propagation, and
   structured-output conversion; updated the experimental compatibility notes.
 
