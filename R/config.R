@@ -25,6 +25,11 @@ codex_responses_url <- function() {
   "https://chatgpt.com/backend-api/codex/responses"
 }
 
+codex_models_endpoint <- function() {
+  # The account-specific model catalog is an observed sibling of Responses.
+  paste0(sub("/responses$", "", codex_responses_url()), "/models")
+}
+
 codex_protocol_version <- function() {
   # Observed compatibility header; not a stable public protocol guarantee.
   "responses=experimental"
@@ -59,7 +64,7 @@ codex_default_model <- function() {
 codex_user_agent <- function() {
   version <- tryCatch(
     as.character(utils::packageVersion("ellmercodex")),
-    error = function(error) "0.1.0"
+    error = function(error) "0.1.1"
   )
   paste0("ellmercodex/", version)
 }

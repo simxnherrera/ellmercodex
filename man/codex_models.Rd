@@ -2,23 +2,36 @@
 % Please edit documentation in R/models.R
 \name{codex_models}
 \alias{codex_models}
-\title{Report whether account-specific Codex model discovery is available.}
+\title{List models available to the authenticated Codex account.}
 \usage{
-codex_models()
+codex_models(auth = NULL, client_version = codex_models_client_version())
+}
+\arguments{
+\item{auth}{Optional package credential. If omitted, the current session or
+package-owned credential is loaded and refreshed as needed.}
+
+\item{client_version}{Optional client-version query value. The default is
+the package version, and \code{ELLMERCODEX_CLIENT_VERSION} can override it.}
 }
 \value{
-An empty data frame with class \code{codex_models_unsupported} and a
-\code{reason} attribute explaining the limitation. The \code{supported} attribute is
-\code{FALSE}.
+A \code{codex_models} data frame with one row per catalog model. The
+\code{supported} attribute is \code{TRUE}; reasoning options are list-columns.
 }
 \description{
-The current subscription compatibility transport does not expose a
-documented, reliable model-list endpoint. This function therefore returns a
-typed empty result rather than inventing a catalog from another client or
-account.
+This makes one authenticated request to the observed Codex model catalog
+endpoint. The returned rows include each model's advertised reasoning effort
+levels, so callers can select an effort without copying a stale catalog into
+this package. Availability is account- and workspace-specific.
 }
+\section{Conditions}{
+
+Missing credentials signal \code{codex_auth_missing}; HTTP and protocol failures
+use the same sanitized transport conditions as generation requests.
+}
+
 \examples{
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 models <- codex_models()
-attr(models, "supported")
-attr(models, "reason")
+models[c("id", "default_reasoning_effort", "supported_reasoning_efforts")]
+\dontshow{\}) # examplesIf}
 }

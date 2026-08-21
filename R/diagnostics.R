@@ -9,7 +9,8 @@ codex_diagnostic_configuration <- function() {
   fn_env <- environment(codex_diagnostic_configuration)
   required <- c(
     "codex_oauth_client_id", "codex_authorization_url", "codex_token_url",
-    "codex_responses_url", "codex_redirect_uri", "codex_request_headers"
+    "codex_responses_url", "codex_models_endpoint", "codex_redirect_uri",
+    "codex_request_headers"
   )
   configured <- all(vapply(
     required,
@@ -95,8 +96,15 @@ codex_diagnostics <- function(check_credentials = FALSE) {
     ellmer = ellmer,
     authentication = authentication,
     model_discovery = list(
-      supported = FALSE,
-      reason = codex_models_unsupported_reason()
+      supported = TRUE,
+      endpoint_configured = isTRUE(tryCatch(
+        grepl("^https://", codex_models_endpoint(), perl = TRUE),
+        error = function(error) FALSE
+      )),
+      reason = paste(
+        "Model discovery uses the authenticated Codex catalog endpoint;",
+        "the endpoint is an undocumented compatibility surface."
+      )
     )
   )
 }

@@ -4,7 +4,14 @@
 \alias{chat_codex}
 \title{Create an experimental Codex chat backed by ellmer}
 \usage{
-chat_codex(system_prompt = NULL, model = NULL, echo = c("none", "output"))
+chat_codex(
+  system_prompt = NULL,
+  model = NULL,
+  echo = c("none", "output"),
+  effort = NULL,
+  params = NULL,
+  api_args = list()
+)
 }
 \arguments{
 \item{system_prompt}{Optional system prompt passed to ellmer.}
@@ -16,6 +23,17 @@ used.}
 prints the completed text. The compatibility wrapper accepts \code{TRUE},
 \code{FALSE}, and \code{"text"} as aliases for \code{"output"}, \code{"none"}, and
 \code{"output"}, respectively.}
+
+\item{effort}{Optional Codex reasoning effort. It is forwarded through
+ellmer as \code{params(reasoning_effort = effort)} and should be one of the
+values advertised by \code{\link[=codex_models]{codex_models()}} for the selected model.}
+
+\item{params}{Optional ellmer model parameters, usually created with
+\code{ellmer::params()}. A supplied \code{reasoning_effort} must agree with
+\code{effort}, when both are provided.}
+
+\item{api_args}{Optional named list of additional Responses arguments passed
+through ellmer on every request.}
 }
 \value{
 An object inheriting from ellmer's \code{Chat} class.
@@ -29,11 +47,12 @@ needed.
 }
 \details{
 The returned chat supports ordinary text \verb{$chat()}, text or content
-\verb{$stream()}, and multi-turn history. The compatibility layer buffers the
-public ellmer stream and repairs the final assistant turn because the
-observed Codex terminal event can omit the output that was present in its
-preceding deltas. Structured output, asynchronous methods, and tool calling
-are outside this experimental interface.
+\verb{$stream()}, ellmer structured output, and multi-turn history. The
+compatibility layer buffers the public ellmer stream and repairs the final
+assistant turn because the observed Codex terminal event can omit the output
+that was present in its preceding deltas. Structured output uses ellmer's
+JSON-schema method and the same streamed-text repair. Asynchronous methods
+and tool calling remain outside this experimental interface.
 }
 \section{Conditions}{
 

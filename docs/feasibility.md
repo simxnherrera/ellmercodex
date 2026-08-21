@@ -156,13 +156,15 @@ The implemented seam wraps public `ellmer::chat_openai()`, which already speaks
 the Responses shape and accepts `base_url`, `credentials`, and additional
 headers. A narrow instance compatibility layer collects ellmer's emitted text
 and restores it to the final assistant turn when the subscription terminal
-payload omits `response$output`. This avoids subclassing unexported provider
-generics while returning a genuine `ellmer` `Chat`.
+payload omits `response$output`. Structured output uses the same streamed
+fallback and installs `ContentJson` before ellmer's normal type conversion. This
+avoids subclassing unexported provider generics while returning a genuine
+`ellmer` `Chat`.
 
 Live `$chat()` tests returned `acknowledged` on the first turn, recalled `amber`
 on the second, and retained four user/assistant turns. `$stream()` and terminal
-history repair are also covered offline. Structured output, async methods, and
-tool calling remain outside this PoC.
+history repair and structured conversion are also covered offline. Async
+methods and tool calling remain outside this PoC.
 
 ## Risks and assumptions
 

@@ -1,7 +1,9 @@
 # The Codex chat deliberately uses ellmer's exported OpenAI factory rather
 # than implementing an ellmer Provider subclass. In ellmer 0.4.2 the provider
 # generics and Chat constructor are internal, and relying on them would make
-# this package tightly coupled to an unstable implementation seam.
+# this package tightly coupled to an unstable implementation seam. Structured
+# output needs a small, separately-gated compatibility fallback in
+# `chat-codex.R`; the ordinary text path remains on exported methods.
 
 #' Check the exported ellmer compatibility seam
 #'
@@ -33,7 +35,7 @@ codex_ellmer_compatibility <- function() {
     )
   }
 
-  required <- c("chat_openai", "AssistantTurn", "ContentText")
+  required <- c("chat_openai", "AssistantTurn", "ContentText", "params")
   available <- vapply(
     required,
     function(name) name %in% getNamespaceExports("ellmer"),
@@ -51,8 +53,35 @@ codex_ellmer_compatibility <- function() {
   invisible(version)
 }
 
+codex_ellmer_structured_compatibility <- function() {
+  required <- c(
+    "ContentJson",
+    "extract_data",
+    "type_needs_wrapper",
+    "wrap_type_if_needed"
+  )
+  namespace <- asNamespace("ellmer")
+  available <- vapply(
+    required,
+    function(name) exists(name, envir = namespace, inherits = FALSE),
+    logical(1)
+  )
+  if (!all(available)) {
+    missing <- paste(required[!available], collapse = ", ")
+    rlang::abort(
+      paste0(
+        "The installed ellmer version is missing structured-output compatibility symbols: ",
+        missing, "."
+      ),
+      class = "codex_ellmer_compatibility_error",
+      parent = NULL
+    )
+  }
+  invisible(TRUE)
+}
+
 codex_ellmer_chat_methods <- function(chat) {
-  required <- c("stream", "get_turns", "set_turns")
+  required <- c("stream", "chat_structured", "get_turns", "set_turns")
   available <- tryCatch(
     vapply(required, function(name) is.function(chat[[name]]), logical(1)),
     error = function(error) rep(FALSE, length(required))
@@ -71,7 +100,9 @@ codex_ellmer_chat_methods <- function(chat) {
 codex_ellmer_chat_openai <- function(
   system_prompt = NULL,
   model,
-  auth
+  auth,
+  params = NULL,
+  api_args = list()
 ) {
   codex_ellmer_compatibility()
 
@@ -89,6 +120,8 @@ codex_ellmer_chat_openai <- function(
       base_url = sub("/responses$", "", codex_responses_url()),
       credentials = function() codex_auth()$access_token,
       model = model,
+      params = params,
+      api_args = api_args,
       api_headers = c(
         `ChatGPT-Account-Id` = auth$account_id,
         originator = codex_originator(),

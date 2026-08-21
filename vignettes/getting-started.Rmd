@@ -25,16 +25,19 @@ open a browser, inspect stored credentials, or make network requests.
 library(ellmercodex)
 
 codex_available()
-models <- codex_models()
-attr(models, "supported")
-attr(models, "reason")
 ```
 
 `codex_available()` checks installed dependencies, static configuration, and
 the supported `ellmer` compatibility seam. Its default does not inspect a
-credential store. Account-specific model discovery is not available through a
-documented direct endpoint, so `codex_models()` returns a typed empty result
-instead of an inferred catalog.
+credential store. After authentication, `codex_models()` queries the observed
+account-specific catalog and returns the models and reasoning efforts the
+account currently advertises:
+
+```{r, eval = FALSE}
+models <- codex_models()
+models[c("id", "display_name", "default_reasoning_effort",
+         "supported_reasoning_efforts")]
+```
 
 ## Authenticate explicitly
 
@@ -83,7 +86,8 @@ workspace-specific:
 ```{r, eval = FALSE}
 chat <- chat_codex(
   system_prompt = "Be concise.",
-  model = Sys.getenv("ELLMERCODEX_MODEL", "gpt-5.6-luna")
+  model = Sys.getenv("ELLMERCODEX_MODEL", "gpt-5.6-luna"),
+  effort = "medium"
 )
 
 chat$chat("Remember that the codeword is amber. Reply: acknowledged")
@@ -91,10 +95,22 @@ chat$chat("What was the codeword?")
 ```
 
 The returned object is an `ellmer` `Chat`. This release supports ordinary text
-`$chat()`, text or content `$stream()`, and multi-turn history with `ellmer`
-versions from 0.4.2 up to, but not including, 0.5.0. Structured output, tools,
-asynchronous methods, and a native provider subclass are not part of the
-supported surface.
+`$chat()`, text or content `$stream()`, ellmer `chat_structured()`, reasoning
+effort, model parameters, and multi-turn history with `ellmer` versions from
+0.4.2 up to, but not including, 0.5.0. Tools, asynchronous methods, and a
+native provider subclass are not part of the supported surface.
+
+Structured output uses the normal ellmer type system:
+
+```{r, eval = FALSE}
+chat$chat_structured(
+  "My name is Susan and I'm 13 years old.",
+  type = ellmer::type_object(
+    name = ellmer::type_string(),
+    age = ellmer::type_integer()
+  )
+)
+```
 
 ## Handle failures
 

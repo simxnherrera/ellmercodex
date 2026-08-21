@@ -4,10 +4,9 @@
 
 This design began with the proof of concept and now covers the experimental R
 package: `chat_codex()`, explicit Pi-style browser login, secure persistence and
-refresh, SSE Responses calls, offline availability diagnostics, and an explicit
-unsupported result for direct account-specific model discovery. It deliberately
-excludes a native `ellmer` provider, structured output, async methods, tools,
-and an invented or copied model catalog.
+refresh, SSE Responses calls, offline availability diagnostics, account-specific
+model discovery, reasoning effort, and ellmer structured output. It deliberately
+excludes a native `ellmer` provider, async methods, and tools.
 
 Live testing resolved a key assumption: the subscription backend returns HTTP
 400 for `stream: false` and requires streaming. The authorized next phase added
@@ -38,7 +37,8 @@ chat_codex() -> ellmer::chat_openai() -> public stream deltas
                                       -> repair terminal assistant turn
                                       -> genuine ellmer Chat
 
-codex_models() -> typed unsupported result (no direct documented catalog)
+codex_models() -> authenticated Codex model catalog + effort metadata
+chat$chat_structured() -> streamed JSON -> repaired ellmer ContentJson turn
 codex_available() -> offline dependency/configuration checks by default
 ```
 
@@ -102,6 +102,11 @@ made the second successful request.
   headers.
 - `codex_request_body()` creates the minimal Responses body with `model`, one
   user text input, fixed instructions, `store: false`, and `stream: true`.
+  When selected, effort is forwarded as `reasoning = list(effort = ..., summary
+  = "auto")`, matching ellmer's OpenAI Responses mapping.
+- `codex_models()` calls the observed `/codex/models` endpoint and normalizes
+  model slugs, display names, defaults, supported reasoning efforts, and
+  service tiers. It does not bundle a private or copied model catalog.
 - `codex_request()` performs HTTP and classifies status failures without exposing
   raw headers or bodies.
 - `codex_parse_sse()` handles CRLF/LF framing, `data:` fields, `[DONE]`, and
@@ -154,8 +159,10 @@ and length bounded. Raw response headers and full bodies are never included.
 
 The exported `ellmer::chat_openai()` factory successfully creates a standard
 `Chat` with the Codex base URL, dynamic credential callback, account header,
-honest originator, experimental protocol header, and mandatory streaming. It
-must use `service_tier = "default"`; ellmer's `"auto"` default is rejected.
+honest originator, experimental protocol header, and mandatory
+`service_tier = "default"`; ellmer's `"auto"` default is rejected. Ellmer
+`params(reasoning_effort = ...)` is passed through unchanged and becomes the
+Codex Responses `reasoning.effort` field.
 
 The unmodified seam is incomplete. The backend sends useful text only in
 delta events and its terminal `response.completed$response$output` is empty.
@@ -166,8 +173,15 @@ history is empty, breaking the intended multi-turn UX.
 `R/chat-codex.R` implements the smallest fallback: `chat_codex()` creates the
 public Chat, delegates requests to its public `$stream()`, accumulates emitted
 text, and replaces only the empty terminal assistant content. It returns normal
-`ellmer_output` values and retains correct multi-turn history. A live two-turn
-test passed, and offline tests cover `$chat()`, `$stream()`, and repaired turns.
+`ellmer_output` values and retains correct multi-turn history.
+
+Structured output uses ellmer's public `Chat$chat_structured()` entry point but
+forces its request into streaming mode. The streamed JSON is captured, turned
+into ellmer's `ContentJson`, and installed as the final assistant content before
+ellmer's normal schema conversion runs. This fallback relies on a small set of
+ellmer 0.4.x internal conversion symbols and is therefore separately checked
+and version-gated. Offline tests cover `$chat()`, `$stream()`, structured
+conversion, and repaired turns.
 
 This is deliberately an instance compatibility layer, not a custom provider. In
 ellmer 0.4.2 a native provider requires unexported generics and the unexported
@@ -177,19 +191,20 @@ hook; otherwise it needs an explicit ellmer version pin and compatibility tests.
 
 ## Compatibility status and release risks
 
-1. The project deliberately accepts that independent client registration and
-   the direct subscription transport are not documented public contracts; the
-   package must disclose this and isolate protocol changes.
+1. The project deliberately accepts that independent client registration,
+   direct subscription transport, and the account-specific model catalog are
+   not documented public contracts; the package must disclose this and isolate
+   protocol changes.
 2. Streaming protocol and model selection without copying another
    client's private catalog.
-3. An exported-only `ellmer` integration seam.
+3. An exported-only ellmer construction seam plus a narrowly tested,
+   version-gated structured-output conversion seam.
 4. Keyring behavior across supported operating systems and refresh-token
    rotation tests.
 5. Offline-only CRAN tests; no package load, test, example, or check may start
    OAuth or make authenticated requests.
 
-The package addresses items 1, 2, 3, and 5 for its deliberately narrow text-chat
-surface on ellmer 0.4.x. Account-specific model discovery remains unsupported
-rather than inferred. Cross-platform keyring coverage and future ellmer
-compatibility remain release-maintenance work; neither changes the decision to
-retain the direct transport.
+The package addresses items 1, 2, 3, and 5 for its deliberately narrow text,
+structured-output, and model-selection surface on ellmer 0.4.x. Cross-platform
+keyring coverage and future ellmer compatibility remain release-maintenance
+work; neither changes the decision to retain the direct transport.

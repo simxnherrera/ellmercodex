@@ -3,7 +3,8 @@
 codex_request_body <- function(
   prompt,
   model = codex_default_model(),
-  instructions = "You are a helpful assistant. Follow the user's output instructions exactly."
+  instructions = "You are a helpful assistant. Follow the user's output instructions exactly.",
+  effort = NULL
 ) {
   if (!is.character(prompt) || length(prompt) != 1L || is.na(prompt) || !nzchar(prompt)) {
     rlang::abort(
@@ -25,7 +26,16 @@ codex_request_body <- function(
     )
   }
 
-  list(
+  if (!is.null(effort) &&
+      (!is.character(effort) || length(effort) != 1L || is.na(effort) ||
+       !nzchar(effort))) {
+    rlang::abort(
+      "`effort` must be NULL or one non-empty string.",
+      class = "codex_request_error"
+    )
+  }
+
+  body <- list(
     model = model,
     instructions = instructions,
     input = list(list(
@@ -38,6 +48,12 @@ codex_request_body <- function(
     # this package buffers the fixture/live body before assembling text.
     stream = TRUE
   )
+  if (!is.null(effort)) {
+    # Match ellmer's OpenAI Responses mapping exactly. The catalog owns the
+    # allowed effort vocabulary; this transport forwards it unchanged.
+    body$reasoning <- list(effort = effort, summary = "auto")
+  }
+  body
 }
 
 codex_error_detail_value <- function(value) {
@@ -99,7 +115,8 @@ codex_request <- function(
   prompt,
   auth,
   model = codex_default_model(),
-  endpoint = codex_responses_url()
+  endpoint = codex_responses_url(),
+  effort = NULL
 ) {
   if (!is.character(endpoint) || length(endpoint) != 1L || is.na(endpoint) ||
         !grepl("^https://", endpoint, perl = TRUE)) {
@@ -112,7 +129,10 @@ codex_request <- function(
   headers <- codex_request_headers(auth)
   request <- httr2::request(endpoint) |>
     httr2::req_headers(!!!headers) |>
-    httr2::req_body_json(codex_request_body(prompt, model), auto_unbox = TRUE) |>
+    httr2::req_body_json(
+      codex_request_body(prompt, model, effort = effort),
+      auto_unbox = TRUE
+    ) |>
     httr2::req_timeout(120) |>
     httr2::req_error(is_error = function(response) FALSE)
 
@@ -155,7 +175,12 @@ codex_parse_response <- function(value) {
   paste0(pieces, collapse = "")
 }
 
-codex_generate <- function(prompt, model = codex_default_model(), auth = NULL) {
+codex_generate <- function(
+  prompt,
+  model = codex_default_model(),
+  auth = NULL,
+  effort = NULL
+) {
   explicit_auth <- !is.null(auth)
   if (is.null(auth)) {
     auth <- codex_auth()
@@ -168,7 +193,12 @@ codex_generate <- function(prompt, model = codex_default_model(), auth = NULL) {
     auth <- codex_refresh(auth, persist = !explicit_auth)
   }
 
-  response <- codex_request(prompt, auth = auth, model = model)
+  response <- codex_request(
+    prompt,
+    auth = auth,
+    model = model,
+    effort = effort
+  )
   content_type <- tryCatch(
     httr2::resp_content_type(response),
     error = function(error) NA_character_

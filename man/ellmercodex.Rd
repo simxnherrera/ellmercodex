@@ -22,10 +22,19 @@ browser, read credentials, or make network requests.
 
 The public API is deliberately small: \code{\link[=codex_login]{codex_login()}}, \code{\link[=codex_logout]{codex_logout()}},
 \code{\link[=codex_account]{codex_account()}}, \code{\link[=codex_models]{codex_models()}}, \code{\link[=codex_available]{codex_available()}}, and
-\code{\link[=chat_codex]{chat_codex()}}. The text-chat compatibility layer is version-gated for the
-ellmer 0.4.x public API and is intentionally limited to text streaming and
-ordinary multi-turn history; structured output, asynchronous methods, and
-tool calling are not promised by this experimental package.
+\code{\link[=chat_codex]{chat_codex()}}. The chat compatibility layer is version-gated for the
+ellmer 0.4.x public API and supports text streaming, model parameters,
+per-model reasoning effort, structured output, and ordinary multi-turn
+history. Asynchronous methods and tool calling are not promised by this
+experimental package.
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/simxnherrera/ellmercodex}
+  \item Report bugs at \url{https://github.com/simxnherrera/ellmercodex/issues}
+}
+
 }
 \author{
 \strong{Maintainer}: Simon Herrera \email{simxnherrera@gmail.com}

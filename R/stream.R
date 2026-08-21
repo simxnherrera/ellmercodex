@@ -264,7 +264,7 @@ codex_parse_sse_response <- function(events) {
       codex_sse_error(event)
     }
     # Unknown event names are intentionally ignored.  Codex can add progress,
-    # tool, or metadata events without breaking a text-only client.
+    # tool, or metadata events without breaking this text-oriented client.
   }
 
   if (is.null(terminal_type)) {

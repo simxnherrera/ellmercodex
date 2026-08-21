@@ -32,6 +32,22 @@ test_that("the public OpenAI factory creates an offline-compatible Chat", {
   expect_identical(provider@extra_headers[["originator"]], "ellmercodex")
 })
 
+test_that("ellmer reasoning effort is forwarded without translation", {
+  skip_if_not_installed("ellmer")
+
+  auth <- structure(
+    list(access_token = "fixture-access-token", account_id = "fixture-account"),
+    class = c("codex_auth", "list")
+  )
+  chat <- codex_ellmer_chat_openai(
+    model = "fixture-model",
+    auth = auth,
+    params = ellmer::params(reasoning_effort = "high")
+  )
+  provider <- chat$get_provider()
+  expect_identical(provider@params$reasoning_effort, "high")
+})
+
 test_that("Codex compatibility repairs streamed text for chat and history", {
   skip_if_not_installed("ellmer")
 
@@ -92,12 +108,68 @@ test_that("Codex compatibility repairs streamed text for chat and history", {
   expect_identical(attr(chat, "ellmercodex_compatibility"), "buffered-terminal-output")
 })
 
+test_that("Codex compatibility repairs structured JSON output", {
+  skip_if_not_installed("ellmer")
+
+  chat <- ellmer::chat_openai(
+    credentials = function() "fixture-access-token",
+    model = "fixture-model",
+    base_url = "http://127.0.0.1:1",
+    service_tier = "default",
+    echo = "none"
+  )
+
+  fixture_structured <- function(..., type, echo = "none", convert = TRUE) {
+    chat$set_turns(c(
+      chat$get_turns(),
+      list(
+        ellmer::UserTurn(list(ellmer::ContentText("fixture prompt"))),
+        ellmer::AssistantTurn()
+      )
+    ))
+    cat("{\"name\":\"Susan\",\"age\":13}")
+    rlang::abort("fixture terminal response omitted output")
+  }
+
+  rlang::env_binding_unlock(chat, "chat_structured")
+  chat$chat_structured <- fixture_structured
+  rlang::env_binding_lock(chat, "chat_structured")
+  chat <- codex_patch_chat(chat)
+
+  value <- chat$chat_structured(
+    "ignored",
+    type = ellmer::type_object(
+      name = ellmer::type_string(),
+      age = ellmer::type_number()
+    )
+  )
+  expect_identical(value$name, "Susan")
+  expect_identical(value$age, 13L)
+  expect_true(inherits(chat$last_turn()@contents[[1L]], "ellmer::ContentJson"))
+  expect_length(chat$get_turns(), 2L)
+})
+
 test_that("chat argument and compatibility failures use user-facing conditions", {
   fake_auth <- structure(
     list(access_token = "fixture-access-token", account_id = "fixture-account"),
     class = c("codex_auth", "list")
   )
   expect_error(codex_echo("all"), class = "codex_chat_argument_error")
+  expect_error(
+    ellmercodex::chat_codex(effort = ""),
+    class = "codex_chat_argument_error"
+  )
+  expect_error(
+    ellmercodex::chat_codex(
+      effort = "high",
+      params = list(reasoning_effort = "low")
+    ),
+    class = "codex_chat_argument_error"
+  )
+  expect_error(
+    ellmercodex:::codex_structured_echo("invalid"),
+    class = "codex_chat_argument_error"
+  )
   expect_error(
     codex_repair_last_turn(
       ellmer::chat_openai(credentials = function() fake_auth$access_token),

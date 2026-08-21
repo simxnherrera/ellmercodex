@@ -25,12 +25,26 @@ testthat::test_that("request body is streaming and does not store server-side st
   testthat::expect_identical(body$input[[1L]]$role, "user")
   testthat::expect_identical(body$input[[1L]]$content[[1L]]$type, "input_text")
   testthat::expect_identical(body$input[[1L]]$content[[1L]]$text, "fixture prompt")
+  testthat::expect_null(body$reasoning)
   testthat::expect_error(
     codex_request_body(""),
     class = "codex_request_error"
   )
   testthat::expect_error(
     codex_request_body("fixture", model = ""),
+    class = "codex_request_error"
+  )
+  effort_body <- codex_request_body(
+    "fixture prompt",
+    model = "fixture-model",
+    effort = "high"
+  )
+  testthat::expect_identical(
+    effort_body$reasoning,
+    list(effort = "high", summary = "auto")
+  )
+  testthat::expect_error(
+    codex_request_body("fixture", effort = ""),
     class = "codex_request_error"
   )
 })
@@ -109,6 +123,26 @@ testthat::test_that("request construction can be exercised with a single mocked 
   testthat::expect_identical(seen$request$body$data$stream, TRUE)
   testthat::expect_identical(seen$request$body$data$store, FALSE)
   testthat::expect_identical(seen$request$headers$originator, "ellmercodex")
+
+  effort_result <- httr2::with_mocked_responses(
+    function(req) {
+      testthat::expect_identical(
+        req$body$data$reasoning,
+        list(effort = "high", summary = "auto")
+      )
+      httr2::response_json(body = list(output = list(list(
+        type = "message",
+        content = list(list(type = "output_text", text = "effort answer"))
+      ))))
+    },
+    codex_generate(
+      "fixture prompt",
+      auth = fake_codex_auth(),
+      model = "fixture-model",
+      effort = "high"
+    )
+  )
+  testthat::expect_identical(effort_result, "effort answer")
 })
 
 testthat::test_that("ordinary network failures are graceful and never retried", {

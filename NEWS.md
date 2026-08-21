@@ -1,3 +1,14 @@
+# ellmercodex 0.1.1
+
+* Added authenticated Codex model discovery with per-model reasoning-effort
+  metadata; the package no longer invents a static model catalog.
+* Added `effort`, ellmer `params()`, and `api_args` support to `chat_codex()`.
+  Reasoning effort is forwarded using ellmer's Responses-compatible mapping.
+* Added streamed structured output through `Chat$chat_structured()`, including
+  repair of the terminal assistant turn into ellmer `ContentJson`.
+* Added offline fixtures for model discovery, effort propagation, and
+  structured-output conversion; updated the experimental compatibility notes.
+
 # ellmercodex 0.1.0
 
 * Converted the validated proof of concept into an installable R package with
