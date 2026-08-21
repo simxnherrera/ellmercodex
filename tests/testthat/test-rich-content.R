@@ -54,3 +54,20 @@ test_that("streamed text repair preserves terminal image content", {
     "Here is the image."
   )
 })
+
+test_that("content streaming yields terminal images without text rendering", {
+  skip_if_not_installed("ellmer")
+
+  chat <- new_async_fixture_chat()
+  outcome <- httr2::with_mocked_responses(
+    function(req) fixture_stream_response("image-output.sse"),
+    coro::collect(chat$stream("Generate an image.", stream = "content"))
+  )
+
+  expect_true(any(vapply(
+    outcome,
+    inherits,
+    logical(1),
+    what = "ellmer::ContentImageInline"
+  )))
+})

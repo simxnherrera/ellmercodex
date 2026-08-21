@@ -94,12 +94,14 @@ chat$chat("Remember that the codeword is amber. Reply: acknowledged")
 chat$chat("What was the codeword?")
 ```
 
-The returned object is an `ellmer` `Chat`. This release supports ordinary text
-`$chat()`, text or content `$stream()`, ellmer structured output, reasoning
-effort, model parameters, registered function tools, asynchronous chat and
-streaming, rich image/PDF content, and multi-turn history with `ellmer`
-versions from 0.4.2 up to, but not including, 0.5.0. A native provider subclass
-is not part of the supported surface.
+The returned object is an `ellmer` 0.4.2 `Chat`. The complete public Chat
+surface remains available: ordinary and structured chat, text/content
+streaming, reasoning effort, model parameters, registered function tools,
+async methods, callbacks, cancellation, cloning, rich image/PDF content,
+history, echo, and response metadata. The compatibility implementation is
+version-gated to exactly 0.4.2. The separate `parallel_chat*()` and
+`batch_chat*()` helpers are explicitly blocked because the Codex endpoint is
+stream-only; this prevents a stable-status claim.
 
 ## Tool calling
 

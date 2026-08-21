@@ -8,8 +8,7 @@ codex_stream_chunk_text <- getFromNamespace("codex_stream_chunk_text", "ellmerco
 test_that("the installed ellmer release exposes the supported seam", {
   version <- codex_ellmer_compatibility()
 
-  expect_gte(version, numeric_version("0.4.2"))
-  expect_lt(version, numeric_version("0.5.0"))
+  expect_identical(as.character(version), "0.4.2")
   exports <- getNamespaceExports("ellmer")
   expect_true(all(c("chat_openai", "AssistantTurn", "ContentText") %in% exports))
 })
@@ -52,105 +51,60 @@ test_that("ellmer reasoning effort is forwarded without translation", {
   expect_identical(provider@params$reasoning_effort, "high")
 })
 
-test_that("Codex compatibility repairs streamed text for chat and history", {
+test_that("Codex compatibility keeps the public Chat lifecycle and repairs streamed text", {
   skip_if_not_installed("ellmer")
 
-  chat <- ellmer::chat_openai(
-    credentials = function() "fixture-access-token",
-    model = "fixture-model",
-    base_url = "http://127.0.0.1:1",
-    service_tier = "default",
-    echo = "none"
-  )
-
-  # Keep this fixture entirely offline; the real credentials callback is
-  # exercised by chat_codex() only after an explicit login.
-  fake_auth <- structure(
-    list(access_token = "fixture-access-token", account_id = "fixture-account"),
+  auth <- structure(
+    list(
+      access_token = "fixture-access-token",
+      refresh_token = "fixture-refresh-token",
+      account_id = "fixture-account",
+      expires_at = as.numeric(Sys.time()) + 3600
+    ),
     class = c("codex_auth", "list")
   )
+  chat <- codex_patch_chat(codex_ellmer_chat_openai(model = "fixture-model", auth = auth))
 
-  fixture_stream <- function(
-    ...,
-    stream = c("text", "content"),
-    controller = NULL
-  ) {
-    stream <- match.arg(stream)
-    chat$set_turns(c(
-      chat$get_turns(),
-      list(
-        ellmer::UserTurn(list(ellmer::ContentText("fixture prompt"))),
-        ellmer::AssistantTurn()
-      )
-    ))
+  answer <- httr2::with_mocked_responses(
+    function(req) fixture_stream_response("stream-async-empty-terminal.sse"),
+    chat$chat("Say hello.")
+  )
 
-    chunks <- if (identical(stream, "content")) {
-      list(ellmer::ContentText("Hello "), ellmer::ContentText("from R"))
-    } else {
-      list("Hello ", "from R")
-    }
-    coro::generator(function() {
-      for (chunk in chunks) coro::yield(chunk)
-    })()
-  }
-
-  rlang::env_binding_unlock(chat, "stream")
-  chat$stream <- fixture_stream
-  rlang::env_binding_lock(chat, "stream")
-  chat <- codex_patch_chat(chat)
-
-  first <- chat$chat("ignored")
-  expect_s3_class(first, "ellmer_output")
-  expect_identical(as.character(first), "Hello from R")
-  expect_identical(chat$last_turn()@text, "Hello from R")
-
-  streamed <- coro::collect(chat$stream("ignored", stream = "content"))
-  streamed_text <- paste0(vapply(streamed, codex_stream_chunk_text, character(1)), collapse = "")
-  expect_identical(streamed_text, "Hello from R")
-  expect_identical(chat$last_turn()@text, "Hello from R")
-  expect_length(chat$get_turns(), 4L)
-  expect_identical(attr(chat, "ellmercodex_compatibility"), "buffered-terminal-output")
+  expect_s3_class(answer, "ellmer_output")
+  expect_identical(as.character(answer), "Hello async")
+  expect_identical(chat$last_turn()@text, "Hello async")
+  expect_true(is.finite(chat$last_turn()@duration))
+  expect_identical(chat$last_turn()@finish_reason, "success")
+  expect_identical(attr(chat, "ellmercodex_compatibility"), "ellmer-0.4.2-provider-stream")
 })
 
-test_that("Codex compatibility repairs structured JSON output", {
+test_that("Codex structured output uses ellmer conversion after SSE merge", {
   skip_if_not_installed("ellmer")
 
-  chat <- ellmer::chat_openai(
-    credentials = function() "fixture-access-token",
-    model = "fixture-model",
-    base_url = "http://127.0.0.1:1",
-    service_tier = "default",
-    echo = "none"
+  auth <- structure(
+    list(
+      access_token = "fixture-access-token",
+      refresh_token = "fixture-refresh-token",
+      account_id = "fixture-account",
+      expires_at = as.numeric(Sys.time()) + 3600
+    ),
+    class = c("codex_auth", "list")
   )
-
-  fixture_structured <- function(..., type, echo = "none", convert = TRUE) {
-    chat$set_turns(c(
-      chat$get_turns(),
-      list(
-        ellmer::UserTurn(list(ellmer::ContentText("fixture prompt"))),
-        ellmer::AssistantTurn()
+  chat <- codex_patch_chat(codex_ellmer_chat_openai(model = "fixture-model", auth = auth))
+  value <- httr2::with_mocked_responses(
+    function(req) fixture_stream_response("structured-async-empty-terminal.sse"),
+    chat$chat_structured(
+      "Extract the person.",
+      type = ellmer::type_object(
+        name = ellmer::type_string(),
+        age = ellmer::type_number()
       )
-    ))
-    cat("{\"name\":\"Susan\",\"age\":13}")
-    rlang::abort("fixture terminal response omitted output")
-  }
-
-  rlang::env_binding_unlock(chat, "chat_structured")
-  chat$chat_structured <- fixture_structured
-  rlang::env_binding_lock(chat, "chat_structured")
-  chat <- codex_patch_chat(chat)
-
-  value <- chat$chat_structured(
-    "ignored",
-    type = ellmer::type_object(
-      name = ellmer::type_string(),
-      age = ellmer::type_number()
     )
   )
+
   expect_identical(value$name, "Susan")
   expect_identical(value$age, 13L)
   expect_true(inherits(chat$last_turn()@contents[[1L]], "ellmer::ContentJson"))
-  expect_length(chat$get_turns(), 2L)
 })
 
 test_that("chat argument and compatibility failures use user-facing conditions", {
@@ -158,7 +112,7 @@ test_that("chat argument and compatibility failures use user-facing conditions",
     list(access_token = "fixture-access-token", account_id = "fixture-account"),
     class = c("codex_auth", "list")
   )
-  expect_error(codex_echo("all"), class = "codex_chat_argument_error")
+  expect_identical(codex_echo("all"), "all")
   expect_error(
     ellmercodex::chat_codex(effort = ""),
     class = "codex_chat_argument_error"

@@ -4,11 +4,14 @@ Status: investigation, offline checks, Pi-style OAuth, buffered SSE transport,
 keyring persistence, forced refresh, genuine-process restart, and a working
 multi-turn `chat_codex()` proof of concept are complete. An experimental R
 package now ports those pieces with offline tests, model/availability
-diagnostics, documentation, and CI. Sources were inspected on 2026-08-20.
+diagnostics, documentation, and CI. Sources were inspected on 2026-08-21.
 
-The package implementation preserves the support boundary below while accepting
-it as an experimental compatibility risk. See `docs/research-risk-review.md`
-for the package-phase review and release posture.
+The package implementation now targets the complete public Chat surface of
+exactly ellmer 0.4.2 while accepting the direct transport as an experimental
+compatibility risk. The separate ellmer parallel/batch helpers remain an
+explicit blocker because their non-streaming request model cannot be mapped to
+the Codex endpoint. See `docs/research-risk-review.md` for the package-phase
+review and release posture.
 
 ## Conclusion and recommendation
 
@@ -40,11 +43,14 @@ The live PoC followed Pi's mechanics while identifying the client honestly as
 an honest originator, package-owned credentials, explicit user authentication,
 and prominent experimental-status disclosure. Never impersonate Pi or Codex.
 
-The transport and PoC integration uncertainties are resolved: every current
-client inspected uses `stream: true`, the live backend explicitly requires it,
-buffered SSE works in pure R, and a thin compatibility layer produces correct
-`ellmer` return values and history. Production-grade support remains out of
-scope for the experimental release rather than blocking it.
+The transport and Chat integration uncertainties are resolved for the pinned
+Chat target: every current client inspected uses `stream: true`, the live
+backend explicitly requires it, buffered SSE works in pure R, and the
+version-gated provider/TurnAccumulator seam produces ellmer return values and
+history. Parallel/batch helper support is explicitly blocked, rather than
+de-scoped, and blocks stable status because those helpers require
+non-streaming or OpenAI Batch requests that the Codex transport does not
+provide.
 
 ## Official documentation and policy findings
 
@@ -143,8 +149,11 @@ version 0.4.2.9000.
 
 In 0.4.2, `Provider` is exported but `Chat` and provider dispatch generics such
 as `chat_request`, `chat_body`, `stream_parse`, and `value_turn` are not. An
-in-memory external subclass test worked only by registering methods against
-`ellmer:::` symbols. That is not an acceptable stable package seam. See
+in-memory subclass works only by registering methods against `ellmer:::`
+symbols. The package isolates that unavoidable private dependency in one
+version-gated compatibility module and pins the exact release; it is an
+explicit maintenance risk rather than a reason to remove Chat functionality.
+See
 [`R/provider.R` at v0.4.2](https://github.com/tidyverse/ellmer/blob/v0.4.2/R/provider.R)
 and [`R/chat.R` at v0.4.2](https://github.com/tidyverse/ellmer/blob/v0.4.2/R/chat.R).
 
@@ -152,21 +161,22 @@ Upstream `main` exports `Chat` and a new `Model` class, but still does not expor
 the provider generics; their signatures have also changed. A custom subclass
 would therefore carry high version-coupling risk.
 
-The implemented seam wraps public `ellmer::chat_openai()`, which already speaks
-the Responses shape and accepts `base_url`, `credentials`, and additional
-headers. A narrow instance compatibility layer collects ellmer's emitted text
-and restores it to the final assistant turn when the subscription terminal
-payload omits `response$output`. Structured output uses the same streamed
-fallback and installs `ContentJson` before ellmer's normal type conversion. This
-avoids subclassing unexported provider generics while returning a genuine
-`ellmer` `Chat`.
+The implemented seam constructs the genuine ellmer 0.4.2 `Chat` with a
+version-gated `CodexProvider`. It reuses ellmer's OpenAI Responses input
+serializer and supplies the stream-only request, credentials, SSE parser,
+ordered content merge, structured `ContentJson` conversion, token/cost/finish
+metadata, and rich output conversion. Only the four private execution methods
+`chat_impl`, `chat_impl_async`, `submit_turns`, and `submit_turns_async` are
+installed, with clone-aware R6 environments; ellmer continues to own public
+methods, turns, cloning, cancellation, callbacks, dangling tools, and the
+tool invocation helpers. The full inventory is in
+`docs/ellmer-chat-interface.md`.
 
-Live `$chat()` tests returned `acknowledged` on the first turn, recalled `amber`
-on the second, and retained four user/assistant turns. `$stream()` and terminal
-history repair, structured conversion, an offline end-to-end registered
-ellmer tool loop, and the asynchronous Chat methods are also covered. Async
-tool modes delegate to ellmer's async tool loop; the package still gates the
-whole adapter to ellmer 0.4.x.
+The offline regression suite covers the complete Chat method inventory, clone
+closure independence, text/tool/text and text/image/text ordering, structured
+output, rich input, metadata, auth refresh, tool errors and recovery, sync and
+async tool modes, cancellation, and explicit parallel/batch blockers. Those
+tests are added or updated in this pass but are intentionally not run.
 
 ## Risks and assumptions
 
@@ -179,14 +189,15 @@ whole adapter to ellmer 0.4.x.
 - Eligibility, workspace administration, usage limits, and model availability
   remain account-specific.
 - A non-streaming request is rejected even when OAuth succeeds; SSE is required.
+  ellmer's `parallel_chat*()` and `batch_chat*()` helpers therefore remain an
+  explicit compatibility blocker rather than being silently emulated.
 - Successful OAuth demonstrates current login compatibility for one account; it
   does not establish policy approval or production stability.
 - `ellmer::chat_openai()` must use `service_tier = "default"`; its default
   `"auto"` is rejected by the subscription backend.
-- The backend streams output deltas but returns an empty terminal
-  `response$output`. `ellmer` 0.4.2 therefore prints the deltas but replaces its
-  final assistant turn with empty content unless the PoC compatibility layer is
-  installed on the Chat instance.
+- The backend streams output deltas but can return an empty terminal
+  `response$output`. The provider/TurnAccumulator seam preserves streamed
+  history and metadata without replacing public Chat methods.
 
 ## Acceptance evidence
 
@@ -230,8 +241,9 @@ The exported `ellmer::chat_openai()` seam was also tested live. Its default
 made streaming succeed visibly. However, `$chat()` returned an empty string and
 the final assistant turn had zero text characters. A protocol-only probe
 confirmed that the terminal `response.completed` payload has zero output items;
-the usable text exists only in preceding delta events. The public factory is
-therefore insufficient by itself. The implemented Codex compatibility layer
-buffers those public-stream deltas and repairs the final assistant turn. A live
-two-turn `chat_codex()` test then returned `acknowledged`, recalled `amber`, and
-retained four turns.
+the usable text exists only in preceding delta events. This evidence motivates
+the current provider/TurnAccumulator seam, which buffers those deltas while
+leaving public Chat methods and clone behavior intact. A live two-turn
+`chat_codex()` test then returned `acknowledged`, recalled `amber`, and retained
+four turns; the regression suite for the current architecture is intentionally
+not run in the present implementation pass.

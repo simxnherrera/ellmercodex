@@ -7,7 +7,7 @@
 chat_codex(
   system_prompt = NULL,
   model = NULL,
-  echo = c("none", "output"),
+  echo = c("none", "output", "all"),
   effort = NULL,
   params = NULL,
   api_args = list()
@@ -19,7 +19,7 @@ chat_codex(
 \item{model}{Optional Codex model name. If omitted, the package default is
 used.}
 
-\item{echo}{One of \code{"none"} or \code{"output"}; controls whether \verb{$chat()}
+\item{echo}{One of \code{"none"}, \code{"output"}, or \code{"all"}; controls whether \verb{$chat()}
 prints the completed text. The compatibility wrapper accepts \code{TRUE},
 \code{FALSE}, and \code{"text"} as aliases for \code{"output"}, \code{"none"}, and
 \code{"output"}, respectively.}
@@ -46,17 +46,15 @@ credential is available; an existing credential is loaded and refreshed as
 needed.
 }
 \details{
-The returned chat supports ordinary text \verb{$chat()}, text or content
-\verb{$stream()}, ellmer structured output, and multi-turn history. The
-compatibility layer buffers the public ellmer stream and repairs the final
-assistant turn because the observed Codex terminal event can omit the output
-that was present in its preceding deltas. Structured output uses ellmer's
-JSON-schema method and the same streamed-text repair. Registered ellmer
-tools use the Codex Responses function-call protocol and are executed in a
-complete loop until a final assistant response is produced. The returned chat
-also supports \code{chat_async()}, \code{stream_async()} with ellmer's
-sequential/concurrent tool modes and cancellation controller, and
-\code{chat_structured_async()}.
+The returned chat is the complete public \code{ellmer} 0.4.2 \code{Chat}
+object, including ordinary and structured chat, synchronous and asynchronous
+streaming, tool declarations and multi-round execution, callbacks,
+cancellation, cloning, history, echo, model/provider configuration, rich
+content, and response metadata. The compatibility layer uses one
+version-gated provider/execution seam while leaving public Chat methods
+and ellmer lifecycle semantics intact. Parallel and batch ellmer helpers are
+explicitly blocked because their non-streaming request model is incompatible
+with the Codex stream-only endpoint.
 
 \verb{$chat_structured()} intentionally follows ellmer's semantics and disables
 registered tools for that request. Call \verb{$chat()} first when tool-assisted
@@ -67,8 +65,9 @@ context is needed, then use \verb{$chat_structured()} to extract structured data
 Invalid arguments signal \code{codex_chat_argument_error}. Missing or
 incompatible ellmer installations signal \code{codex_ellmer_missing} or
 \code{codex_ellmer_compatibility_error}. Authentication failures found before
-the Chat is constructed retain their package condition classes; errors while
-delegating through the ellmer seam are sanitized as \code{codex_chat_error}.
+the Chat is constructed retain their package condition classes. Transport and
+protocol errors retain their specific Codex/ellmer condition classes;
+compatibility-shape failures use \code{codex_ellmer_compatibility_error}.
 }
 
 \examples{

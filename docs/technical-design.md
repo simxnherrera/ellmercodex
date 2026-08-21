@@ -2,13 +2,12 @@
 
 ## Scope
 
-This design began with the proof of concept and now covers the experimental R
-package: `chat_codex()`, explicit Pi-style browser login, secure persistence and
-refresh, SSE Responses calls, offline availability diagnostics, account-specific
-model discovery, reasoning effort, ellmer structured output, and registered
-ellmer function tools. It deliberately excludes a native `ellmer` provider;
-the Chat instance compatibility layer now covers ellmer's asynchronous methods
-and rich image/PDF content.
+This design covers the experimental R package: `chat_codex()`, explicit
+browser login, secure persistence and refresh, SSE Responses calls, offline
+availability diagnostics, account-specific model discovery, reasoning effort,
+and the complete public `ellmer` 0.4.2 Chat interface. The package uses a
+version-gated provider subclass plus one private Chat execution seam because
+the Codex endpoint is stream-only; it does not replace public Chat methods.
 
 Live testing resolved a key assumption: the subscription backend returns HTTP
 400 for `stream: false` and requires streaming. The authorized next phase added
@@ -35,15 +34,16 @@ transport.R: refresh if due -> stream=true request -> SSE events -> text
                      v
                codex_generate()
 
-chat_codex() -> ellmer::chat_openai() -> public stream deltas
-                                      -> repair terminal assistant turn
-                                      -> genuine ellmer Chat
+chat_codex() -> ellmer::Chat$new(CodexProvider)
+             -> ellmer public Chat lifecycle
+             -> private chat/submit compatibility seam
+             -> stream-only Codex request -> ordered response conversion
 
-chat$stream_async() -> ellmer async stream -> per-turn text repair
-chat$chat_async() -> async stream collection -> ellmer_output promise
-chat$chat_structured_async() -> typed async stream -> ContentJson repair
+chat$stream_async() -> ellmer async stream -> TurnAccumulator -> Chat history
+chat$chat_async() -> ellmer async tool loop -> promise return shape
+chat$chat_structured_async() -> typed async stream -> ContentJson conversion
 
-registered tools -> Responses function-call events -> local ToolDef execution
+registered tools -> ellmer ToolDef execution/callback loop
                  -> ContentToolResult input -> next Responses round
 
 codex_models() -> authenticated Codex model catalog + effort metadata
@@ -121,9 +121,14 @@ made the second successful request.
 - `codex_parse_sse()` handles CRLF/LF framing, `data:` fields, `[DONE]`, and
   bounded JSON parsing. `codex_parse_sse_response()` assembles output deltas and
   requires a terminal event.
-- `tool-calling.R` assembles Responses function-call item and argument-delta
-  events, preserves `call_id`, executes registered ellmer tools, and appends
-  `ContentToolRequest`/`ContentToolResult` turns until a final response.
+- `ellmer-compatibility.R` defines the version-gated `CodexProvider`, dynamic
+  credential reference, S7 request/stream/value methods, ordered output-item
+  merge, and clone-safe private Chat execution methods. Ellmer's own
+  `TurnAccumulator`, tool invocation/callback helpers, async primitives, and
+  dangling-request handling remain authoritative.
+- `tool-calling.R` remains the standalone SSE parser and fixture-compatible
+  Responses tool representation used by transport diagnostics; Chat tool
+  lifecycle is deliberately delegated to ellmer rather than duplicated here.
 - `codex_parse_response()` remains as a fallback for ordinary JSON terminal
   payloads.
 - `codex_generate()` coordinates auth/refresh, request, and parsing but contains
@@ -160,7 +165,7 @@ therefore accepts either a declared `text/event-stream` media type or a safe
 | `codex_generation_error` | SSE failure or error event |
 | `codex_incomplete_error` | SSE terminal event reports an incomplete response |
 | `codex_chat_argument_error` | Invalid `chat_codex()`/Chat compatibility argument |
-| `codex_chat_error` | Sanitized failure from the ellmer-backed transport |
+| `codex_chat_error` | Sanitized Chat/provider construction failure |
 | `codex_ellmer_compatibility_error` | ellmer did not record the expected terminal turn |
 
 Server error details are parsed only from a small nested error object or a
@@ -169,52 +174,52 @@ and length bounded. Raw response headers and full bodies are never included.
 
 ## `ellmer` integration seam
 
-The exported `ellmer::chat_openai()` factory successfully creates a standard
-`Chat` with the Codex base URL, dynamic credential callback, account header,
-honest originator, experimental protocol header, and mandatory
-`service_tier = "default"`; ellmer's `"auto"` default is rejected. Ellmer
-`params(reasoning_effort = ...)` is passed through unchanged and becomes the
-Codex Responses `reasoning.effort` field.
+The installed target is exactly `ellmer` 0.4.2. Its public `Chat` object has 25
+public methods and no public fields; the complete inventory, exact signatures,
+return/state behavior, and helper audit are recorded in
+`docs/ellmer-chat-interface.md`.
 
-The unmodified seam is incomplete. The backend sends useful text only in
-delta events and its terminal `response.completed$response$output` is empty.
-Ellmer 0.4.2 visibly streams the deltas, then constructs its final turn from the
-empty terminal payload. Consequently `$chat()` returns empty and the assistant
-history is empty, breaking the intended multi-turn UX.
+`chat_codex()` constructs the actual non-exported ellmer `Chat` R6 class with a
+version-gated S7 subclass of ellmer's OpenAI provider. The provider reuses
+ellmer's OpenAI Responses serializer for every supported input Content and
+Turn type, while supplying Codex authentication, mandatory streaming, request
+construction, SSE parsing, merge, output conversion, token normalization,
+finish metadata, and cost handling.
 
-`R/chat-codex.R` implements the smallest fallback: `chat_codex()` creates the
-public Chat, delegates requests to its public `$stream()`, accumulates emitted
-text, and replaces only the empty terminal assistant content. It returns normal
-`ellmer_output` values and retains correct multi-turn history.
+The Codex endpoint returns useful text in delta events while its terminal
+`response.completed$response$output` may be empty. Replacing only the provider
+methods is insufficient because ellmer's `chat()` and `chat_async()` normally
+use non-streaming value requests. The compatibility module therefore replaces
+only the four private Chat execution methods: `chat_impl`, `chat_impl_async`,
+`submit_turns`, and `submit_turns_async`. The two chat-loop methods are a small
+copy of ellmer's 0.4.2 lifecycle that filters tool-request yields already
+emitted at their exact provider position; validation, invocation, callbacks,
+async modes, and turn construction still use ellmer helpers. The submit
+methods still use ellmer's `TurnAccumulator`, so partial turns, duration,
+cancellation, history, finish checks, and structured extraction remain ellmer
+semantics. Public methods are never replaced.
 
-Rich input content remains on ellmer's provider serialization path, which maps
-`ContentImage*` and `ContentPDF` to Responses input items. Text repair replaces
-only existing text content in a completed assistant turn, preserving terminal
-image content and other non-text objects already produced by ellmer.
+The installed private methods are assigned with the Chat enclosing environment
+as their function environment. R6 cloning then rewrites `self` and `private` to
+the clone. No compatibility closure retains the original Chat. Credential
+state is held in a separate mutable reference environment, allowing safe
+refresh and refresh-token persistence without keyring re-entry; sharing that
+credential cache between a clone and its source does not share Chat turns or
+Chat closures.
 
-Structured output uses ellmer's public `Chat$chat_structured()` entry point but
-forces its request into streaming mode. The streamed JSON is captured, turned
-into ellmer's `ContentJson`, and installed as the final assistant content before
-ellmer's normal schema conversion runs. This fallback relies on a small set of
-ellmer 0.4.x internal conversion symbols and is therefore separately checked
-and version-gated. Offline tests cover `$chat()`, `$stream()`, structured
-conversion, and repaired turns.
+The response converter retains event order for text, function calls, reasoning,
+images, PDFs, and provider/terminal items. Terminal output only fills missing
+items and cannot move streamed text across a tool request. Known items become
+ellmer Content objects; unknown items become `ContentJson` containing the full
+item. Input images, PDFs, tool results, structured schemas, and provider-native
+declarations remain on ellmer's serializer path.
 
-Async methods use the same instance seam. `$stream_async()` delegates the
-provider request and ellmer's own async tool loop, preserving sequential and
-concurrent tool modes, callbacks, and controller cancellation. The wrapper
-tracks completed assistant-turn indices so streamed text repairs stay attached
-to the correct round when tools cause multiple Responses requests. Structured
-async output uses ellmer's typed async submission method with `stream = TRUE`,
-then installs `ContentJson` before the normal schema extractor runs. Offline
-fixtures cover plain async chat, content streaming, both tool modes, callbacks,
-cancellation, structured output, and the empty-terminal response shape.
-
-This is deliberately an instance compatibility layer, not a custom provider. In
-ellmer 0.4.2 a native provider requires unexported generics and the unexported
-`Chat` constructor; current upstream has already changed both class layout and
-generic signatures. A package should pursue an exported upstream finalization
-hook; otherwise it needs an explicit ellmer version pin and compatibility tests.
+`parallel_chat*()` and `batch_chat*()` were audited as part of the public
+ellmer surface. They request non-streaming responses or the OpenAI Batch API,
+which the Codex subscription endpoint does not provide. The Codex provider
+rejects those requests with an explicit
+`codex_ellmer_parallel_batch_blocker` before network I/O. This is a documented
+blocker and prevents the package from being called stable.
 
 ## Compatibility status and release risks
 
@@ -224,14 +229,15 @@ hook; otherwise it needs an explicit ellmer version pin and compatibility tests.
    protocol changes.
 2. Streaming protocol and model selection without copying another
    client's private catalog.
-3. An exported-only ellmer construction seam plus a narrowly tested,
-   version-gated structured-output conversion seam.
+3. A single, narrowly tested, version-gated ellmer provider/Chat submission
+   seam, with the full public Chat lifecycle left to ellmer.
 4. Keyring behavior across supported operating systems and refresh-token
    rotation tests.
 5. Offline-only CRAN tests; no package load, test, example, or check may start
    OAuth or make authenticated requests.
 
-The package addresses items 1, 2, 3, and 5 for its deliberately narrow text,
-structured-output, and model-selection surface on ellmer 0.4.x. Cross-platform
-keyring coverage and future ellmer compatibility remain release-maintenance
-work; neither changes the decision to retain the direct transport.
+The package addresses the complete Chat surface for the pinned ellmer 0.4.2
+release, subject to the undocumented Codex transport. The parallel/batch
+helper blocker and the undocumented endpoint are open release blockers; the
+package must not be labeled stable until they are resolved or the supported
+contract is explicitly changed by its owner.

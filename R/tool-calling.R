@@ -798,8 +798,8 @@ codex_tool_execute <- function(chat, request) {
   if (inherits(value, "promise")) {
     rlang::abort(
       paste(
-        "Async tools are not supported by `chat_codex()` `$chat()` or `$stream()`.",
-        "Use ellmer's asynchronous methods with a provider that supports them."
+        "The legacy buffered tool parser cannot execute an async tool.",
+        "The public Chat path uses ellmer's asynchronous methods instead."
       ),
       class = "tool_async_error",
       parent = NULL

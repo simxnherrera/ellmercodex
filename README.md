@@ -6,7 +6,8 @@
 This is an independent, experimental integration. It uses compatibility
 behavior observed in Codex clients rather than a documented third-party API,
 so it may stop working if and when the upstream service changes. It is not affiliated
-with or endorsed by OpenAI.
+with or endorsed by OpenAI. The Chat compatibility target is exactly the
+installed `ellmer` 0.4.2 release.
 
 ## Install
 
@@ -14,7 +15,7 @@ Install the current tagged release from GitHub with [`pak`](https://pak.r-lib.or
 
 ```r
 install.packages("pak")
-pak::pak("simxnherrera/ellmercodex@v0.1.2")
+pak::pak("simxnherrera/ellmercodex@v0.1.3")
 ```
 
 ## Quick start
@@ -70,7 +71,9 @@ The loop supports multiple and sequential calls, fragmented streaming
 arguments, tool errors and `ellmer::tool_reject()`, calls with no preceding
 assistant text, and streamed content through `$stream(stream = "content")`.
 Tool requests and results remain `ellmer::ContentToolRequest` and
-`ellmer::ContentToolResult` objects in the conversation history.
+`ellmer::ContentToolResult` objects in the conversation history. Cloning,
+callbacks, dangling tool requests, cancellation, sync/async tool execution,
+and multiple tool rounds remain ellmer Chat behavior.
 
 Image and PDF content uses ellmer's normal constructors and is serialized as
 Codex Responses input. Terminal image content is retained when the adapter
@@ -85,9 +88,10 @@ chat$chat(
 )
 ```
 
-Tool-aware turns currently preserve text and tool request/result content; rich
-output items produced inside the custom tool loop and response-usage metadata
-are not normalized yet.
+Response content is normalized in event order. Text, tool requests, images,
+PDFs, reasoning, terminal/provider items, usage, duration, finish metadata,
+and structured content remain attached to the ellmer assistant turn. Unknown
+Responses items are retained as `ContentJson` rather than discarded.
 
 ## Choose a model
 
@@ -154,8 +158,8 @@ package does not read credentials belonging to Codex CLI or other applications.
 
 `chat_codex()` preserves ellmer's structured-output interface. Use any
 ellmer `type_*()` schema; the request is streamed to satisfy the Codex
-subscription transport, then the streamed JSON is repaired into the assistant
-turn before ellmer converts it:
+subscription transport, converted to ellmer `ContentJson`, and then passed
+through ellmer's normal schema conversion:
 
 ```r
 chat <- chat_codex(model = models$id[[1]])
@@ -192,18 +196,24 @@ stream <- chat$stream_async(
 # Call `controller$cancel()` from the UI to stop generation.
 ```
 
-## Current scope
+## Exact compatibility scope
 
-The current release supports ordinary text chats, text streaming, structured
-output, registered function tools, model parameters, reasoning effort, and
-multi-turn history, plus asynchronous chat, structured output, streaming, tool
-callbacks, tool concurrency modes, and cancellation with `ellmer >= 0.4.2` and
-`< 0.5.0`. The Codex subscription endpoint and its Responses event names are
-undocumented compatibility surfaces, so upstream protocol changes may require
-a package update.
+The returned object is the complete public ellmer 0.4.2 `Chat` surface:
+`initialize`, `get_turns`, `set_turns`, `add_turn`, `get_system_prompt`,
+`get_model`, `set_model`, `set_system_prompt`, `get_tokens`, `get_cost`,
+`last_turn`, `chat`, `chat_structured`, `chat_structured_async`, `chat_async`,
+`stream`, `stream_async`, `register_tool`, `register_tools`, `get_provider`,
+`get_tools`, `set_tools`, `on_tool_request`, `on_tool_result`, and `clone`.
+See [`docs/ellmer-chat-interface.md`](docs/ellmer-chat-interface.md) for the
+derived signatures, state transitions, return shapes, and conversion rules.
 
-The remaining compatibility gaps are exact `echo = "all"` semantics, complete
-tokens/cost/duration/finish-reason metadata after streamed and tool turns,
-`parallel_chat()`/`batch_chat()`, and provider-native tools such as
-`openai_tool_web_search()`. This release supports user-defined
-`ellmer::tool()` functions only.
+`parallel_chat*()` and `batch_chat*()` are audited but explicitly blocked: the
+ellmer 0.4.2 helpers require non-streaming OpenAI requests or the OpenAI Batch
+API, while the Codex subscription endpoint requires SSE streaming. They fail
+with `codex_ellmer_parallel_batch_blocker` before sending a request rather than
+silently degrading. This remains a blocker to declaring the package stable.
+
+The Codex endpoint and its Responses event names are undocumented compatibility
+surfaces, so upstream protocol changes may require a package update. The
+package is therefore not labeled stable until the explicit helper blocker and
+any future upstream protocol changes are resolved.

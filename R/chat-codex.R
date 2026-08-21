@@ -4,16 +4,16 @@ codex_echo <- function(echo, default = "none") {
   # choice explicitly so errors remain package conditions rather than base
   # `match.arg()` errors.
   if (is.character(echo) && length(echo) > 1L &&
-        all(echo %in% c("none", "output"))) {
+        all(echo %in% c("none", "output", "all"))) {
     echo <- echo[[1L]]
   }
   if (isTRUE(echo)) echo <- "output"
   if (isFALSE(echo)) echo <- "none"
   if (identical(echo, "text")) echo <- "output"
   if (!is.character(echo) || length(echo) != 1L || is.na(echo) ||
-        !echo %in% c("none", "output")) {
+        !echo %in% c("none", "output", "all")) {
     rlang::abort(
-      "`echo` must be one of \"none\" or \"output\".",
+      "`echo` must be one of \"none\", \"output\", or \"all\".",
       class = "codex_chat_argument_error",
       parent = NULL
     )
@@ -517,223 +517,12 @@ codex_patch_chat <- function(chat, default_echo = "none") {
       parent = NULL
     )
   }
-  codex_ellmer_chat_methods(chat)
-  codex_ellmer_structured_compatibility()
-  codex_ellmer_tool_compatibility()
-  codex_ellmer_chat_tool_compatibility(chat)
-  default_echo <- codex_echo(default_echo)
-
-  if (identical(attr(chat, "ellmercodex_compatibility"), "buffered-terminal-output")) {
-    return(chat)
-  }
-
-  original_stream <- chat$stream
-  original_stream_async <- chat$stream_async
-  original_chat <- chat$chat
-  original_chat_async <- chat$chat_async
-  original_structured <- chat$chat_structured
-  original_structured_async <- chat$chat_structured_async
-  if (!is.function(original_stream) || !is.function(original_stream_async) ||
-      !is.function(original_chat) || !is.function(original_chat_async) ||
-      !is.function(original_structured) || !is.function(original_structured_async)) {
-    rlang::abort(
-      paste(
-        "The ellmer Chat object does not expose callable synchronous and",
-        "asynchronous chat, stream, and structured-chat methods."
-      ),
-      class = "codex_ellmer_compatibility_error",
-      parent = NULL
-    )
-  }
-
-  patched_chat <- function(..., echo = NULL) {
-    echo <- codex_echo(echo, default = default_echo)
-    if (codex_tool_has_tools(chat)) {
-      return(codex_tool_chat(chat, list(...), echo = echo))
-    }
-    chunks <- tryCatch(
-      coro::collect(original_stream(..., stream = "text")),
-      error = codex_chat_error
-    )
-    text <- paste0(
-      vapply(
-        chunks,
-        function(chunk) codex_stream_piece_for_history(chat, chunk),
-        character(1)
-      ),
-      collapse = ""
-    )
-    codex_repair_last_turn(chat, text)
-
-    value <- structure(text, class = "ellmer_output")
-    if (identical(echo, "output")) {
-      cat(text, "\n", sep = "")
-      invisible(value)
-    } else {
-      value
-    }
-  }
-
-  patched_stream_async <- function(
-    ...,
-    tool_mode = c("concurrent", "sequential"),
-    stream = c("text", "content"),
-    controller = NULL
-  ) {
-    tool_mode <- match.arg(tool_mode)
-    stream <- match.arg(stream)
-    controller <- controller %||% ellmer::stream_controller()
-    delegate <- tryCatch(
-      original_stream_async(
-        ...,
-        tool_mode = tool_mode,
-        stream = stream,
-        controller = controller
-      ),
-      error = codex_chat_error
-    )
-    codex_async_stream_repair(chat, delegate, controller)
-  }
-
-  patched_chat_async <- function(
-    ...,
-    tool_mode = c("concurrent", "sequential")
-  ) {
-    tool_mode <- match.arg(tool_mode)
-    stream <- patched_stream_async(
-      ...,
-      tool_mode = tool_mode,
-      stream = "text",
-      controller = NULL
-    )
-    done <- coro::async_collect(stream)
-    promises::then(
-      done,
-      function(chunks) {
-        assistant <- tryCatch(
-          chat$last_turn(role = "assistant"),
-          error = function(error) NULL
-        )
-        text <- if (!is.null(assistant)) assistant@text else paste0(
-          vapply(chunks, codex_stream_chunk_text, character(1)),
-          collapse = ""
-        )
-        if (!is.character(text) || length(text) != 1L || is.na(text)) text <- ""
-        structure(text, class = "ellmer_output")
-      },
-      function(error) codex_chat_error(error)
-    )
-  }
-
-  patched_stream <- function(
-    ...,
-    stream = c("text", "content"),
-    controller = NULL
-  ) {
-    stream <- match.arg(stream)
-    if (codex_tool_has_tools(chat)) {
-      delegate <- codex_tool_stream(
-        chat,
-        list(...),
-        stream = stream,
-        controller = controller,
-        warn_errors = TRUE
-      )
-      return(coro::generator(function() {
-        repeat {
-          chunk <- tryCatch(delegate(), error = codex_chat_error)
-          if (coro::is_exhausted(chunk)) break
-          coro::yield(chunk)
-        }
-      })())
-    }
-    delegate <- tryCatch(
-      original_stream(..., stream = stream, controller = controller),
-      error = codex_chat_error
-    )
-
-    coro::generator(function() {
-      pieces <- character()
-      repeat {
-        chunk <- tryCatch(delegate(), error = codex_chat_error)
-        if (coro::is_exhausted(chunk)) break
-        pieces <- c(pieces, codex_stream_piece_for_history(chat, chunk))
-        coro::yield(chunk)
-      }
-      codex_repair_last_turn(chat, paste0(pieces, collapse = ""))
-    })()
-  }
-
-  patched_chat_structured <- function(..., type, echo = "none", convert = TRUE) {
-    echo <- codex_structured_echo(echo)
-    outcome <- codex_capture_output(function() {
-      original_structured(
-        ...,
-        type = type,
-        # Codex requires streaming. Capture ellmer's streamed JSON and repair
-        # the empty terminal turn below.
-        echo = "output",
-        convert = convert
-      )
-    })
-
-    parsed <- codex_structured_json_text(outcome$output)
-    value <- if (is.null(outcome$error)) {
-      outcome$value
-    } else if (!is.null(parsed)) {
-      codex_extract_structured(chat, parsed$text, type, convert = convert)
-    } else {
-      codex_chat_error(outcome$error)
-    }
-
-    if (identical(echo, "output") || identical(echo, "all")) {
-      if (!is.null(parsed)) {
-        cat(parsed$text, "\n", sep = "")
-      } else if (length(outcome$output) > 0L) {
-        cat(outcome$output, sep = "\n")
-        cat("\n")
-      }
-      invisible(value)
-    } else {
-      value
-    }
-  }
-
-  method_names <- c(
-    "chat", "stream", "chat_structured", "chat_async", "stream_async",
-    "chat_structured_async"
-  )
-  locked <- rlang::env_binding_are_locked(chat, method_names)
-  if (any(locked)) {
-    rlang::env_binding_unlock(chat, method_names[locked])
-    on.exit(
-      {
-        for (name in method_names) {
-          if (!rlang::env_binding_are_locked(chat, name)) {
-            rlang::env_binding_lock(chat, name)
-          }
-        }
-      },
-      add = TRUE
-    )
-  }
-  chat$chat <- patched_chat
-  chat$stream <- patched_stream
-  chat$chat_structured <- patched_chat_structured
-  chat$stream_async <- patched_stream_async
-  chat$chat_async <- patched_chat_async
-  chat$chat_structured_async <- function(..., type, echo = "none", convert = TRUE) {
-    codex_structured_async(chat, list(...), type = type, echo = echo, convert = convert)
-  }
-  if (any(locked)) {
-    rlang::env_binding_lock(chat, method_names[locked])
-    on.exit(NULL, add = FALSE)
-  }
-
-  attr(chat, "ellmercodex_compatibility") <- "buffered-terminal-output"
-  chat
+  # Historical internal entry point retained for callers from 0.1.x. The
+  # compatibility implementation itself is centralized in one module and
+  # never replaces public Chat methods.
+  codex_ellmer_compatibility()
+  codex_install_private_submit_methods(chat)
 }
-
 #' Create an experimental Codex chat backed by ellmer
 #'
 #' `chat_codex()` returns a normal ellmer `Chat` object configured for the
@@ -742,17 +531,15 @@ codex_patch_chat <- function(chat, default_echo = "none") {
 #' credential is available; an existing credential is loaded and refreshed as
 #' needed.
 #'
-#' The returned chat supports ordinary text `$chat()`, text or content
-#' `$stream()`, ellmer structured output, and multi-turn history. The
-#' compatibility layer buffers the public ellmer stream and repairs the final
-#' assistant turn because the observed Codex terminal event can omit the output
-#' that was present in its preceding deltas. Structured output uses ellmer's
-#' JSON-schema method and the same streamed-text repair. Registered ellmer
-#' tools use the Codex Responses function-call protocol and are executed in a
-#' complete loop until a final assistant response is produced. The returned
-#' chat also supports `chat_async()`, `stream_async()` with ellmer's
-#' sequential/concurrent tool modes and cancellation controller, and
-#' `chat_structured_async()`.
+#' The returned chat is the complete public `ellmer` 0.4.2 `Chat` object,
+#' including ordinary and structured chat, synchronous and asynchronous
+#' streaming, tool declarations and multi-round execution, callbacks,
+#' cancellation, cloning, history, echo, model/provider configuration, rich
+#' content, and response metadata. The compatibility layer uses one
+#' version-gated provider/turn-submission seam while leaving public Chat methods
+#' and ellmer lifecycle semantics intact. The separate ellmer parallel/batch
+#' helpers are explicitly blocked because their non-streaming request model is
+#' incompatible with the Codex stream-only endpoint.
 #'
 #' `$chat_structured()` intentionally follows ellmer's semantics and disables
 #' registered tools for that request. Call `$chat()` first when tool-assisted
@@ -769,7 +556,7 @@ codex_patch_chat <- function(chat, default_echo = "none") {
 #'   `effort`, when both are provided.
 #' @param api_args Optional named list of additional Responses arguments passed
 #'   through ellmer on every request.
-#' @param echo One of `"none"` or `"output"`; controls whether `$chat()`
+#' @param echo One of `"none"`, `"output"`, or `"all"`; controls whether `$chat()`
 #'   prints the completed text. The compatibility wrapper accepts `TRUE`,
 #'   `FALSE`, and `"text"` as aliases for `"output"`, `"none"`, and
 #'   `"output"`, respectively.
@@ -778,8 +565,9 @@ codex_patch_chat <- function(chat, default_echo = "none") {
 #' Invalid arguments signal `codex_chat_argument_error`. Missing or
 #' incompatible ellmer installations signal `codex_ellmer_missing` or
 #' `codex_ellmer_compatibility_error`. Authentication failures found before
-#' the Chat is constructed retain their package condition classes; errors while
-#' delegating through the ellmer seam are sanitized as `codex_chat_error`.
+#' the Chat is constructed retain their package condition classes. Transport
+#' and protocol errors retain their specific Codex/ellmer condition classes;
+#' compatibility-shape failures use `codex_ellmer_compatibility_error`.
 #' @examplesIf interactive()
 #' chat <- chat_codex(
 #'   system_prompt = "Be concise.",
@@ -799,7 +587,7 @@ codex_patch_chat <- function(chat, default_echo = "none") {
 chat_codex <- function(
   system_prompt = NULL,
   model = NULL,
-  echo = c("none", "output"),
+  echo = c("none", "output", "all"),
   effort = NULL,
   params = NULL,
   api_args = list()
@@ -868,7 +656,8 @@ chat_codex <- function(
     model = model,
     auth = auth,
     params = params,
-    api_args = api_args
+    api_args = api_args,
+    echo = echo
   )
   codex_patch_chat(chat, default_echo = echo)
 }

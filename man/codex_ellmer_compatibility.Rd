@@ -10,8 +10,8 @@ codex_ellmer_compatibility()
 The installed ellmer version, invisibly.
 }
 \description{
-The package currently supports the public \code{ellmer} 0.4.x API starting at
-0.4.2. This check is intentionally kept in one helper so a later upstream
-API change can be handled by one compatibility update and one offline test.
+The package supports exactly the inspected public \code{ellmer} 0.4.2 Chat
+implementation. A later upstream release must be audited before it can be
+admitted because the transport uses version-gated private ellmer seams.
 }
 \keyword{internal}

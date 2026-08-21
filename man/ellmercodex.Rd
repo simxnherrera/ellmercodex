@@ -22,14 +22,13 @@ browser, read credentials, or make network requests.
 
 The public API is deliberately small: \code{\link[=codex_login]{codex_login()}}, \code{\link[=codex_logout]{codex_logout()}},
 \code{\link[=codex_account]{codex_account()}}, \code{\link[=codex_models]{codex_models()}}, \code{\link[=codex_available]{codex_available()}}, and
-\code{\link[=chat_codex]{chat_codex()}}. The chat compatibility layer is version-gated for the
-ellmer 0.4.x public API and supports text streaming, model parameters,
-per-model reasoning effort, structured output, and ordinary multi-turn
-history, rich image/PDF content, and ellmer asynchronous chat and streaming
-methods. Registered ellmer function tools are supported through a
-version-gated Codex Responses compatibility loop, including asynchronous tool
-modes. The chat also supports structured output, callbacks, and cancellation
-methods.
+\code{\link[=chat_codex]{chat_codex()}}. The chat compatibility layer is
+version-gated to the inspected ellmer 0.4.2 public Chat API and supports its
+complete Chat object: text/content streaming, structured output, model and
+provider configuration, multi-round tools, async methods, callbacks,
+cancellation, cloning, history, echo, rich content, and response metadata.
+The separately exported ellmer parallel/batch helpers are explicitly blocked
+for the Codex stream-only endpoint, so the package is not declared stable.
 }
 \seealso{
 Useful links:

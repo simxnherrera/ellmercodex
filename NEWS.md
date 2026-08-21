@@ -1,3 +1,17 @@
+# ellmercodex 0.1.3
+
+* Reworked the ellmer integration around a version-gated `CodexProvider` and
+  ellmer 0.4.2's own `Chat` lifecycle. The public Chat methods, R6 cloning,
+  sync/async tool loops, structured output, rich ordered content, cancellation,
+  history, echo, usage, cost, duration, and finish metadata now share one
+  compatibility seam rather than per-instance public-method patches.
+* Added clone-safe credential references with refresh-token rotation and
+  persistent updates across all Chat request paths. Non-streaming ellmer
+  parallel/batch helpers now fail explicitly because the Codex subscription
+  endpoint is stream-only; this remains a blocker to stable status.
+* Documented the complete installed ellmer 0.4.2 Chat interface and capability
+  matrix in `docs/ellmer-chat-interface.md`.
+
 # ellmercodex 0.1.2
 
 * Added authenticated Codex model discovery with per-model reasoning-effort
@@ -24,10 +38,10 @@
 * Converted the validated proof of concept into an installable R package with
   six exported functions, offline examples, a getting-started vignette, and a
   manual opt-in compatibility check.
-* Added the explicitly opt-in `chat_codex()` wrapper around ellmer's exported
-  `chat_openai()` seam. The compatibility layer is tested against ellmer
-  0.4.x starting at 0.4.2, buffers streamed text, and repairs the terminal
-  assistant turn used for multi-turn history.
+* Added the explicitly opt-in `chat_codex()` wrapper around ellmer's Chat
+  seam. The compatibility layer was tested against ellmer 0.4.2, buffers
+  streamed text, and repairs the terminal assistant turn used for multi-turn
+  history.
 * Added package-scoped OS-keyring persistence, an explicitly enabled encrypted
   file fallback, refresh-token rotation, logout, and redacted diagnostics.
 * Added fixture-based request, SSE, credential, authentication, diagnostic,
