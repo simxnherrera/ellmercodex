@@ -1,140 +1,92 @@
 # ellmercodex
 
-`ellmercodex` is an experimental, independent R package that connects
-[`ellmer`](https://ellmer.tidyverse.org/) text chats to observed
-subscription-backed Codex behavior.
+`ellmercodex` lets you use a Codex subscription from R through an
+[`ellmer`](https://ellmer.tidyverse.org/) chat interface.
 
-> **Support and policy warning**
->
-> The direct OAuth endpoints, native client identifier, request headers, and
-> `chatgpt.com/backend-api/codex/responses` transport used here are observed
-> compatibility behavior, not a documented public integration contract for
-> third-party packages. This package deliberately retains that direct route to
-> provide a pure-R integration similar to other independent coding clients.
-> Treat it as experimental and potentially breakable, not as OpenAI-endorsed
-> software or evidence of policy approval.
+This is an independent, experimental integration. It uses compatibility
+behavior observed in Codex clients rather than a documented third-party API,
+so it may stop working when the upstream service changes. It is not affiliated
+with or endorsed by OpenAI.
 
-The package never authenticates, opens a browser, reads credentials, or makes a
-network request while loading. Its tests, examples, and CI are offline.
+## Install
 
-## Status
-
-The package currently provides:
-
-- explicit browser OAuth with PKCE and state validation;
-- package-scoped keyring persistence, refresh-token rotation, and logout;
-- an explicitly enabled encrypted `tools::R_user_dir()` fallback when an OS
-  keyring cannot be used;
-- mandatory streaming request construction and buffered SSE parsing;
-- a narrow `ellmer::chat_openai()` compatibility layer that preserves streamed
-  final text and multi-turn history; and
-- offline availability checks, redacted diagnostics, and an honest unsupported
-  result for direct account-specific model discovery.
-
-Text chat is version-gated to `ellmer >= 0.4.2` and `< 0.5.0`. Structured
-output, tools, asynchronous chat methods, a native Provider subclass, and a
-production support contract are out of scope.
-
-## Installation from GitHub
-
-`ellmercodex` is not on CRAN yet. Install the current tagged release from
-GitHub with [`pak`](https://pak.r-lib.org/):
+Install the current tagged release from GitHub with [`pak`](https://pak.r-lib.org/):
 
 ```r
 install.packages("pak")
 pak::pak("simxnherrera/ellmercodex@v0.1.0")
 ```
 
-To follow the latest development version on `main` instead:
+## Quick start
 
-```r
-pak::pak("simxnherrera/ellmercodex")
-```
-
-The checked R source-package tarball can also be downloaded from the
-[GitHub Releases page](https://github.com/simxnherrera/ellmercodex/releases/latest).
-The installation instructions will change to `install.packages("ellmercodex")`
-only after the package is actually published on CRAN.
-
-## Offline usage
-
-These examples are safe during package checks and do not inspect credentials:
+Load the package and sign in. `codex_login()` opens a browser for the sign-in
+flow and saves the package's credential for later sessions by default.
 
 ```r
 library(ellmercodex)
 
-codex_available()
+codex_login()
 
-models <- codex_models()
-attr(models, "supported")
-attr(models, "reason")
+chat <- chat_codex(
+  system_prompt = "Be concise and helpful."
+)
+
+chat$chat("Explain why reproducible examples matter in R packages.")
+chat$chat("Now summarize that in one sentence.")
 ```
 
-`codex_models()` does not copy a catalog from another client or confuse API
-models with subscription eligibility. OpenAI currently documents account-aware
-`model/list` through Codex app-server, but no equivalent direct discovery
-contract for this package's transport. Pass a model explicitly to
-`chat_codex()` when appropriate. The centralized development fallback can be
-overridden with `ELLMERCODEX_MODEL`.
-
-## Explicit live use
-
-The following is intentionally not run by package checks. It opens a browser
-and uses the experimental transport only after an explicit call:
+The returned object is a regular `ellmer` `Chat`, so each `$chat()` call keeps
+the conversation history. Use `$stream()` when you want streamed output:
 
 ```r
-if (interactive()) {
-  codex_login()
-
-  chat <- chat_codex(
-    system_prompt = "Be concise.",
-    model = Sys.getenv("ELLMERCODEX_MODEL", "gpt-5.6-luna")
-  )
-
-  chat$chat("Remember that the codeword is amber. Reply: acknowledged")
-  chat$chat("What was the codeword?")
-}
+chat$stream("Give me three ideas for naming an R package.")
 ```
 
-Explicitly inspect this package's credential backend and return only a redacted
-account summary with `codex_account()`. Remove only this package's credential
-with `codex_logout()`. The package never reads `~/.codex/auth.json` or another
-application's stored session.
+If you have already signed in and the credential is still available, you can
+skip `codex_login()` and call `chat_codex()` directly. The package refreshes a
+stored credential when needed.
 
-Use `codex_login(persist = FALSE)` to keep a credential only in the current R
-process. That process-local session remains available to `chat_codex()` and is
-cleared by `codex_logout()`; it is never written to disk or the OS keyring.
+## Choose a model
 
-The OS keyring is the default credential backend. An encrypted file fallback
-under `tools::R_user_dir("ellmercodex", "data")` is available only when
-`ELLMERCODEX_CREDENTIAL_BACKEND=file` and
-`ELLMERCODEX_CREDENTIAL_PASSPHRASE` is explicitly set. No plaintext fallback is
-provided.
+Model availability depends on your account and workspace. Pass a model name
+explicitly when needed:
 
-## Compatibility checks
+```r
+chat <- chat_codex(model = "gpt-5.6-luna")
+```
 
-The installed package includes an opt-in live acceptance script at
-`system.file("manual-tests", "live.R", package = "ellmercodex")`. It is never
-run by `R CMD check`. Maintainers can use it before a release by setting
-`ELLMERCODEX_RUN_LIVE_TESTS=true`; it checks explicit authentication, two-turn
-text chat, and retained history without printing credentials.
+You can also set `ELLMERCODEX_MODEL` and omit the `model` argument:
 
-Ordinary tests and examples remain fixture-only. They do not start OAuth,
-inspect the keyring, contact OpenAI, or rely on a currently available model.
+```r
+Sys.setenv(ELLMERCODEX_MODEL = "gpt-5.6-luna")
+chat <- chat_codex()
+```
 
-## Public API
+## Authentication and credentials
 
-The exported API is exactly:
+Inspect the current sign-in state with a redacted account summary:
 
-- `codex_login()`
-- `codex_logout()`
-- `codex_account()`
-- `codex_models()`
-- `codex_available()`
-- `chat_codex()`
+```r
+codex_account()
+```
 
-See [the feasibility study](docs/feasibility.md),
-[technical design](docs/technical-design.md), and
-[release-risk review](docs/research-risk-review.md) for the documented versus
-observed boundary, the accepted direct-transport decision, and the remaining
-compatibility risks.
+To keep a credential only for the current R process, use:
+
+```r
+codex_login(persist = FALSE)
+```
+
+Sign out and remove the credential owned by this package with:
+
+```r
+codex_logout()
+```
+
+By default, credentials are stored in the operating system's keyring. The
+package does not read credentials belonging to Codex CLI or other applications.
+
+## Current scope
+
+The current release supports ordinary text chats, text streaming, and
+multi-turn history with `ellmer >= 0.4.2` and `< 0.5.0`. Structured output,
+tool calls, and asynchronous chat methods are not supported.
