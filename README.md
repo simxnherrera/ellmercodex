@@ -35,20 +35,26 @@ Text chat is version-gated to `ellmer >= 0.4.2` and `< 0.5.0`. Structured
 output, tools, asynchronous chat methods, a native Provider subclass, and a
 production support contract are out of scope.
 
-## Installation
+## Installation from GitHub
 
-After a CRAN release, install the package with:
+`ellmercodex` is not on CRAN yet. Install the current tagged release from
+GitHub with [`pak`](https://pak.r-lib.org/):
 
 ```r
-install.packages("ellmercodex")
+install.packages("pak")
+pak::pak("simxnherrera/ellmercodex@v0.1.0")
 ```
 
-To install a source tarball built from this checkout:
+To follow the latest development version on `main` instead:
 
-```sh
-R CMD build .
-R CMD INSTALL ellmercodex_0.1.0.tar.gz
+```r
+pak::pak("simxnherrera/ellmercodex")
 ```
+
+The checked R source-package tarball can also be downloaded from the
+[GitHub Releases page](https://github.com/simxnherrera/ellmercodex/releases/latest).
+The installation instructions will change to `install.packages("ellmercodex")`
+only after the package is actually published on CRAN.
 
 ## Offline usage
 
