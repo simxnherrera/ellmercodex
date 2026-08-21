@@ -1,0 +1,130 @@
+---
+title: "Getting started with ellmercodex"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with ellmercodex}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+`ellmercodex` connects `ellmer` text chats to observed, subscription-backed
+Codex authentication and response behavior. It is an independent experimental
+integration. The direct OAuth and response transport are not a documented
+third-party API and may change without notice.
+
+Package loading, examples, vignettes, and automated tests do not authenticate,
+open a browser, inspect stored credentials, or make network requests.
+
+## Check the local integration
+
+```{r}
+library(ellmercodex)
+
+codex_available()
+models <- codex_models()
+attr(models, "supported")
+attr(models, "reason")
+```
+
+`codex_available()` checks installed dependencies, static configuration, and
+the supported `ellmer` compatibility seam. Its default does not inspect a
+credential store. Account-specific model discovery is not available through a
+documented direct endpoint, so `codex_models()` returns a typed empty result
+instead of an inferred catalog.
+
+## Authenticate explicitly
+
+Authentication happens only after a direct call to `codex_login()`. The
+function opens a browser, validates a loopback callback using PKCE and OAuth
+state, and stores the resulting credential in a package-specific OS-keyring
+entry by default.
+
+```{r, eval = FALSE}
+auth <- codex_login()
+codex_account(auth)
+```
+
+`codex_account()` omits tokens and redacts the account identifier. The package
+does not read the Codex CLI credential file or another application's stored
+session.
+
+Set `persist = FALSE` to keep the credential only in the current R process:
+
+```{r, eval = FALSE}
+codex_login(persist = FALSE)
+chat <- chat_codex(model = Sys.getenv("ELLMERCODEX_MODEL"))
+```
+
+The process-local session is cleared by `codex_logout()` and is never written
+to disk or the OS keyring.
+
+The OS keyring is the default backend. A file fallback is available only when
+both of these environment variables are configured explicitly:
+
+```{r, eval = FALSE}
+Sys.setenv(
+  ELLMERCODEX_CREDENTIAL_BACKEND = "file",
+  ELLMERCODEX_CREDENTIAL_PASSPHRASE = "use-a-secret-from-your-password-manager"
+)
+```
+
+The fallback is encrypted and stored below
+`tools::R_user_dir("ellmercodex", "data")`. No plaintext fallback is provided.
+
+## Create a text chat
+
+Select a model explicitly because subscription eligibility is account- and
+workspace-specific:
+
+```{r, eval = FALSE}
+chat <- chat_codex(
+  system_prompt = "Be concise.",
+  model = Sys.getenv("ELLMERCODEX_MODEL", "gpt-5.6-luna")
+)
+
+chat$chat("Remember that the codeword is amber. Reply: acknowledged")
+chat$chat("What was the codeword?")
+```
+
+The returned object is an `ellmer` `Chat`. This release supports ordinary text
+`$chat()`, text or content `$stream()`, and multi-turn history with `ellmer`
+versions from 0.4.2 up to, but not including, 0.5.0. Structured output, tools,
+asynchronous methods, and a native provider subclass are not part of the
+supported surface.
+
+## Handle failures
+
+The package uses structured condition classes so applications do not need to
+parse messages. For example:
+
+```{r, eval = FALSE}
+tryCatch(
+  chat$chat("Hello"),
+  codex_auth_error = function(error) {
+    message("Authentication failed; run codex_login() again.")
+  },
+  codex_chat_error = function(error) {
+    message("The experimental Codex request failed: ", conditionMessage(error))
+  },
+  codex_protocol_changed_error = function(error) {
+    message("The experimental upstream protocol may have changed.")
+  }
+)
+```
+
+Messages are sanitized before they are signaled. Raw response bodies, bearer
+tokens, authorization codes, OAuth state, account identifiers, and
+credential-store contents are not intentionally included.
+
+## Sign out
+
+```{r, eval = FALSE}
+codex_logout()
+```
+
+Logout removes only the package's own keyring entry and encrypted fallback
+file. It does not remove credentials belonging to Codex CLI or other clients.

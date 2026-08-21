@@ -1,0 +1,7 @@
+data: {"type":"response.output_text.delta","delta":"line one"}
+
+data: {"type":"response.output_text.delta",
+data: "delta":" and line two"}
+
+data: {"type":"response.completed","response":{"status":"completed"}}
+

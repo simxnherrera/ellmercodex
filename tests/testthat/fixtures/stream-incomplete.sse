@@ -1,0 +1,4 @@
+data: {"type":"response.output_text.delta","delta":"partial"}
+
+data: {"type":"response.incomplete","response":{"status":"incomplete","incomplete_details":{"reason":"max_output_tokens"}}}
+

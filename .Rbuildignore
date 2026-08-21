@@ -1,0 +1,11 @@
+^\.github$
+^\.gitattributes$
+^\.lintr$
+^\.Rcheck$
+^\.\.Rcheck$
+^cran-comments\.md$
+^ellmercodex\.Rcheck$
+^ellmercodex_[0-9].*\.tar\.gz$
+^docs$
+^inst/COORDINATION\.md$
+^poc$

@@ -1,0 +1,12 @@
+event: response.created
+data: {"type":"response.created","response":{"id":"resp_fixture"}}
+
+data: {"type":"response.output_text.delta","delta":"Hello "}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","delta":"from fixture"}
+
+data: {"type":"response.completed","response":{"status":"completed"}}
+
+data: [DONE]
+

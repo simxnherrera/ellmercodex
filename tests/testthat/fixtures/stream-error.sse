@@ -1,0 +1,2 @@
+data: {"type":"response.failed","response":{"error":{"type":"server_error","message":"fixture failure"}}}
+
