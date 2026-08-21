@@ -5,7 +5,7 @@
 
 This is an independent, experimental integration. It uses compatibility
 behavior observed in Codex clients rather than a documented third-party API,
-so it may stop working when the upstream service changes. It is not affiliated
+so it may stop working if and when the upstream service changes. It is not affiliated
 with or endorsed by OpenAI.
 
 ## Install
