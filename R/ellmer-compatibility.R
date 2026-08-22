@@ -398,25 +398,80 @@ codex_stream_state_set_item <- function(state, key, item) {
   state
 }
 
-codex_stream_state_append_text <- function(state, text) {
+codex_stream_item_has_text <- function(item) {
+  is.list(item) && identical(item$type, "message") && is.list(item$content) &&
+    any(vapply(item$content, function(content) {
+      is.list(content) && identical(content$type, "output_text") &&
+        is.character(content$text) && length(content$text) == 1L &&
+        !is.na(content$text) && nzchar(content$text)
+    }, logical(1)))
+}
+
+codex_stream_state_has_text <- function(state, item_id = NULL) {
+  items <- state$codex_items
+  if (!is.null(item_id)) {
+    key <- codex_stream_item_key(list(type = "message", id = item_id))
+    if (is.null(key)) {
+      items <- list()
+    } else {
+      index <- match(key, state$codex_keys)
+      if (!is.na(index)) items <- list(state$codex_items[[index]]) else items <- list()
+    }
+  }
+  any(vapply(items, codex_stream_item_has_text, logical(1)))
+}
+
+codex_stream_state_append_text <- function(state, text, item_id = NULL) {
   if (!is.character(text) || length(text) != 1L || is.na(text)) {
     codex_sse_protocol_error("The Codex output text delta was malformed.")
   }
   if (!nzchar(text)) return(state)
-  last <- if (length(state$codex_order)) utils::tail(state$codex_order, 1L) else NULL
-  if (is.character(last) && startsWith(last, "text:")) {
-    index <- match(last, state$codex_keys)
+
+  item_key <- if (!is.null(item_id)) {
+    codex_stream_item_key(list(type = "message", id = item_id))
+  } else {
+    NULL
+  }
+  index <- if (!is.null(item_key)) match(item_key, state$codex_keys) else NA_integer_
+  if (is.na(index)) {
+    last <- if (length(state$codex_order)) utils::tail(state$codex_order, 1L) else NULL
+    if (is.character(last) && startsWith(last, "text:")) {
+      item_key <- last
+      index <- match(last, state$codex_keys)
+    }
+  }
+
+  if (!is.na(index)) {
     item <- state$codex_items[[index]]
-    item$content[[1L]]$text <- paste0(item$content[[1L]]$text, text)
+    content <- if (is.list(item$content)) item$content else list()
+    text_index <- which(vapply(content, function(value) {
+      is.list(value) && identical(value$type, "output_text")
+    }, logical(1)))
+    if (length(text_index) == 0L) {
+      content[[length(content) + 1L]] <- list(type = "output_text", text = text)
+    } else {
+      text_index <- text_index[[1L]]
+      content[[text_index]]$text <- paste0(
+        content[[text_index]]$text %||% "",
+        text
+      )
+    }
+    item$content <- content
     state$codex_items[[index]] <- item
   } else {
-    state$codex_text_counter <- state$codex_text_counter + 1L
-    key <- paste0("text:", state$codex_text_counter)
-    state$codex_keys <- c(state$codex_keys, key)
-    state$codex_order <- c(state$codex_order, key)
-    state$codex_items[[length(state$codex_items) + 1L]] <- list(
-      type = "message",
-      content = list(list(type = "output_text", text = text))
+    if (is.null(item_key)) {
+      state$codex_text_counter <- state$codex_text_counter + 1L
+      item_key <- paste0("text:", state$codex_text_counter)
+    }
+    state$codex_keys <- c(state$codex_keys, item_key)
+    state$codex_order <- c(state$codex_order, item_key)
+    state$codex_items[[length(state$codex_items) + 1L]] <- Filter(
+      Negate(is.null),
+      list(
+        type = "message",
+        id = item_id,
+        content = list(list(type = "output_text", text = text))
+      )
     )
   }
   state$output <- state$codex_items
@@ -452,13 +507,6 @@ codex_stream_state_append_thinking <- function(state, thinking, extra = NULL) {
 }
 
 codex_stream_state_upsert_event_item <- function(state, event, item) {
-  type <- codex_stream_item_type(item)
-  # Empty message placeholders are completed by output_text deltas. Adding one
-  # here would create a duplicate message in the final turn.
-  if (identical(type, "message") &&
-      (!is.list(item$content) || length(item$content) == 0L)) {
-    return(state)
-  }
   key <- codex_stream_item_key(item, event = event, fallback = length(state$codex_items) + 1L)
   if (is.null(key)) return(state)
   codex_stream_state_set_item(state, key, item)
@@ -505,6 +553,11 @@ codex_stream_state_merge_terminal <- function(state, terminal) {
     ))) {
       next
     }
+    key <- codex_stream_item_key(item, fallback = i)
+    if (!is.null(key) && key %in% state$codex_keys) {
+      state <- codex_stream_state_set_item(state, key, item)
+      next
+    }
     if (identical(item$type, "message") && streamed_text) {
       # The endpoint often repeats an aggregated message in the terminal
       # object even though its deltas already established text/tool/text
@@ -534,18 +587,23 @@ codex_stream_merge <- function(provider, result, chunk) {
   if (is.null(type)) return(state)
 
   if (identical(type, "response.output_text.delta")) {
-    if (!is.null(chunk$delta)) state <- codex_stream_state_append_text(state, chunk$delta)
+    if (!is.null(chunk$delta)) {
+      state <- codex_stream_state_append_text(
+        state,
+        chunk$delta,
+        item_id = chunk$item_id
+      )
+    }
   } else if (identical(type, "response.output_text.done")) {
     # The delta sequence is authoritative when present. If there were no
     # deltas, the terminal/text-done event is still a real output item.
-    has_text <- any(vapply(state$codex_items, function(item) {
-      is.list(item) && identical(item$type, "message") && is.list(item$content) &&
-        any(vapply(item$content, function(content) {
-          is.list(content) && identical(content$type, "output_text")
-        }, logical(1)))
-    }, logical(1)))
+    has_text <- codex_stream_state_has_text(state, item_id = chunk$item_id)
     if (!has_text && !is.null(chunk$text)) {
-      state <- codex_stream_state_append_text(state, chunk$text)
+      state <- codex_stream_state_append_text(
+        state,
+        chunk$text,
+        item_id = chunk$item_id
+      )
     }
   } else if (identical(type, "response.reasoning_summary_text.delta")) {
     state <- codex_stream_state_append_thinking(state, chunk$delta)
@@ -630,6 +688,11 @@ codex_stream_output_format <- function(item) {
 codex_stream_content_from_item <- function(item) {
   if (!is.list(item)) return(NULL)
   type <- codex_stream_item_type(item)
+  if (identical(type, "message")) {
+    # Message text is emitted through output_text.delta events. A completed
+    # message repeats that text; the terminal merge handles the no-delta case.
+    return(NULL)
+  }
   if (identical(type, "image_generation_call")) {
     data <- item$result %||% item$data
     if (is.character(data) && length(data) == 1L && !is.na(data)) {
@@ -1421,16 +1484,19 @@ codex_submit_turns_sync <- function(
     repeat {
       chunk <- request()
       if (coro::is_exhausted(chunk)) break
+      streamed_key <- NULL
       if (identical(codex_stream_event_type(chunk), "response.output_item.done")) {
         item <- codex_stream_event_item(chunk)
-        key <- codex_stream_item_key(item, event = chunk)
-        if (!is.null(key)) streamed_item_keys <- c(streamed_item_keys, key)
+        streamed_key <- codex_stream_item_key(item, event = chunk)
       }
       content <- utils::getFromNamespace("stream_content", "ellmer")(
         provider,
         chunk
       )
       if (!is.null(content)) {
+        if (!is.null(streamed_key)) {
+          streamed_item_keys <- c(streamed_item_keys, streamed_key)
+        }
         emitted <- codex_emit_stream_content(content, emit, yield_as_content)
         if (!is.null(emitted)) coro::yield(emitted)
         accumulator$update_turn(content)
@@ -1538,16 +1604,19 @@ codex_submit_turns_async <- function(
     streamed_text <- FALSE
     result <- NULL
     for (chunk in coro::await_each(request)) {
+      streamed_key <- NULL
       if (identical(codex_stream_event_type(chunk), "response.output_item.done")) {
         item <- codex_stream_event_item(chunk)
-        key <- codex_stream_item_key(item, event = chunk)
-        if (!is.null(key)) streamed_item_keys <- c(streamed_item_keys, key)
+        streamed_key <- codex_stream_item_key(item, event = chunk)
       }
       content <- utils::getFromNamespace("stream_content", "ellmer")(
         provider,
         chunk
       )
       if (!is.null(content)) {
+        if (!is.null(streamed_key)) {
+          streamed_item_keys <- c(streamed_item_keys, streamed_key)
+        }
         emitted <- codex_emit_stream_content(content, emit, yield_as_content)
         if (!is.null(emitted)) coro::yield(emitted)
         accumulator$update_turn(content)

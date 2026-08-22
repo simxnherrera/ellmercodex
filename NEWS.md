@@ -1,3 +1,15 @@
+# ellmercodex 0.1.5
+
+* Fixed Codex Responses streaming history duplication by correlating streamed
+  text deltas with their provider `item_id` and merging completed message
+  items instead of recording the same assistant text twice.
+* Preserved terminal-only message output and removed duplicate message content
+  from rich content streaming.
+* Added regression coverage for live-shaped Responses event sequences and a
+  full maintainer runner covering offline tests, live chat/streaming,
+  structured and async methods, tools, cancellation, multimodal input, model
+  discovery, and redacted persisted artifacts.
+
 # ellmercodex 0.1.4
 
 * Expanded the public reference pages and getting-started vignette with the

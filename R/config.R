@@ -64,7 +64,7 @@ codex_default_model <- function() {
 codex_user_agent <- function() {
   version <- tryCatch(
     as.character(utils::packageVersion("ellmercodex")),
-    error = function(error) "0.1.4"
+    error = function(error) "0.1.5"
   )
   paste0("ellmercodex/", version)
 }

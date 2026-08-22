@@ -1,20 +1,30 @@
-# Manual live compatibility check
+# Maintainer verification checks
 
-This directory contains an opt-in maintainer check for the experimental live
-transport. It is not sourced during package loading, examples, tests, builds,
-or `R CMD check`.
+`test-all.R` is the complete verification runner. By default it runs the
+fixture-backed test suite without network access and writes logs, JUnit/CSV
+summaries, session information, and serialized turn artifacts to a timestamped
+directory. Set `ELLMERCODEX_TEST_OUTPUT` to keep those artifacts outside the
+repository.
 
-Run it only when you intend to let `ellmercodex` inspect its package-scoped
-credential, open a browser if authentication is missing, and send two short
-prompts to the selected Codex model:
+Run the offline suite:
+
+```sh
+ELLMERCODEX_TEST_OUTPUT=/tmp/ellmercodex-test-results \
+Rscript --vanilla inst/manual-tests/test-all.R
+```
+
+Set `ELLMERCODEX_RUN_LIVE_TESTS=true` to add real Codex checks. If the
+account-specific model catalog is empty, provide an explicitly selected model
+with `ELLMERCODEX_MODEL`:
+
 
 ```sh
 ELLMERCODEX_RUN_LIVE_TESTS=true \
 ELLMERCODEX_MODEL=gpt-5.6-luna \
-R --vanilla -f inst/manual-tests/live.R
+ELLMERCODEX_TEST_OUTPUT=/tmp/ellmercodex-live-test \
+Rscript --vanilla inst/manual-tests/test-all.R
 ```
 
-The script prints only the package's redacted account summary and ordinary
-model output. It never reads another application's credentials. It deliberately
-does not log out afterward, because doing so would delete the package's saved
-session.
+Live checks inspect only the package-scoped credential, use redacted account
+artifacts, and do not log out afterward. `live.R` remains as the smaller
+two-prompt compatibility smoke check.

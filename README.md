@@ -16,7 +16,7 @@ Install the current tagged release from GitHub with [`pak`](https://pak.r-lib.or
 
 ```r
 install.packages("pak")
-pak::pak("simxnherrera/ellmercodex@v0.1.4")
+pak::pak("simxnherrera/ellmercodex@v0.1.5")
 ```
 
 ## Quick start

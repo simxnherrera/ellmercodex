@@ -159,6 +159,123 @@ test_that("ordered Codex content preserves text, tool, image, and later text", {
   expect_identical(turn@contents[[5L]]@text, "After.")
 })
 
+test_that("Responses message identity merges live text events once", {
+  skip_if_not_installed("ellmer")
+
+  chat <- interface_fixture_chat()
+  provider <- chat$get_provider()
+  events <- list(
+    list(
+      type = "response.output_item.added",
+      item = list(
+        id = "msg_live",
+        type = "message",
+        status = "in_progress",
+        content = list(),
+        role = "assistant"
+      )
+    ),
+    list(
+      type = "response.content_part.added",
+      content_index = 0L,
+      item_id = "msg_live",
+      part = list(type = "output_text", text = "")
+    ),
+    list(
+      type = "response.output_text.delta",
+      item_id = "msg_live",
+      delta = "Hello "
+    ),
+    list(
+      type = "response.output_text.delta",
+      item_id = "msg_live",
+      delta = "live"
+    ),
+    list(
+      type = "response.output_text.done",
+      item_id = "msg_live",
+      text = "Hello live"
+    ),
+    list(
+      type = "response.output_item.done",
+      item = list(
+        id = "msg_live",
+        type = "message",
+        status = "completed",
+        content = list(list(type = "output_text", text = "Hello live")),
+        role = "assistant"
+      )
+    ),
+    list(
+      type = "response.completed",
+      response = list(status = "completed", output = list())
+    )
+  )
+
+  result <- NULL
+  streamed <- list()
+  for (event in events) {
+    content <- ellmer:::stream_content(provider, event)
+    if (!is.null(content)) streamed <- c(streamed, list(content))
+    result <- ellmer:::stream_merge_chunks(provider, result, event)
+  }
+  turn <- ellmer:::value_turn(provider, result)
+
+  expect_length(result$codex_items, 1L)
+  expect_identical(result$codex_keys, "message:msg_live")
+  expect_length(turn@contents, 1L)
+  expect_identical(turn@contents[[1L]]@text, "Hello live")
+  expect_length(streamed, 2L)
+  expect_true(all(vapply(
+    streamed,
+    inherits,
+    logical(1),
+    what = "ellmer::ContentText"
+  )))
+  expect_identical(
+    paste0(vapply(streamed, function(value) value@text, character(1)), collapse = ""),
+    "Hello live"
+  )
+})
+
+test_that("terminal-only message items still provide content after deduplication", {
+  skip_if_not_installed("ellmer")
+
+  chat <- interface_fixture_chat()
+  provider <- chat$get_provider()
+  done <- list(
+    type = "response.output_item.done",
+    item = list(
+      id = "msg_terminal",
+      type = "message",
+      status = "completed",
+      content = list(list(type = "output_text", text = "Terminal text")),
+      role = "assistant"
+    )
+  )
+  result <- ellmer:::stream_merge_chunks(provider, NULL, done)
+  result <- ellmer:::stream_merge_chunks(
+    provider,
+    result,
+    list(
+      type = "response.completed",
+      response = list(status = "completed", output = list())
+    )
+  )
+  contents <- getFromNamespace(
+    "codex_terminal_stream_contents",
+    "ellmercodex"
+  )(
+    result,
+    streamed_item_keys = character(),
+    streamed_text = FALSE
+  )
+
+  expect_null(ellmer:::stream_content(provider, done))
+  expect_length(contents, 1L)
+  expect_identical(contents[[1L]]@text, "Terminal text")
+})
+
 test_that("content streaming exposes tools once and preserves unknown output", {
   skip_if_not_installed("ellmer")
 

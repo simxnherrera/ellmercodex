@@ -5,11 +5,11 @@ codex_models_client_version <- function() {
     "ELLMERCODEX_CLIENT_VERSION",
     unset = tryCatch(
       as.character(utils::packageVersion("ellmercodex")),
-      error = function(error) "0.1.4"
+      error = function(error) "0.1.5"
     )
   )
   if (!is.character(value) || length(value) != 1L || is.na(value) || !nzchar(value)) {
-    "0.1.4"
+    "0.1.5"
   } else {
     value
   }
