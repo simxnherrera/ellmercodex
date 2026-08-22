@@ -1,17 +1,139 @@
-# Credential persistence and redaction.
+# OAuth token caching and credential redaction.
 
-# The keyring entry is deliberately package-scoped. In particular, this layer
-# never reads another client's credential files.
-codex_keyring_service <- function() "ellmercodex"
-
-codex_keyring_username <- function() "oauth"
-
-codex_credentials_directory <- function() {
-  tools::R_user_dir("ellmercodex", which = "data")
+# httr2 owns the on-disk cache. It encrypts cached tokens, scopes them to the
+# named OAuth client, and refreshes them when they expire. The package never
+# uses an OS keyring or reads another client's credential files.
+codex_oauth_client <- function() {
+  httr2::oauth_client(
+    id = codex_oauth_client_id(),
+    token_url = codex_token_url(),
+    auth = "body",
+    name = "ellmercodex"
+  )
 }
 
-codex_credentials_path <- function() {
-  file.path(codex_credentials_directory(), "credentials.json.enc")
+codex_oauth_scope <- function() {
+  "openid profile email offline_access"
+}
+
+codex_oauth_flow <- function(
+  client,
+  allow_interactive = TRUE,
+  auth_url = codex_authorization_url(),
+  scope = codex_oauth_scope(),
+  pkce = TRUE,
+  auth_params = list(
+    id_token_add_organizations = "true",
+    codex_cli_simplified_flow = "true",
+    originator = codex_originator()
+  ),
+  token_params = list(),
+  redirect_uri = codex_redirect_uri(),
+  timeout = 300
+) {
+  if (!isTRUE(allow_interactive)) {
+    codex_auth_abort(
+      "No stored ellmercodex credentials were found; run codex_login().",
+      "codex_auth_missing"
+    )
+  }
+  if (!is.numeric(timeout) || length(timeout) != 1L || !is.finite(timeout) || timeout <= 0) {
+    codex_auth_abort("`timeout` must be one positive number of seconds.", "codex_auth_argument_error")
+  }
+  # httr2 owns the browser and callback loop but does not expose a timeout
+  # argument. A transient R time limit preserves codex_login()'s public timeout
+  # contract without changing httr2's cache or OAuth implementation.
+  setTimeLimit(elapsed = timeout, transient = TRUE)
+  tryCatch(
+    httr2::oauth_flow_auth_code(
+      client = client,
+      auth_url = auth_url,
+      scope = scope,
+      pkce = pkce,
+      auth_params = auth_params,
+      token_params = token_params,
+      redirect_uri = redirect_uri
+    ),
+    error = function(error) {
+      if (inherits(error, "codex_auth_error")) {
+        stop(error)
+      }
+      if (grepl("time limit", conditionMessage(error), ignore.case = TRUE)) {
+        codex_auth_abort("Timed out waiting for the OAuth browser callback.", "codex_oauth_timeout")
+      }
+      message <- codex_redact(conditionMessage(error))
+      if (!codex_auth_scalar_character(message)) {
+        message <- "The browser authentication flow did not complete."
+      }
+      codex_auth_abort(
+        paste0("Codex browser authentication failed: ", message),
+        "codex_oauth_callback_error"
+      )
+    }
+  )
+}
+
+codex_oauth_token_cached <- function(
+  cache_disk = TRUE,
+  cache_key = NULL,
+  reauth = FALSE,
+  allow_interactive = reauth,
+  timeout = 300
+) {
+  if (!is.logical(cache_disk) || length(cache_disk) != 1L || is.na(cache_disk)) {
+    codex_auth_abort("`cache_disk` must be one `TRUE` or `FALSE` value.", "codex_auth_argument_error")
+  }
+  if (!is.logical(reauth) || length(reauth) != 1L || is.na(reauth)) {
+    codex_auth_abort("`reauth` must be one `TRUE` or `FALSE` value.", "codex_auth_argument_error")
+  }
+  if (!is.logical(allow_interactive) || length(allow_interactive) != 1L || is.na(allow_interactive)) {
+    codex_auth_abort(
+      "`allow_interactive` must be one `TRUE` or `FALSE` value.",
+      "codex_auth_argument_error"
+    )
+  }
+  if (!is.numeric(timeout) || length(timeout) != 1L || !is.finite(timeout) || timeout <= 0) {
+    codex_auth_abort("`timeout` must be one positive number of seconds.", "codex_auth_argument_error")
+  }
+
+  client <- codex_oauth_client()
+  flow_params <- list(
+    allow_interactive = allow_interactive,
+    auth_url = codex_authorization_url(),
+    scope = codex_oauth_scope(),
+    pkce = TRUE,
+    auth_params = list(
+      id_token_add_organizations = "true",
+      codex_cli_simplified_flow = "true",
+      originator = codex_originator()
+    ),
+    token_params = list(),
+    redirect_uri = codex_redirect_uri(),
+    timeout = timeout
+  )
+  tryCatch(
+    httr2::oauth_token_cached(
+      client = client,
+      flow = codex_oauth_flow,
+      flow_params = flow_params,
+      cache_disk = cache_disk,
+      cache_key = cache_key,
+      reauth = reauth
+    ),
+    error = function(error) {
+      if (inherits(error, "codex_auth_error")) {
+        stop(error)
+      }
+      message <- codex_redact(conditionMessage(error))
+      if (!codex_auth_scalar_character(message)) {
+        message <- "The OAuth token flow did not complete."
+      }
+      codex_auth_abort(
+        paste0("Codex OAuth token flow failed: ", message),
+        if (isTRUE(reauth)) "codex_oauth_callback_error" else "codex_refresh_error"
+      )
+    }
+  )
 }
 
 codex_redact <- function(x) {
@@ -83,337 +205,46 @@ codex_credentials_as_auth <- function(value) {
   structure(value, class = c("codex_auth", "list"))
 }
 
-codex_credentials_file_passphrase <- function(required = TRUE) {
-  passphrase <- Sys.getenv("ELLMERCODEX_CREDENTIAL_PASSPHRASE", unset = "")
-  if (!nzchar(passphrase)) {
-    if (isTRUE(required)) {
-      codex_auth_abort(
-        paste(
-          "The encrypted file credential fallback is disabled because",
-          "ELLMERCODEX_CREDENTIAL_PASSPHRASE is not set. Use the OS credential store",
-          "or set an explicit passphrase before enabling the fallback."
-        ),
-        "codex_credential_store_error"
-      )
-    }
-    return(NULL)
-  }
-  passphrase
-}
-
-codex_credentials_backend_preference <- function() {
-  value <- tolower(Sys.getenv("ELLMERCODEX_CREDENTIAL_BACKEND", unset = "keyring"))
-  if (!value %in% c("keyring", "file")) {
-    codex_auth_abort(
-      "ELLMERCODEX_CREDENTIAL_BACKEND must be `keyring` or `file`.",
-      "codex_credential_store_error"
-    )
-  }
-  value
-}
-
-codex_keyring_available <- function() {
-  isTRUE(requireNamespace("keyring", quietly = TRUE))
-}
-
-codex_file_backend_enabled <- function() {
-  identical(codex_credentials_backend_preference(), "file") ||
-    (!codex_keyring_available() && !is.null(codex_credentials_file_passphrase(required = FALSE)))
-}
-
-codex_credentials_keyring_store <- function(payload) {
-  tryCatch(
-    keyring::key_set_with_value(
-      service = codex_keyring_service(),
-      username = codex_keyring_username(),
-      password = payload
-    ),
-    error = function(error) {
-      codex_auth_abort(
-        "Could not save Codex credentials in the OS credential store.",
-        "codex_credential_store_error"
-      )
-    }
-  )
-  invisible(TRUE)
-}
-
-codex_credentials_keyring_load <- function() {
-  tryCatch(
-    keyring::key_get(
-      service = codex_keyring_service(),
-      username = codex_keyring_username()
-    ),
-    error = function(error) {
-      # A missing key and an unavailable backend are intentionally represented
-      # by the same NULL value here; callers decide whether an explicit file
-      # fallback is enabled and never expose backend error text.
-      NULL
-    }
-  )
-}
-
-codex_credentials_keyring_delete <- function() {
-  if (!codex_keyring_available()) {
-    return(invisible(TRUE))
-  }
-  tryCatch(
-    keyring::key_delete(
-      service = codex_keyring_service(),
-      username = codex_keyring_username()
-    ),
-    error = function(error) NULL
-  )
-  invisible(TRUE)
-}
-
-codex_file_keys <- function(passphrase, salt, rounds = 64L) {
-  # Derive independent encryption and authentication keys from a random salt.
-  # bcrypt_pbkdf makes offline passphrase guessing more expensive than a
-  # single fast digest.
-  derived <- openssl::bcrypt_pbkdf(
-    password = passphrase,
-    salt = salt,
-    rounds = rounds,
-    size = 64L
-  )
-  list(encryption = derived[seq_len(32L)], authentication = derived[33L:64L])
-}
-
-codex_credentials_file_mac <- function(version, rounds, salt, iv, ciphertext, key) {
-  # Authenticate the complete ciphertext envelope before attempting decryption.
-  metadata <- charToRaw(sprintf("ellmercodex:%d:%d:", version, rounds))
-  codex_base64url_encode(
-    openssl::sha256(c(metadata, salt, iv, ciphertext), key = key)
-  )
-}
-
-codex_credentials_file_encrypt <- function(payload, passphrase) {
-  version <- 2L
-  rounds <- 64L
-  salt <- openssl::rand_bytes(16L)
-  keys <- codex_file_keys(passphrase, salt, rounds)
-  encrypted <- openssl::aes_gcm_encrypt(
-    charToRaw(payload),
-    key = keys$encryption
-  )
-  iv <- attr(encrypted, "iv")
-  ciphertext <- unclass(encrypted)
-  envelope <- list(
-    version = version,
-    kdf = "bcrypt_pbkdf",
-    rounds = rounds,
-    salt = codex_base64url_encode(salt),
-    iv = codex_base64url_encode(iv),
-    ciphertext = codex_base64url_encode(ciphertext),
-    mac = codex_credentials_file_mac(
-      version,
-      rounds,
-      salt,
-      iv,
-      ciphertext,
-      keys$authentication
-    )
-  )
-  jsonlite::toJSON(envelope, auto_unbox = TRUE)
-}
-
-codex_credentials_file_decrypt <- function(payload, passphrase) {
-  envelope <- tryCatch(jsonlite::fromJSON(payload, simplifyVector = TRUE), error = function(error) NULL)
-  valid <- is.list(envelope) && identical(as.integer(envelope$version), 2L) &&
-    identical(envelope$kdf, "bcrypt_pbkdf") &&
-    identical(as.integer(envelope$rounds), 64L) &&
-    codex_auth_scalar_character(envelope$salt) &&
-    codex_auth_scalar_character(envelope$iv) &&
-    codex_auth_scalar_character(envelope$ciphertext) &&
-    codex_auth_scalar_character(envelope$mac)
-  if (!valid) {
-    return(NULL)
-  }
-  tryCatch(
-    {
-      salt <- codex_base64url_decode(envelope$salt)
-      keys <- codex_file_keys(passphrase, salt, as.integer(envelope$rounds))
-      iv <- codex_base64url_decode(envelope$iv)
-      encrypted <- codex_base64url_decode(envelope$ciphertext)
-      expected_mac <- codex_credentials_file_mac(
-        2L,
-        64L,
-        salt,
-        iv,
-        encrypted,
-        keys$authentication
-      )
-      if (!identical(expected_mac, envelope$mac)) {
-        return(NULL)
-      }
-      attr(encrypted, "iv") <- iv
-      plaintext <- rawToChar(
-        openssl::aes_gcm_decrypt(encrypted, key = keys$encryption)
-      )
-      plaintext
-    },
-    error = function(error) NULL
-  )
-}
-
-codex_credentials_file_store <- function(payload) {
-  passphrase <- codex_credentials_file_passphrase(required = TRUE)
-  directory <- codex_credentials_directory()
-  path <- codex_credentials_path()
-  if (!dir.exists(directory) && !dir.create(directory, recursive = TRUE, mode = "0700")) {
-    codex_auth_abort(
-      "Could not create the private ellmercodex credential directory.",
-      "codex_credential_store_error"
-    )
-  }
-  # Tighten permissions even when the directory existed before this call.
-  try(Sys.chmod(directory, mode = "0700"), silent = TRUE)
-  encrypted <- codex_credentials_file_encrypt(payload, passphrase)
-  temporary <- tempfile("credentials-", tmpdir = directory, fileext = ".tmp")
-  on.exit(unlink(temporary, force = TRUE), add = TRUE)
-  ok <- tryCatch(
-    {
-      writeLines(encrypted, temporary, useBytes = TRUE)
-      TRUE
-    },
-    error = function(error) FALSE
-  )
-  if (!isTRUE(ok)) {
-    codex_auth_abort(
-      "Could not save the encrypted ellmercodex credential fallback.",
-      "codex_credential_store_error"
-    )
-  }
-  try(Sys.chmod(temporary, mode = "0600"), silent = TRUE)
-  if (!file.rename(temporary, path)) {
-    # Windows can reject rename-overwrite; remove only this exact package file
-    # before a retry. No broad or recursive deletion is used.
-    if (file.exists(path)) unlink(path, force = TRUE)
-    if (!file.rename(temporary, path)) {
-      codex_auth_abort(
-        "Could not finalize the encrypted ellmercodex credential fallback.",
-        "codex_credential_store_error"
-      )
-    }
-  }
-  try(Sys.chmod(path, mode = "0600"), silent = TRUE)
-  invisible(TRUE)
-}
-
-codex_credentials_file_load <- function() {
-  path <- codex_credentials_path()
-  if (!file.exists(path)) {
-    return(NULL)
-  }
-  passphrase <- codex_credentials_file_passphrase(required = TRUE)
-  payload <- tryCatch(
-    paste(readLines(path, warn = FALSE, encoding = "UTF-8"), collapse = "\n"),
-    error = function(error) NULL
-  )
-  if (is.null(payload)) {
-    return(NULL)
-  }
-  codex_credentials_file_decrypt(payload, passphrase)
-}
-
-codex_credentials_file_delete <- function() {
-  path <- codex_credentials_path()
-  if (file.exists(path)) unlink(path, force = TRUE)
-  invisible(TRUE)
-}
-
-codex_credentials_payload <- function(auth) {
-  if (!inherits(auth, "codex_auth") || !codex_credentials_valid(auth)) {
-    codex_auth_abort("The credential cannot be stored because it is malformed.", "codex_credential_store_error")
-  }
-  jsonlite::toJSON(unclass(auth), auto_unbox = TRUE, null = "null", na = "null", digits = NA)
-}
-
-codex_credentials_store <- function(auth) {
-  payload <- codex_credentials_payload(auth)
-  preference <- codex_credentials_backend_preference()
-
-  if (identical(preference, "keyring")) {
-    if (!codex_keyring_available()) {
-      # A missing keyring package is never permission to write plaintext. The
-      # encrypted fallback requires an explicit passphrase.
-      codex_credentials_file_store(payload)
-    } else {
-      stored <- tryCatch(
-        codex_credentials_keyring_store(payload),
-        error = function(error) error
-      )
-      if (inherits(stored, "condition")) {
-        # Some OS keyring backends are installed but unavailable (for example,
-        # in a headless session). An explicitly supplied passphrase permits a
-        # secure encrypted fallback; without one, retain the sanitized keyring
-        # condition and never write plaintext.
-        if (!is.null(codex_credentials_file_passphrase(required = FALSE))) {
-          # Avoid leaving an older keyring value that would win on the next
-          # load after this fallback succeeds.
-          codex_credentials_keyring_delete()
-          codex_credentials_file_store(payload)
-        } else {
-          codex_auth_abort(
-            "Could not save Codex credentials in the OS credential store.",
-            "codex_credential_store_error"
-          )
-        }
-      }
-    }
-  } else {
-    codex_credentials_file_store(payload)
-  }
-  invisible(auth)
-}
-
 codex_credentials_load <- function(required = TRUE) {
   if (!is.logical(required) || length(required) != 1L || is.na(required)) {
     codex_auth_abort("`required` must be one `TRUE` or `FALSE` value.", "codex_auth_argument_error")
   }
-  preference <- codex_credentials_backend_preference()
-  payload <- NULL
-
-  if (identical(preference, "keyring")) {
-    if (codex_keyring_available()) {
-      payload <- codex_credentials_keyring_load()
-      if (is.null(payload) && file.exists(codex_credentials_path()) &&
-            !is.null(codex_credentials_file_passphrase(required = FALSE))) {
-        payload <- codex_credentials_file_load()
+  token <- tryCatch(
+    codex_oauth_token_cached(
+      cache_disk = TRUE,
+      reauth = FALSE,
+      allow_interactive = FALSE
+    ),
+    error = function(error) {
+      if (!isTRUE(required) && inherits(error, "codex_auth_missing")) {
+        return(NULL)
       }
-    } else if (isTRUE(required) || codex_file_backend_enabled()) {
-      payload <- codex_credentials_file_load()
+      stop(error)
     }
-  } else {
-    payload <- codex_credentials_file_load()
+  )
+  if (is.null(token)) {
+    return(NULL)
   }
-
-  if (is.null(payload)) {
-    if (!isTRUE(required)) {
-      return(NULL)
+  auth <- tryCatch(
+    codex_auth_from_tokens(token),
+    error = function(error) {
+      if (inherits(error, "codex_auth_error")) {
+        stop(error)
+      }
+      codex_auth_abort(
+        "Stored ellmercodex credentials are malformed; run codex_logout() and codex_login().",
+        "codex_credential_store_error"
+      )
     }
-    codex_auth_abort(
-      "No ellmercodex credentials were found; run codex_login().",
-      "codex_auth_missing"
-    )
-  }
-
-  value <- tryCatch(jsonlite::fromJSON(payload, simplifyVector = TRUE), error = function(error) NULL)
-  if (!codex_credentials_valid(value)) {
-    codex_auth_abort(
-      "Stored ellmercodex credentials are malformed; run codex_logout() and codex_login().",
-      "codex_credential_store_error"
-    )
-  }
-  codex_credentials_as_auth(value)
+  )
+  codex_credentials_as_auth(unclass(auth))
 }
 
 #' Remove only ellmercodex's stored Codex credential.
 #'
-#' This function touches only the package-scoped keyring entry (or the
-#' explicitly enabled encrypted fallback file). It never removes Codex CLI
-#' credentials or other applications' entries.
+#' This function clears only the package-named httr2 token cache and the
+#' process-local session. It never removes Codex CLI credentials or another
+#' application's entries.
 #'
 #' @return `TRUE`, invisibly. The process-local credential is cleared even if
 #'   no persistent backend is available.
@@ -427,10 +258,9 @@ codex_credentials_load <- function(required = TRUE) {
 #' codex_logout()
 #' @export
 codex_logout <- function() {
-  # Logout remains best-effort: a user should be able to clear one backend even
-  # if the other backend is unavailable. No backend error text is exposed.
   codex_session_clear()
-  if (codex_keyring_available()) codex_credentials_keyring_delete()
-  try(codex_credentials_file_delete(), silent = TRUE)
+  client <- codex_oauth_client()
+  try(httr2::oauth_cache_clear(client, cache_disk = TRUE), silent = TRUE)
+  try(httr2::oauth_cache_clear(client, cache_disk = FALSE), silent = TRUE)
   invisible(TRUE)
 }

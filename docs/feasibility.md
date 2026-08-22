@@ -1,7 +1,7 @@
 # `ellmercodex` feasibility study
 
 Status: investigation, offline checks, Pi-style OAuth, buffered SSE transport,
-keyring persistence, forced refresh, genuine-process restart, and a working
+httr2 encrypted-cache persistence, forced refresh, genuine-process restart, and a working
 multi-turn `chat_codex()` implementation are complete. The package now
 provides a bounded stable core for the complete public `ellmer` 0.4.2 `Chat`
 object, with offline tests, model/availability diagnostics, documentation, and
@@ -22,13 +22,14 @@ streaming**.
 Pi, OpenCode, OpenClaw, CortexKit, and OpenAI Codex converge on the same browser
 authorization-code flow with PKCE, token refresh shape, account claim, and direct
 Codex Responses transport. R has all of the required primitives in `openssl`,
-`httpuv`, `httr2`, `jsonlite`, and `keyring`.
+`httpuv`, `httr2`, and `jsonlite`.
 
-The authorized next phase is a **technical go**: browser OAuth succeeded; a
-minimal pure-R SSE implementation buffered `Hello from R`; the credential was
-then stored in the macOS keyring; and a genuinely new R process restored it,
-forced refresh, persisted the refreshed credential, and buffered `Still
-working`.
+The authorized next phase was a **technical go**: browser OAuth succeeded; a
+minimal pure-R SSE implementation buffered `Hello from R`; the prototype
+credential was then stored in the macOS keyring; and a genuinely new R process
+restored it, forced refresh, persisted the refreshed credential, and buffered
+`Still working`. The package implementation now uses httr2's encrypted OAuth
+cache instead of the prototype keyring path.
 
 The package decision is **go for a bounded stable-core release using the
 direct transport**. OpenAI's official documentation supports
@@ -229,7 +230,7 @@ returned:
 Hello from R
 ```
 
-Only then was the credential written to the macOS keyring. That R process was
+Only then was the prototype credential written to the macOS keyring. That R process was
 terminated without saving its workspace. A new `Rscript --vanilla` process
 loaded only `poc/run.R`, restored the PoC credential, forced a token refresh, and
 returned:

@@ -42,9 +42,11 @@ Codex-specific complexity belongs in a small number of internal modules: authent
 
 - Login is an explicit browser OAuth flow initiated only by `codex_login()` and modeled on the user experience of Pi-style login.
 - Package loading, examples, tests, and checks must never initiate authentication.
-- Credentials must be stored securely in the OS credential store where practical, with any fallback confined to package-specific user storage.
+- Credentials must be stored securely in a package-specific user cache; the
+  implementation should avoid OS-keyring prompts and use httr2's encrypted
+  OAuth cache where practical.
 - Refresh and refresh-token rotation must work transparently and persist safely.
-- Injected credentials used by tests or callers must remain usable throughout sync, async, and tool paths; code must not unexpectedly re-enter the keyring.
+- Injected credentials used by tests or callers must remain usable throughout sync, async, and tool paths; code must not unexpectedly re-enter the persistent cache.
 - The package must never read `~/.codex/auth.json`, scrape another application's credentials, impersonate an approved client, expose secrets, spoof entitlement, or bypass subscription/rate limits.
 - The package must clearly state that it is independent of OpenAI and Posit and that the direct subscription protocol is undocumented or unstable where that remains true.
 

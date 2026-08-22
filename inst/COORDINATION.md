@@ -23,7 +23,7 @@ implemented only as an internal helper because it is not in the fixed API.
 ## Dependency policy
 
 Use imported packages only for required runtime behavior: `ellmer`, `httr2`,
-`httpuv`, `jsonlite`, `keyring`, `openssl`, `rlang`, and `coro`. Prefer
+`httpuv`, `jsonlite`, `openssl`, `rlang`, and `coro`. Prefer
 namespace-qualified calls. Put testing, documentation, and optional fallback
 support in `Suggests`; no package load, test, or example may authenticate, open
 a browser, read credentials, or access the network. Do not use unexported

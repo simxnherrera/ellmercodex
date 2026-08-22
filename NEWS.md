@@ -1,4 +1,12 @@
-# ellmercodex 0.1.6
+# ellmercodex 0.1.61
+
+* Replaced the OS-keyring credential backend with httr2's encrypted OAuth
+  cache. Cached tokens are stored in a user-level `ellmercodex` cache and
+  refreshed without macOS Keychain prompts.
+
+* Fixed streamed reasoning summaries whose initial `summary` array is empty.
+  Reasoning deltas now initialize the first summary part and use the streamed
+  reasoning item identifier when it is available.
 
 * Selects the default model from the authenticated account catalog, validates
   reasoning effort against advertised model capabilities, and reports

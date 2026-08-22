@@ -170,7 +170,7 @@ codex_provider_access_token <- function(reference) {
     refreshed <- codex_refresh(auth, persist = reference$persist)
     reference$auth <- refreshed
     # Refreshing an injected credential must update the in-memory session, but
-    # it must never fall back to loading a keyring credential. Persistence is
+    # it must never fall back to loading a persisted credential. Persistence is
     # controlled solely by the reference created by the caller.
     codex_session_set(refreshed, persist = reference$persist)
     auth <- refreshed
@@ -234,7 +234,7 @@ codex_provider_request <- function(provider, stream = TRUE, turns = list(), tool
   }
 
   # Refresh before constructing the request, then let ellmer's base request
-  # method attach the current bearer token. No keyring lookup is performed.
+  # method attach the current bearer token. No persistent-cache lookup is performed.
   codex_provider_access_token(provider@auth_ref)
   provider@extra_headers <- codex_provider_headers(provider)
 
@@ -461,25 +461,55 @@ codex_stream_state_append_text <- function(state, text, item_id = NULL) {
   state
 }
 
-codex_stream_state_append_thinking <- function(state, thinking, extra = NULL) {
+codex_stream_state_append_thinking <- function(
+  state,
+  thinking,
+  extra = NULL,
+  item_id = NULL
+) {
   if (!is.character(thinking) || length(thinking) != 1L || is.na(thinking) || !nzchar(thinking)) {
     return(state)
   }
-  last <- if (length(state$codex_order)) utils::tail(state$codex_order, 1L) else NULL
-  if (is.character(last) && startsWith(last, "reasoning:")) {
-    index <- match(last, state$codex_keys)
+
+  item_key <- if (!is.null(item_id)) {
+    codex_stream_item_key(list(type = "reasoning", id = item_id))
+  } else {
+    NULL
+  }
+  index <- if (!is.null(item_key)) match(item_key, state$codex_keys) else NA_integer_
+  if (is.na(index)) {
+    last <- if (length(state$codex_order)) utils::tail(state$codex_order, 1L) else NULL
+    if (is.character(last) && startsWith(last, "reasoning:")) {
+      item_key <- last
+      index <- match(last, state$codex_keys)
+    }
+  }
+
+  if (!is.na(index)) {
     item <- state$codex_items[[index]]
-    item$summary[[1L]]$text <- paste0(item$summary[[1L]]$text, thinking)
+    summary <- if (is.list(item$summary)) item$summary else list()
+    first <- if (length(summary) && is.list(summary[[1L]])) {
+      summary[[1L]]
+    } else {
+      list(type = "summary_text", text = "")
+    }
+    if (!is.character(first$text) || length(first$text) != 1L || is.na(first$text)) {
+      first$text <- ""
+    }
+    first$text <- paste0(first$text, thinking)
+    summary[[1L]] <- first
+    item$summary <- summary
     state$codex_items[[index]] <- item
   } else {
     state$codex_reasoning_counter <- state$codex_reasoning_counter + 1L
-    key <- paste0("reasoning:", state$codex_reasoning_counter)
+    key <- item_key %||% paste0("reasoning:", state$codex_reasoning_counter)
     state$codex_keys <- c(state$codex_keys, key)
     state$codex_order <- c(state$codex_order, key)
     state$codex_items[[length(state$codex_items) + 1L]] <- Filter(
       Negate(is.null),
       list(
         type = "reasoning",
+        id = item_id,
         summary = list(list(type = "summary_text", text = thinking)),
         extra = extra
       )
@@ -589,7 +619,11 @@ codex_stream_merge <- function(provider, result, chunk) {
       )
     }
   } else if (identical(type, "response.reasoning_summary_text.delta")) {
-    state <- codex_stream_state_append_thinking(state, chunk$delta)
+    state <- codex_stream_state_append_thinking(
+      state,
+      chunk$delta,
+      item_id = chunk$item_id
+    )
   } else if (identical(type, "response.output_item.added") ||
              identical(type, "response.output_item.done")) {
     item <- codex_stream_event_item(chunk)

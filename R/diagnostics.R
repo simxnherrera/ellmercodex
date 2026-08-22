@@ -1,7 +1,7 @@
 # Offline-safe package and authentication diagnostics.
 
 codex_diagnostic_dependencies <- function() {
-  packages <- c("ellmer", "httr2", "httpuv", "jsonlite", "keyring", "openssl", "promises", "rlang", "coro", "S7")
+  packages <- c("ellmer", "httr2", "httpuv", "jsonlite", "openssl", "promises", "rlang", "coro", "S7")
   stats::setNames(vapply(packages, requireNamespace, logical(1), quietly = TRUE), packages)
 }
 

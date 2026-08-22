@@ -11,9 +11,9 @@ codex_logout()
 no persistent backend is available.
 }
 \description{
-This function touches only the package-scoped keyring entry (or the
-explicitly enabled encrypted fallback file). It never removes Codex CLI
-credentials or other applications' entries.
+This function clears only the package-named httr2 token cache and the
+process-local session. It never removes Codex CLI credentials or another
+application's entries.
 }
 \note{
 Logout removes local credential material but does not contact the

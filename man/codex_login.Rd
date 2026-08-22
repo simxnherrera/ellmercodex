@@ -21,12 +21,10 @@ account summary; token fields are intentionally not printed.
 }
 \description{
 \code{codex_login()} is the explicit authentication entry point. It opens a
-browser only when called by the user, validates a loopback callback with
-PKCE and OAuth state, and stores the resulting credential in the OS
-credential store by default. If the file backend is explicitly enabled,
-the credential is instead stored in the encrypted file described in the
-package overview. It never reads credentials created by Codex CLI or
-another application.
+browser only when called by the user, uses httr2's PKCE-protected OAuth code
+flow, and stores the resulting credential in httr2's encrypted user-level
+cache by default. It does not use the OS keyring. The package never reads
+credentials created by Codex CLI or another application.
 }
 \note{
 This function is interactive: it opens the default browser and

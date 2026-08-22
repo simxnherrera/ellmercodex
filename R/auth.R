@@ -323,10 +323,21 @@ codex_auth_from_tokens <- function(tokens, previous = NULL) {
     )
   }
 
-  expires_in <- suppressWarnings(as.numeric(tokens$expires_in %||% NA_real_))
-  if (length(expires_in) != 1L || !is.finite(expires_in) || expires_in < 0) expires_in <- NA_real_
-  expires_at <- if (is.finite(expires_in)) as.numeric(Sys.time()) + expires_in else NA_real_
-  account_id <- codex_account_id(tokens$access_token, id_token)
+  expires_at <- suppressWarnings(as.numeric(tokens$expires_at %||% NA_real_))
+  if (length(expires_at) != 1L || !is.finite(expires_at) || expires_at < 0) {
+    expires_in <- suppressWarnings(as.numeric(tokens$expires_in %||% NA_real_))
+    if (length(expires_in) != 1L || !is.finite(expires_in) || expires_in < 0) {
+      expires_in <- NA_real_
+    }
+    expires_at <- if (is.finite(expires_in)) as.numeric(Sys.time()) + expires_in else NA_real_
+  }
+  account_id <- tryCatch(
+    codex_account_id(tokens$access_token, id_token),
+    error = function(error) {
+      previous_account <- if (is.list(previous)) previous$account_id else NULL
+      if (codex_auth_scalar_character(previous_account)) previous_account else stop(error)
+    }
+  )
 
   structure(
     list(
@@ -385,6 +396,17 @@ codex_refresh <- function(auth, persist = TRUE) {
   if (!inherits(auth, "codex_auth") || !codex_auth_scalar_character(auth$refresh_token)) {
     codex_auth_abort("The Codex credential cannot be refreshed.", "codex_refresh_error")
   }
+  if (isTRUE(persist)) {
+    # httr2 owns the persisted token and refresh-token rotation. This path is
+    # used only for package-managed credentials; injected credentials remain
+    # process-local and use the explicit exchange below.
+    tokens <- codex_oauth_token_cached(
+      cache_disk = TRUE,
+      reauth = FALSE,
+      allow_interactive = FALSE
+    )
+    return(codex_auth_from_tokens(tokens, previous = auth))
+  }
   request <- httr2::request(codex_token_url()) |>
     httr2::req_body_form(
       grant_type = "refresh_token",
@@ -404,9 +426,6 @@ codex_refresh <- function(auth, persist = TRUE) {
     if (inherits(error, "codex_refresh_error")) stop(error)
     codex_auth_abort(codex_redact(conditionMessage(error)), "codex_refresh_error")
   })
-  # Persist the replacement before returning it: refresh tokens are commonly
-  # rotated, and losing the new value would invalidate the next request.
-  if (isTRUE(persist)) codex_credentials_store(refreshed)
   refreshed
 }
 
@@ -442,12 +461,10 @@ codex_open_browser <- function(url) {
 #' Sign in to a Codex subscription with browser OAuth.
 #'
 #' `codex_login()` is the explicit authentication entry point. It opens a
-#' browser only when called by the user, validates a loopback callback with
-#' PKCE and OAuth state, and stores the resulting credential in the OS
-#' credential store by default. If the file backend is explicitly enabled,
-#' the credential is instead stored in the encrypted file described in the
-#' package overview. It never reads credentials created by Codex CLI or
-#' another application.
+#' browser only when called by the user, uses httr2's PKCE-protected OAuth code
+#' flow, and stores the resulting credential in httr2's encrypted user-level
+#' cache by default. It does not use the OS keyring. The package never reads
+#' credentials created by Codex CLI or another application.
 #'
 #' @param persist Whether to save the credential for later sessions. The
 #'   default is `TRUE`; use `FALSE` for a process-only session.
@@ -478,17 +495,13 @@ codex_login <- function(persist = TRUE, timeout = 300) {
     codex_auth_abort("`timeout` must be one positive number of seconds.", "codex_auth_argument_error")
   }
 
-  pkce <- codex_pkce()
-  state <- codex_oauth_state()
-  authorization_url <- codex_authorize_url(pkce, state)
-  code <- codex_wait_for_callback(
-    state,
-    timeout = timeout,
-    on_ready = function() codex_open_browser(authorization_url)
+  tokens <- codex_oauth_token_cached(
+    cache_disk = isTRUE(persist),
+    reauth = TRUE,
+    allow_interactive = TRUE,
+    timeout = timeout
   )
-  tokens <- codex_exchange_code(code, pkce$verifier)
   auth <- codex_auth_from_tokens(tokens)
-  if (isTRUE(persist)) codex_credentials_store(auth)
   codex_session_set(auth, persist = persist)
   auth
 }
@@ -496,8 +509,8 @@ codex_login <- function(persist = TRUE, timeout = 300) {
 #' Show a redacted Codex authentication summary.
 #'
 #' The account identifier and all token material are deliberately replaced or
-#' omitted. Calling this function does not refresh a credential or contact the
-#' network.
+#' omitted. Calling this function does not open a browser; an expired cached
+#' credential may be refreshed by httr2.
 #'
 #' @param auth Optional in-memory credential. If omitted, the current
 #'   process-local session and then the package's own credential store are

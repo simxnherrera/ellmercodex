@@ -342,9 +342,11 @@ codex_models <- function(
   }
 
   explicit_auth <- !is.null(auth)
+  persist <- FALSE
   if (is.null(auth)) auth <- codex_auth()
+  if (!explicit_auth) persist <- isTRUE(codex_session_persists())
   if (isTRUE(codex_token_expired(auth))) {
-    auth <- codex_refresh(auth, persist = !explicit_auth)
+    auth <- codex_refresh(auth, persist = persist)
   }
 
   endpoint <- codex_models_endpoint()

@@ -20,7 +20,7 @@ Install the current tagged release from GitHub with [`pak`](https://pak.r-lib.or
 
 ```r
 install.packages("pak")
-pak::pak("simxnherrera/ellmercodex@v0.1.6")
+pak::pak("simxnherrera/ellmercodex@v0.1.61")
 ```
 
 ## Quick start
@@ -163,8 +163,12 @@ Sign out and remove the credential owned by this package with:
 codex_logout()
 ```
 
-By default, credentials are stored in the operating system's keyring. The
-package does not read credentials belonging to Codex CLI or other applications.
+By default, `httr2` stores the credential in its encrypted, user-level OAuth
+cache. This follows the same general approach as the `gargle` cache used by
+`googledrive` and `googlesheets4`; it does not use the macOS Keychain or
+another OS keyring. Set `HTTR2_OAUTH_CACHE` to choose a different cache root.
+The package does not read credentials belonging to Codex CLI or other
+applications.
 
 ## Structured output
 

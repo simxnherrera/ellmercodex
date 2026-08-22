@@ -77,15 +77,13 @@ testthat::test_that("non-persistent login remains usable in the current process"
   auth <- fake_codex_auth()
 
   testthat::local_mocked_bindings(
-    codex_pkce = function() list(verifier = "fixture-verifier", challenge = "fixture-challenge"),
-    codex_oauth_state = function() "fixture-state",
-    codex_authorize_url = function(pkce, state) "https://example.invalid/authorize",
-    codex_wait_for_callback = function(expected_state, timeout, on_ready) "fixture-code",
-    codex_exchange_code = function(code, verifier) list(access_token = "unused"),
-    codex_auth_from_tokens = function(tokens, previous = NULL) auth,
-    codex_credentials_load = function(required = TRUE) {
-      testthat::fail("A non-persistent session must not read credential storage.")
+    codex_oauth_token_cached = function(cache_disk, reauth, allow_interactive, timeout = 300, cache_key = NULL) {
+      testthat::expect_false(cache_disk)
+      testthat::expect_true(reauth)
+      testthat::expect_true(allow_interactive)
+      list(access_token = "unused", refresh_token = "unused")
     },
+    codex_auth_from_tokens = function(tokens, previous = NULL) auth,
     .package = "ellmercodex"
   )
 
@@ -96,7 +94,7 @@ testthat::test_that("non-persistent login remains usable in the current process"
   testthat::expect_true(ellmercodex::codex_account()$authenticated)
 })
 
-testthat::test_that("refresh rotation is persisted once without a generation retry", {
+testthat::test_that("managed refresh uses httr2 cache rotation without a generation retry", {
   claims <- codex_base64url_encode(charToRaw(jsonlite::toJSON(
     list(
       exp = as.numeric(Sys.time()) + 3600,
@@ -108,29 +106,22 @@ testthat::test_that("refresh rotation is persisted once without a generation ret
   stored <- new.env(parent = emptyenv())
   stored$calls <- 0L
   testthat::local_mocked_bindings(
-    codex_credentials_store = function(auth) {
+    codex_oauth_token_cached = function(cache_disk, reauth, allow_interactive, timeout = 300, cache_key = NULL) {
       stored$calls <- stored$calls + 1L
-      stored$auth <- auth
-      invisible(auth)
+      testthat::expect_true(cache_disk)
+      testthat::expect_false(reauth)
+      testthat::expect_false(allow_interactive)
+      list(
+        access_token = access_token,
+        refresh_token = "fixture-rotated-refresh",
+        expires_in = 3600
+      )
     },
     .package = "ellmercodex"
   )
 
-  refreshed <- httr2::with_mocked_responses(
-    function(req) {
-      httr2::response_json(
-        status_code = 200L,
-        body = list(
-          access_token = access_token,
-          refresh_token = "fixture-rotated-refresh",
-          expires_in = 3600
-        )
-      )
-    },
-    codex_refresh(fake_codex_auth(), persist = TRUE)
-  )
+  refreshed <- codex_refresh(fake_codex_auth(), persist = TRUE)
 
   testthat::expect_identical(refreshed$refresh_token, "fixture-rotated-refresh")
   testthat::expect_identical(stored$calls, 1L)
-  testthat::expect_identical(stored$auth, refreshed)
 })

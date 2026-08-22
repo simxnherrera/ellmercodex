@@ -159,6 +159,53 @@ test_that("ordered Codex content preserves text, tool, image, and later text", {
   expect_identical(turn@contents[[5L]]@text, "After.")
 })
 
+test_that("reasoning summary deltas initialize an empty summary item", {
+  skip_if_not_installed("ellmer")
+
+  chat <- interface_fixture_chat()
+  provider <- chat$get_provider()
+  events <- list(
+    list(
+      type = "response.output_item.added",
+      item = list(
+        id = "reasoning_live",
+        type = "reasoning",
+        summary = list()
+      )
+    ),
+    list(
+      type = "response.reasoning_summary_part.added",
+      item_id = "reasoning_live",
+      summary_index = 0L,
+      part = list(type = "summary_text", text = "")
+    ),
+    list(
+      type = "response.reasoning_summary_text.delta",
+      item_id = "reasoning_live",
+      summary_index = 0L,
+      delta = "Thinking"
+    ),
+    list(
+      type = "response.reasoning_summary_text.delta",
+      item_id = "reasoning_live",
+      summary_index = 0L,
+      delta = " clearly."
+    )
+  )
+
+  result <- NULL
+  for (event in events) {
+    result <- ellmer:::stream_merge_chunks(provider, result, event)
+  }
+
+  expect_length(result$codex_items, 1L)
+  expect_identical(result$codex_keys, "reasoning:reasoning_live")
+  expect_identical(
+    result$codex_items[[1L]]$summary[[1L]]$text,
+    "Thinking clearly."
+  )
+})
+
 test_that("Responses message identity merges live text events once", {
   skip_if_not_installed("ellmer")
 
@@ -371,7 +418,7 @@ test_that("usage fields omitted by Codex remain unknown", {
   expect_true(all(is.na(as.numeric(chat$last_turn()@tokens))))
 })
 
-test_that("expired injected credentials refresh once without keyring re-entry", {
+test_that("expired injected credentials refresh once without cache re-entry", {
   skip_if_not_installed("ellmer")
 
   auth <- interface_fixture_auth(expires_at = as.numeric(Sys.time()) - 3600)
@@ -382,7 +429,7 @@ test_that("expired injected credentials refresh once without keyring re-entry", 
       refresh_calls <<- refresh_calls + 1L
       refreshed
     },
-    codex_credentials_load = function(...) stop("keyring re-entry"),
+    codex_credentials_load = function(...) stop("persistent-cache re-entry"),
     .package = "ellmercodex"
   )
 

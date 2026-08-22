@@ -181,9 +181,10 @@ codex_generate <- function(
   auth = NULL,
   effort = NULL
 ) {
-  explicit_auth <- !is.null(auth)
+  persist <- FALSE
   if (is.null(auth)) {
     auth <- codex_auth()
+    persist <- isTRUE(codex_session_persists())
   }
 
   if (is.null(model)) {
@@ -194,7 +195,7 @@ codex_generate <- function(
   # generation retry: a request may already have been accepted upstream.
   if (exists("codex_token_expired", mode = "function") &&
         isTRUE(codex_token_expired(auth))) {
-    auth <- codex_refresh(auth, persist = !explicit_auth)
+    auth <- codex_refresh(auth, persist = persist)
   }
 
   response <- codex_request(

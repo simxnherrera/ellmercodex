@@ -38,7 +38,7 @@ Codex CLI dependency.
 |---|---|---|
 | Product identity: an independent `ellmer` companion, not a CLI/agent wrapper | **Implemented** | `README.md:3-15` and `R/chat-codex.R:526-680` present the package as a normal `ellmer` Chat; no runtime process invocation is present in the package source. |
 | Runtime architecture: pure R auth, refresh, models, HTTPS, SSE, and Chat | **Implemented** | `DESCRIPTION:9-19` has the R/HTTP dependencies and no CLI dependency; `R/auth.R`, `R/models.R`, `R/stream.R`, and `R/ellmer-compatibility.R` contain the corresponding paths. The direct endpoint and native-client assumptions remain a security/protocol risk (see below). |
-| Auth/account: explicit browser OAuth, safe storage, refresh rotation, injected-credential continuity, no foreign auth-file scraping or secret exposure | **Partial** | `R/auth.R:56-120,165-240,442-535` implements PKCE/state, localhost callback, explicit login, and redacted account output. `R/credentials.R:3-15,170-435` uses package-scoped keyring plus encrypted fallback, and `R/ellmer-compatibility.R:141-187` refreshes injected credentials without re-entering the keyring. However, `R/config.R:8-30` uses an observed native client ID and direct undocumented endpoints; the repository has no independent registration evidence. |
+| Auth/account: explicit browser OAuth, safe storage, refresh rotation, injected-credential continuity, no foreign auth-file scraping or secret exposure | **Partial** | `R/auth.R:56-120,165-240,442-535` implements the explicit OAuth boundary and redacted account output. `R/credentials.R` delegates encrypted token caching and refresh rotation to httr2, while `R/ellmer-compatibility.R:141-187` keeps injected credentials process-local without re-entering the persistent cache. However, `R/config.R:8-30` uses an observed native client ID and direct undocumented endpoints; the repository has no independent registration evidence. |
 | Public API: exactly six public helpers and a normal usable Chat | **Implemented** | `NAMESPACE:3-11` exports exactly `codex_login`, `codex_logout`, `codex_account`, `codex_models`, `codex_available`, and `chat_codex` (apart from S3 print methods). `R/chat-codex.R:604-680` constructs the Chat and maps `effort` to reasoning parameters. |
 | Full `ellmer` compatibility: ordinary/multiturn, sync/async, structured, tools, rich content, cancellation, clone/history, callbacks, errors, and metadata | **Implemented for the supported ellmer range** | The private seam and loops are implemented in `R/ellmer-compatibility.R`; ordered stream/rich conversion, unknown usage preservation, tools, async paths, clone/history, cancellation, and error recovery have deterministic fixtures. The live runner also passed ordinary/multiturn output, streaming, structured output, tools, async, rich input, cancellation, cloning, and history. Parallel/batch helpers remain the documented stable-core exception. |
 | Models/reasoning: account-specific catalog, appropriate dynamic `model = NULL`, explicit fallback, selectable compatible effort | **Implemented with documented transport risk** | `R/models.R` selects the lowest-priority usable row from the authenticated catalog, honors `ELLMERCODEX_MODEL` only as an explicit override, and turns empty/unavailable discovery into `codex_model_selection_error`. `chat_codex()` validates `effort` and `params$reasoning_effort` against the selected row. Offline fixtures cover selection/errors; the live catalog was non-empty and the runner passed both default and explicit selection plus a supported effort. |
@@ -49,7 +49,7 @@ Codex CLI dependency.
 ## Released baseline versus current work
 
 - `v0.1.5` is the tagged release at `7c5436f`. It contains the direct-R
-  architecture, six exports, OAuth/keyring paths, the `ellmer` compatibility
+  architecture, six exports, OAuth/httr2-cache paths, the `ellmer` compatibility
   seam, SSE/tool/rich/async code, and the bounded parallel/batch contract.
 - The current uncommitted changes extend the earlier model/catalog work with
   dynamic default selection, reasoning validation, unknown usage handling,
@@ -66,9 +66,8 @@ Codex CLI dependency.
   contract.
 - Loading the package, checking availability, and constructing the documented
   auth paths are designed without credential-store or network side effects.
-- PKCE/state validation, callback handling, redaction, package-scoped keyring
-  storage, encrypted fallback, and refresh rotation have explicit code and
-  offline fixtures.
+- PKCE/state validation, callback handling, redaction, httr2 encrypted cache
+  integration, and refresh rotation have explicit code and offline fixtures.
 - The adapter preserves the ordinary `ellmer` lifecycle rather than exposing a
   reduced custom chat object. Stream accumulation handles ordered text,
   reasoning, tool/function-call deltas, terminal events, structured output,

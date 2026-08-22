@@ -48,8 +48,9 @@ models[c("id", "display_name", "default_reasoning_effort",
 
 Authentication happens only after a direct call to `codex_login()`. The
 function opens a browser, validates a loopback callback using PKCE and OAuth
-state, and stores the resulting credential in a package-specific OS-keyring
-entry by default.
+state, and stores the resulting credential in httr2's encrypted, user-level
+OAuth cache under the `ellmercodex` client name by default. It does not use the macOS
+Keychain or another OS keyring.
 
 ```{r, eval = FALSE}
 auth <- codex_login()
@@ -68,20 +69,18 @@ chat <- chat_codex(model = Sys.getenv("ELLMERCODEX_MODEL"))
 ```
 
 The process-local session is cleared by `codex_logout()` and is never written
-to disk or the OS keyring.
+to disk or an OS keyring.
 
-The OS keyring is the default backend. A file fallback is available only when
-both of these environment variables are configured explicitly:
+The cache is encrypted by httr2. Set `HTTR2_OAUTH_CACHE` to choose a different
+cache root if needed:
 
 ```{r, eval = FALSE}
-Sys.setenv(
-  ELLMERCODEX_CREDENTIAL_BACKEND = "file",
-  ELLMERCODEX_CREDENTIAL_PASSPHRASE = "use-a-secret-from-your-password-manager"
-)
+Sys.setenv(HTTR2_OAUTH_CACHE = "/path/to/a/private/cache")
 ```
 
-The fallback is encrypted and stored below
-`tools::R_user_dir("ellmercodex", "data")`. No plaintext fallback is provided.
+The default cache is below `tools::R_user_dir("httr2", "cache")`, in an
+`ellmercodex` subdirectory. httr2 refreshes cached access tokens as needed and
+prunes old cached tokens.
 
 ## Create a text chat
 
@@ -199,5 +198,5 @@ shape may have changed. The full list is available in
 codex_logout()
 ```
 
-Logout removes only the package's own keyring entry and encrypted fallback
-file. It does not remove credentials belonging to Codex CLI or other clients.
+Logout removes only the package's own httr2 cache and process-local credential.
+It does not remove credentials belonging to Codex CLI or other clients.

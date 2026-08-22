@@ -27,7 +27,7 @@ auth.R: PKCE + state -> browser -> 127.0.0.1 callback -> token exchange
         +-------------------------+
         |                         |
         v                         v
-credentials.R: keyring       auth object in memory
+credentials.R: httr2 OAuth cache  auth object in memory
         |                         |
         +------------+------------+
                      v
@@ -81,8 +81,8 @@ registration or approval claim.
    remains the authority.
 8. Expiry uses the access-token `exp` claim when available, otherwise
    `expires_in`, with a 60-second refresh margin.
-9. Refresh is form encoded. A rotated refresh token is retained and, when using
-   persisted credentials, immediately replaces the old keyring value.
+9. Refresh is handled by httr2 for package-managed credentials. A rotated
+   refresh token is retained in httr2's encrypted cache before the next request.
 
 The implementation never reads Codex CLI or Pi files, never accepts a supplied
 foreign session, and never prints authorization codes, state, verifier, tokens,
@@ -90,22 +90,21 @@ or account identifiers.
 
 ## Credential storage
 
-The package defaults to the OS credential store through `keyring`, under
-service `ellmercodex` and username `oauth`. It has no plaintext fallback. An
-encrypted file under `tools::R_user_dir("ellmercodex", "data")` is available
-only with an explicit `ELLMERCODEX_CREDENTIAL_PASSPHRASE`; users can select it
-with `ELLMERCODEX_CREDENTIAL_BACKEND=file`. Without a usable keyring or explicit
-passphrase, persistence fails with a sanitized error.
+The package delegates persistence to httr2's encrypted OAuth cache. The client
+is named `ellmercodex`, so httr2 stores its token below
+`tools::R_user_dir("httr2", "cache")/ellmercodex`. The cache location can be
+overridden with `HTTR2_OAUTH_CACHE`; `persist = FALSE` keeps the token in
+httr2's process-local cache only. No OS keyring is used.
 
-`codex_logout()` deletes only that service/username entry and the exact
-package-specific encrypted fallback file. `codex_account()` reports
+`codex_logout()` deletes only the named httr2 cache and process-local token.
+`codex_account()` reports
 authentication and expiry while replacing the account identifier with a
 literal redaction.
 
-The acceptance sequence called `codex_login(persist = FALSE)` first, proved the
-in-memory SSE request, and stored only afterward. A genuinely new R process then
-read the keyring entry, forced refresh, persisted the refreshed credential, and
-made the second successful request.
+The acceptance sequence calls `codex_login(persist = FALSE)` to prove the
+process-local path. A genuinely new R process can then load the encrypted httr2
+cache, refresh a managed token, and persist any rotated refresh token without a
+Keychain prompt.
 
 ## Transport boundary
 
@@ -158,7 +157,7 @@ therefore accepts either a declared `text/event-stream` media type or a safe
 | `codex_oauth_browser_error` | The system browser could not be opened |
 | `codex_token_exchange_error` | Exchange failure or malformed credential response |
 | `codex_refresh_error` | Refresh transport failure; authenticate again if persistent |
-| `codex_credential_store_error` | OS keyring storage/load failure |
+| `codex_credential_store_error` | Credential conversion or cache configuration failure |
 | `codex_account_error` | Required account-routing claim absent |
 | `codex_authentication_error` | HTTP 401/403 from the Codex transport |
 | `codex_rate_limit_error` | HTTP 429 / subscription or rate limit |
@@ -209,7 +208,7 @@ The installed private methods are assigned with the Chat enclosing environment
 as their function environment. R6 cloning then rewrites `self` and `private` to
 the clone. No compatibility closure retains the original Chat. Credential
 state is held in a separate mutable reference environment, allowing safe
-refresh and refresh-token persistence without keyring re-entry; sharing that
+refresh and refresh-token persistence without OS-keyring re-entry; sharing that
 credential cache between a clone and its source does not share Chat turns or
 Chat closures.
 
@@ -240,8 +239,7 @@ these helpers.
    client's private catalog.
 3. A single, narrowly tested, version-gated ellmer provider/Chat submission
    seam, with the full public Chat lifecycle left to ellmer.
-4. Keyring behavior across supported operating systems and refresh-token
-   rotation tests.
+4. httr2 cache behavior and refresh-token rotation tests.
 5. Offline-only CRAN tests; no package load, test, example, or check may start
    OAuth or make authenticated requests.
 
