@@ -12,9 +12,11 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
 `ellmercodex` connects `ellmer` text chats to observed, subscription-backed
-Codex authentication and response behavior. It is an independent experimental
-integration. The direct OAuth and response transport are not a documented
-third-party API and may change without notice.
+Codex authentication and response behavior. Its stable core is the public
+`ellmer` 0.4.2 `Chat` object for interactive,
+single-conversation work. The direct OAuth and response transport are
+undocumented compatibility surfaces, may change without notice, and are not
+endorsed or supported by OpenAI.
 
 Package loading, examples, vignettes, and automated tests do not authenticate,
 open a browser, inspect stored credentials, or make network requests.
@@ -29,9 +31,10 @@ codex_available()
 
 `codex_available()` checks installed dependencies, static configuration, and
 the supported `ellmer` compatibility seam. Its default does not inspect a
-credential store. After authentication, `codex_models()` queries the observed
-account-specific catalog and returns the models and reasoning efforts the
-account currently advertises:
+credential store or contact the network, and `TRUE` does not guarantee that a
+remote request will succeed. After authentication, `codex_models()` queries
+the observed account-specific catalog and returns the models and reasoning
+efforts the account currently advertises:
 
 ```{r, eval = FALSE}
 models <- codex_models()
@@ -100,8 +103,17 @@ streaming, reasoning effort, model parameters, registered function tools,
 async methods, callbacks, cancellation, cloning, rich image/PDF content,
 history, echo, and response metadata. The compatibility implementation is
 version-gated to exactly 0.4.2. The separate `parallel_chat*()` and
-`batch_chat*()` helpers are explicitly blocked because the Codex endpoint is
-stream-only; this prevents a stable-status claim.
+`batch_chat*()` helpers are outside the stable core contract and are explicitly
+blocked because the Codex endpoint is stream-only. The underlying Codex
+transport remains an undocumented external compatibility dependency.
+
+The constructor and the returned Chat object are documented separately.
+`?chat_codex` describes constructor arguments, credential side effects,
+conditions, and model selection; the `ellmer` Chat help describes the methods
+used for history, streaming, structured output, tools, callbacks, async work,
+and cloning. The package does not claim compatibility with ellmer's separate
+`parallel_chat*()` or `batch_chat*()` helpers because the subscription
+transport is stream-only.
 
 ## Tool calling
 
@@ -169,6 +181,13 @@ tryCatch(
 Messages are sanitized before they are signaled. Raw response bodies, bearer
 tokens, authorization codes, OAuth state, account identifiers, and
 credential-store contents are not intentionally included.
+
+For application code, handle the most specific condition first and then fall
+back to the parent classes. `codex_auth_error` covers missing, malformed, and
+expired credentials; `codex_request_error` covers transport failures; and
+`codex_protocol_changed_error` indicates that the observed upstream response
+shape may have changed. The full list is available in
+`?ellmercodex-conditions`.
 
 ## Sign out
 

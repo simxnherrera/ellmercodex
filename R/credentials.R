@@ -415,7 +415,10 @@ codex_credentials_load <- function(required = TRUE) {
 #' explicitly enabled encrypted fallback file). It never removes Codex CLI
 #' credentials or other applications' entries.
 #'
-#' @return `TRUE`, invisibly.
+#' @return `TRUE`, invisibly. The process-local credential is cleared even if
+#'   no persistent backend is available.
+#' @note Logout removes local credential material but does not contact the
+#'   remote service or revoke a remote session.
 #' @section Conditions:
 #' Logout is best effort and signals no backend details. Storage failures are
 #' reported as `codex_credential_store_error` by the explicit login/refresh

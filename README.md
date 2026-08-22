@@ -3,11 +3,12 @@
 `ellmercodex` lets you use a Codex subscription from R through an
 [`ellmer`](https://ellmer.tidyverse.org/) chat interface.
 
-This is an independent, experimental integration. It uses compatibility
-behavior observed in Codex clients rather than a documented third-party API,
-so it may stop working if and when the upstream service changes. It is not affiliated
-with or endorsed by OpenAI. The Chat compatibility target is exactly the
-installed `ellmer` 0.4.2 release.
+The stable package contract is deliberately bounded to the complete public
+`ellmer` 0.4.2 `Chat` object for interactive, single-conversation operations.
+The underlying subscription authentication and Responses transport are
+compatibility behavior observed in Codex clients rather than a documented
+third-party API, so upstream changes may still require a package update. This
+package is independent and is not affiliated with or endorsed by OpenAI.
 
 ## Install
 
@@ -15,7 +16,7 @@ Install the current tagged release from GitHub with [`pak`](https://pak.r-lib.or
 
 ```r
 install.packages("pak")
-pak::pak("simxnherrera/ellmercodex@v0.1.3")
+pak::pak("simxnherrera/ellmercodex@v0.1.4")
 ```
 
 ## Quick start
@@ -196,7 +197,7 @@ stream <- chat$stream_async(
 # Call `controller$cancel()` from the UI to stop generation.
 ```
 
-## Exact compatibility scope
+## Stable core compatibility scope
 
 The returned object is the complete public ellmer 0.4.2 `Chat` surface:
 `initialize`, `get_turns`, `set_turns`, `add_turn`, `get_system_prompt`,
@@ -207,13 +208,16 @@ The returned object is the complete public ellmer 0.4.2 `Chat` surface:
 See [`docs/ellmer-chat-interface.md`](docs/ellmer-chat-interface.md) for the
 derived signatures, state transitions, return shapes, and conversion rules.
 
-`parallel_chat*()` and `batch_chat*()` are audited but explicitly blocked: the
-ellmer 0.4.2 helpers require non-streaming OpenAI requests or the OpenAI Batch
-API, while the Codex subscription endpoint requires SSE streaming. They fail
-with `codex_ellmer_parallel_batch_blocker` before sending a request rather than
-silently degrading. This remains a blocker to declaring the package stable.
+`parallel_chat*()` and `batch_chat*()` are outside the stable core contract.
+They are audited but explicitly blocked: the ellmer 0.4.2 helpers require
+non-streaming OpenAI requests or the OpenAI Batch API, while the Codex
+subscription endpoint requires SSE streaming. They fail with
+`codex_ellmer_parallel_batch_blocker` before sending a request rather than
+silently degrading. The package does not claim compatibility with those
+helpers.
 
 The Codex endpoint and its Responses event names are undocumented compatibility
-surfaces, so upstream protocol changes may require a package update. The
-package is therefore not labeled stable until the explicit helper blocker and
-any future upstream protocol changes are resolved.
+surfaces, so upstream protocol changes may require a package update. This is an
+external transport caveat on an otherwise stable, version-pinned core Chat
+contract; it is not a claim of OpenAI support or a guarantee that the observed
+backend will remain available.

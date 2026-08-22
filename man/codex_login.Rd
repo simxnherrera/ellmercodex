@@ -7,12 +7,13 @@
 codex_login(persist = TRUE, timeout = 300)
 }
 \arguments{
-\item{persist}{Whether to save the credential for later sessions.}
+\item{persist}{Whether to save the credential for later sessions. The
+default is \code{TRUE}; use \code{FALSE} for a process-only session.}
 
-\item{timeout}{Maximum callback wait in seconds.
-When \code{persist = FALSE}, the credential remains available to
-\code{\link[=chat_codex]{chat_codex()}} only in the current R process. \code{\link[=codex_logout]{codex_logout()}} clears both
-this in-memory session and any package-owned stored credential.}
+\item{timeout}{Maximum callback wait in seconds. This must be one positive
+number. The loopback listener is closed when authentication succeeds,
+fails, or times out. When \code{persist = FALSE}, the credential remains
+available to \code{\link[=chat_codex]{chat_codex()}} only in the current R process.}
 }
 \value{
 An internal \code{codex_auth} object. Use \code{\link[=codex_account]{codex_account()}} for a safe
@@ -22,8 +23,16 @@ account summary; token fields are intentionally not printed.
 \code{codex_login()} is the explicit authentication entry point. It opens a
 browser only when called by the user, validates a loopback callback with
 PKCE and OAuth state, and stores the resulting credential in the OS
-credential store by default. It never reads credentials created by Codex CLI
-or another application.
+credential store by default. If the file backend is explicitly enabled,
+the credential is instead stored in the encrypted file described in the
+package overview. It never reads credentials created by Codex CLI or
+another application.
+}
+\note{
+This function is interactive: it opens the default browser and
+listens on the local loopback callback at port 1455. It does not revoke
+a remote session; use \code{\link[=codex_logout]{codex_logout()}} to remove the local credential
+owned by this package.
 }
 \section{Conditions}{
 

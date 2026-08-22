@@ -81,8 +81,8 @@ test_that("Chat cloning is independent and never retains the original Chat closu
   clone$set_turns(list(ellmer::UserTurn(list(ellmer::ContentText("clone")))))
   clone$set_model("clone-model")
 
-  expect_identical(chat$last_turn(role = "user")@text, "original")
-  expect_identical(clone$last_turn(role = "user")@text, "clone")
+  expect_identical(chat$get_turns()[[1L]]@text, "original")
+  expect_identical(clone$get_turns()[[1L]]@text, "clone")
   expect_identical(chat$get_model(), "fixture-model")
   expect_identical(clone$get_model(), "clone-model")
   expect_false(identical(chat$.__enclos_env__$private, clone$.__enclos_env__$private))
@@ -335,7 +335,7 @@ test_that("non-streaming ellmer helper paths fail explicitly before network I/O"
     class = "codex_ellmer_parallel_batch_blocker"
   )
   expect_error(
-    ellmer::parallel_chat(chat, prompts = "fixture"),
+    ellmer::parallel_chat(chat, prompts = list("fixture")),
     class = "codex_ellmer_parallel_batch_blocker"
   )
 })

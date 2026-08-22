@@ -91,10 +91,12 @@ external URLs that are contacted.
 
 ## Release posture and remaining risks
 
-The project has chosen to publish the direct integration as an experimental
-package. An official registration or support statement is therefore not a CRAN
-release gate, but the package must remain candid about the absence of that
-contract and must fail safely when compatibility changes.
+The project has chosen a bounded stable-core contract for the complete
+ellmer 0.4.2 `Chat` object while retaining the direct subscription transport
+as an experimental external dependency. An official registration or support
+statement is therefore not a gate for the bounded Chat API claim, but the
+package must remain candid about the absence of that contract and must fail
+safely when compatibility changes.
 
 Do not describe the package as production-ready until all of the following are
 true:
@@ -117,5 +119,7 @@ true:
    loopback binding, TLS verification, account routing, logging, and the
    consequences of a malicious or compromised local process.
 
-Until then, releases remain experimental. They do not claim OpenAI support,
-policy approval, or production readiness.
+Until then, the underlying transport remains experimental. Releases may claim
+the bounded stable Chat contract, but they do not claim OpenAI support, policy
+approval, or production readiness for the undocumented authentication or
+backend protocol.

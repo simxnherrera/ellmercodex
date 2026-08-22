@@ -1,21 +1,22 @@
 Package: ellmercodex
-Title: Experimental Codex Integration for 'ellmer'
-Version: 0.1.3
+Title: Codex Integration for 'ellmer'
+Version: 0.1.4
 Authors@R: person("Simon", "Herrera", email = "simxnherrera@gmail.com", role = c("aut", "cre"))
 Author: Simon Herrera [aut, cre]
 Maintainer: Simon Herrera <simxnherrera@gmail.com>
 URL: https://github.com/simxnherrera/ellmercodex
 BugReports: https://github.com/simxnherrera/ellmercodex/issues
 Description: Connects 'ellmer' text chats to observed subscription-backed
-    'Codex' authentication and streaming response behavior. Provides explicit
-    browser sign-in, package-scoped credential storage, redacted diagnostics,
-    the complete public 'ellmer' 0.4.2 Chat interface, multi-turn text,
-    streaming, structured-output, function-tool, asynchronous, cancellation,
-    cloning, metadata, and multimodal chat, account-specific model discovery,
-    and reasoning-effort selection. This independent third-party
+    'Codex' authentication and streaming response behavior. Provides a stable,
+    explicitly bounded core of the complete public 'ellmer' 0.4.2 Chat object,
+    including browser sign-in, package-scoped credential storage, redacted
+    diagnostics, multi-turn text, streaming, structured-output, function-tool,
+    asynchronous, cancellation, cloning, metadata, multimodal chat,
+    account-specific model discovery, and reasoning-effort selection.
+    Parallel and batch helper functions are explicitly unsupported because
+    the subscription transport is stream-only. This independent third-party
     integration uses an undocumented compatibility transport, is not endorsed
-    by OpenAI, and may
-    stop working without notice.
+    by OpenAI, and may stop working without notice.
 License: MIT + file LICENSE
 Depends:
     R (>= 4.1.0)

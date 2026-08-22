@@ -4,15 +4,16 @@
 \name{ellmercodex}
 \alias{ellmercodex-package}
 \alias{ellmercodex}
-\title{ellmercodex: Experimental Codex integration for ellmer}
+\title{ellmercodex: Codex integration for ellmer}
 \description{
-\code{ellmercodex} is an explicitly opt-in, experimental integration between
-\link[ellmer:chat_openai]{ellmer} and subscription-backed Codex authentication
-and Responses transport behavior observed in current clients. The direct
-OAuth endpoints and Responses endpoint used by this package are
-undocumented compatibility observations, may change without notice, and
-are not an OpenAI-supported public API. This package is independent and is
-not affiliated with or endorsed by OpenAI.
+\code{ellmercodex} provides a stable, explicitly bounded core integration between
+\link[ellmer:chat_openai]{ellmer} and subscription-backed Codex authentication.
+The stable compatibility target is the complete public ellmer 0.4.2 \code{Chat}
+object for interactive, single-conversation operations. The direct OAuth
+endpoints and Responses endpoint used by this package are undocumented
+compatibility observations, may change without notice, and are not an
+OpenAI-supported public API. This package is independent and is not
+affiliated with or endorsed by OpenAI.
 }
 \details{
 Authentication is never started as a package-loading side effect. Call
@@ -20,16 +21,31 @@ Authentication is never started as a package-loading side effect. Call
 is available. Examples and offline tests do not authenticate, open a
 browser, read credentials, or make network requests.
 
+The usual workflow is to check \code{\link[=codex_available]{codex_available()}}, authenticate with
+\code{\link[=codex_login]{codex_login()}}, inspect the account with \code{\link[=codex_account]{codex_account()}}, and then create
+a chat with \code{\link[=chat_codex]{chat_codex()}}. \code{\link[=codex_models]{codex_models()}} can be used after sign-in to
+inspect the account-specific model catalog and its advertised reasoning
+efforts. \code{\link[=codex_logout]{codex_logout()}} removes only the credential owned by this package.
+
 The public API is deliberately small: \code{\link[=codex_login]{codex_login()}}, \code{\link[=codex_logout]{codex_logout()}},
 \code{\link[=codex_account]{codex_account()}}, \code{\link[=codex_models]{codex_models()}}, \code{\link[=codex_available]{codex_available()}}, and
-\code{\link[=chat_codex]{chat_codex()}}. The chat compatibility layer is
-version-gated to the inspected ellmer 0.4.2 public Chat API and supports its
-complete Chat object: text/content streaming, structured output, model and
-provider configuration, multi-round tools, async methods, callbacks,
-cancellation, cloning, history, echo, rich content, and response metadata.
-The separately exported ellmer parallel/batch helpers are explicitly blocked
-for the Codex stream-only endpoint, so the package is not declared stable.
+\code{\link[=chat_codex]{chat_codex()}}. The chat compatibility layer is version-gated to the
+inspected ellmer 0.4.2 public API and supports its complete Chat object:
+text and content streaming, model parameters, per-model reasoning effort,
+structured output, multi-turn history, rich image/PDF content, asynchronous
+chat, tool loops, callbacks, cancellation, cloning, echo, and response
+metadata. The separately exported ellmer parallel/batch helpers are outside
+the stable core contract and are explicitly blocked for the Codex stream-only
+endpoint rather than silently degraded.
 }
+\section{External service and compatibility}{
+
+The authentication and Responses transport are observed compatibility
+surfaces rather than documented third-party APIs. They require an active
+account and may change or become unavailable without notice. The package
+does not claim affiliation with or endorsement by OpenAI.
+}
+
 \seealso{
 Useful links:
 \itemize{
@@ -47,4 +63,4 @@ Authors:
 }
 
 }
-\keyword{internal}
+\keyword{package}

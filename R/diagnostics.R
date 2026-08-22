@@ -119,8 +119,15 @@ codex_diagnostics <- function(check_credentials = FALSE) {
 #' @param check_credentials Whether to inspect this package's own credential
 #'   backend. Defaults to `FALSE` to keep ordinary availability checks free of
 #'   credential-store I/O.
-#' @return A single logical value. The full redacted diagnostic object is
-#'   available internally through `codex_diagnostics()`.
+#' @return A single logical value. `TRUE` means that the required dependencies,
+#'   static configuration, and the supported `ellmer` compatibility seam are
+#'   available. With `check_credentials = TRUE`, it also requires a usable
+#'   package-owned credential to be present. `FALSE` does not identify a single
+#'   cause; use the package startup diagnostics or contact the package
+#'   maintainer with a sanitized reproducible report.
+#' @note The default check does not prove that the remote Codex service is
+#'   reachable, that a model is available to the account, or that a request
+#'   will succeed.
 #' @examples
 #' codex_available()
 #' if (interactive()) codex_available(check_credentials = TRUE)

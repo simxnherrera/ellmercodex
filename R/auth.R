@@ -444,17 +444,24 @@ codex_open_browser <- function(url) {
 #' `codex_login()` is the explicit authentication entry point. It opens a
 #' browser only when called by the user, validates a loopback callback with
 #' PKCE and OAuth state, and stores the resulting credential in the OS
-#' credential store by default. It never reads credentials created by Codex CLI
-#' or another application.
+#' credential store by default. If the file backend is explicitly enabled,
+#' the credential is instead stored in the encrypted file described in the
+#' package overview. It never reads credentials created by Codex CLI or
+#' another application.
 #'
-#' @param persist Whether to save the credential for later sessions.
-#' @param timeout Maximum callback wait in seconds.
-#' When `persist = FALSE`, the credential remains available to
-#' [chat_codex()] only in the current R process. [codex_logout()] clears both
-#' this in-memory session and any package-owned stored credential.
+#' @param persist Whether to save the credential for later sessions. The
+#'   default is `TRUE`; use `FALSE` for a process-only session.
+#' @param timeout Maximum callback wait in seconds. This must be one positive
+#'   number. The loopback listener is closed when authentication succeeds,
+#'   fails, or times out. When `persist = FALSE`, the credential remains
+#'   available to [chat_codex()] only in the current R process.
 #'
 #' @return An internal `codex_auth` object. Use [codex_account()] for a safe
 #'   account summary; token fields are intentionally not printed.
+#' @note This function is interactive: it opens the default browser and
+#'   listens on the local loopback callback at port 1455. It does not revoke
+#'   a remote session; use [codex_logout()] to remove the local credential
+#'   owned by this package.
 #' @section Conditions:
 #' Invalid arguments signal `codex_auth_argument_error`; callback, browser, and
 #' token failures use `codex_oauth_callback_error`, `codex_oauth_browser_error`,
@@ -495,8 +502,10 @@ codex_login <- function(persist = TRUE, timeout = 300) {
 #' @param auth Optional in-memory credential. If omitted, the current
 #'   process-local session and then the package's own credential store are
 #'   checked.
-#' @return A data frame with authentication state, a redacted account field,
-#'   and the access-token expiry time.
+#' @return A one-row data frame with columns:
+#'     \item{`authenticated`}{Logical; whether a valid package credential was found.}
+#'     \item{`account`}{Always `"<redacted>"`; account identifiers are never returned.}
+#'     \item{`expires_at`}{The access-token expiry as a UTC `POSIXct` value, or `NA` when unauthenticated.}
 #' @section Conditions:
 #' A malformed in-memory credential signals `codex_auth_argument_error` and a
 #' malformed stored value signals `codex_credential_store_error`.

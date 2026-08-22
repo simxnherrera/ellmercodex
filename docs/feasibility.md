@@ -2,9 +2,10 @@
 
 Status: investigation, offline checks, Pi-style OAuth, buffered SSE transport,
 keyring persistence, forced refresh, genuine-process restart, and a working
-multi-turn `chat_codex()` proof of concept are complete. An experimental R
-package now ports those pieces with offline tests, model/availability
-diagnostics, documentation, and CI. Sources were inspected on 2026-08-21.
+multi-turn `chat_codex()` implementation are complete. The package now
+provides a bounded stable core for the complete public `ellmer` 0.4.2 `Chat`
+object, with offline tests, model/availability diagnostics, documentation, and
+CI. Sources were inspected on 2026-08-21.
 
 The package implementation now targets the complete public Chat surface of
 exactly ellmer 0.4.2 while accepting the direct transport as an experimental
@@ -28,7 +29,7 @@ then stored in the macOS keyring; and a genuinely new R process restored it,
 forced refresh, persisted the refreshed credential, and buffered `Still
 working`.
 
-The package decision is **go for an explicitly experimental release using the
+The package decision is **go for a bounded stable-core release using the
 direct transport**. OpenAI's official documentation supports
 subscription-backed ChatGPT sign-in for Codex and presents `codex app-server`
 as a documented product-integration protocol. It does not document the raw
@@ -47,10 +48,9 @@ The transport and Chat integration uncertainties are resolved for the pinned
 Chat target: every current client inspected uses `stream: true`, the live
 backend explicitly requires it, buffered SSE works in pure R, and the
 version-gated provider/TurnAccumulator seam produces ellmer return values and
-history. Parallel/batch helper support is explicitly blocked, rather than
-de-scoped, and blocks stable status because those helpers require
-non-streaming or OpenAI Batch requests that the Codex transport does not
-provide.
+history. Parallel/batch helper support is explicitly outside the stable core,
+because those helpers require non-streaming or OpenAI Batch requests that the
+Codex transport does not provide.
 
 ## Official documentation and policy findings
 

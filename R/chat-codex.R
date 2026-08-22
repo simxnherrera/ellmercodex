@@ -523,7 +523,7 @@ codex_patch_chat <- function(chat, default_echo = "none") {
   codex_ellmer_compatibility()
   codex_install_private_submit_methods(chat)
 }
-#' Create an experimental Codex chat backed by ellmer
+#' Create a Codex chat backed by ellmer
 #'
 #' `chat_codex()` returns a normal ellmer `Chat` object configured for the
 #' observed Codex subscription transport. It does not start browser
@@ -531,15 +531,16 @@ codex_patch_chat <- function(chat, default_echo = "none") {
 #' credential is available; an existing credential is loaded and refreshed as
 #' needed.
 #'
-#' The returned chat is the complete public `ellmer` 0.4.2 `Chat` object,
-#' including ordinary and structured chat, synchronous and asynchronous
-#' streaming, tool declarations and multi-round execution, callbacks,
-#' cancellation, cloning, history, echo, model/provider configuration, rich
-#' content, and response metadata. The compatibility layer uses one
-#' version-gated provider/turn-submission seam while leaving public Chat methods
-#' and ellmer lifecycle semantics intact. The separate ellmer parallel/batch
-#' helpers are explicitly blocked because their non-streaming request model is
-#' incompatible with the Codex stream-only endpoint.
+#' The returned chat is the complete public `ellmer` 0.4.2 `Chat` object for
+#' interactive, single-conversation operations, including ordinary and
+#' structured chat, synchronous and asynchronous streaming, tool declarations
+#' and multi-round execution, callbacks, cancellation, cloning, history, echo,
+#' model/provider configuration, rich content, and response metadata. The
+#' compatibility layer uses one version-gated provider/turn-submission seam
+#' while leaving public Chat methods and ellmer lifecycle semantics intact.
+#' The separate ellmer parallel/batch helpers are outside this stable core
+#' contract and are explicitly blocked because their non-streaming request
+#' model is incompatible with the Codex stream-only endpoint.
 #'
 #' `$chat_structured()` intentionally follows ellmer's semantics and disables
 #' registered tools for that request. Call `$chat()` first when tool-assisted
@@ -547,20 +548,28 @@ codex_patch_chat <- function(chat, default_echo = "none") {
 #'
 #' @param system_prompt Optional system prompt passed to ellmer.
 #' @param model Optional Codex model name. If omitted, the package default is
-#'   used.
+#'   used; set the ELLMERCODEX_MODEL environment variable to choose a different
+#'   default. Model availability is account- and workspace-specific, so
+#'   [codex_models()] is the authoritative way to inspect available choices.
 #' @param effort Optional Codex reasoning effort. It is forwarded through
-#'   ellmer as `params(reasoning_effort = effort)` and should be one of the
+#'   ellmer's `reasoning_effort` parameter and should be one of the
 #'   values advertised by [codex_models()] for the selected model.
 #' @param params Optional ellmer model parameters, usually created with
 #'   `ellmer::params()`. A supplied `reasoning_effort` must agree with
 #'   `effort`, when both are provided.
+#'   Other ellmer-supported model parameters are passed through unchanged.
 #' @param api_args Optional named list of additional Responses arguments passed
-#'   through ellmer on every request.
+#'   through ellmer on every request. This is an advanced escape hatch for
+#'   arguments accepted by the observed transport; unsupported arguments may
+#'   be rejected by the remote service.
 #' @param echo One of `"none"`, `"output"`, or `"all"`; controls whether `$chat()`
 #'   prints the completed text. The compatibility wrapper accepts `TRUE`,
 #'   `FALSE`, and `"text"` as aliases for `"output"`, `"none"`, and
 #'   `"output"`, respectively.
 #' @return An object inheriting from ellmer's `Chat` class.
+#' The returned object retains ellmer's public Chat methods, history,
+#' callbacks, registered tools, asynchronous methods, and R6 cloning behavior.
+#'
 #' @section Conditions:
 #' Invalid arguments signal `codex_chat_argument_error`. Missing or
 #' incompatible ellmer installations signal `codex_ellmer_missing` or
@@ -568,6 +577,14 @@ codex_patch_chat <- function(chat, default_echo = "none") {
 #' the Chat is constructed retain their package condition classes. Transport
 #' and protocol errors retain their specific Codex/ellmer condition classes;
 #' compatibility-shape failures use `codex_ellmer_compatibility_error`.
+#' @section Side effects:
+#' Constructing a chat reads the current process credential or this package's
+#' credential store and may refresh an expired stored credential. It does not
+#' open a browser. Requests occur only when the corresponding Chat method is
+#' called; constructing a chat does not generate a response.
+#' @seealso
+#'   [codex_login()], [codex_account()], [codex_models()], [codex_logout()],
+#'   and [ellmer::chat_openai()]
 #' @examplesIf interactive()
 #' chat <- chat_codex(
 #'   system_prompt = "Be concise.",

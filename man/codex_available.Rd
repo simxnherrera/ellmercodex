@@ -12,14 +12,23 @@ backend. Defaults to \code{FALSE} to keep ordinary availability checks free of
 credential-store I/O.}
 }
 \value{
-A single logical value. The full redacted diagnostic object is
-available internally through \code{codex_diagnostics()}.
+A single logical value. \code{TRUE} means that the required dependencies,
+static configuration, and the supported \code{ellmer} compatibility seam are
+available. With \code{check_credentials = TRUE}, it also requires a usable
+package-owned credential to be present. \code{FALSE} does not identify a single
+cause; use the package startup diagnostics or contact the package
+maintainer with a sanitized reproducible report.
 }
 \description{
 This is an offline check. By default it verifies package dependencies and
 static configuration only; it does not open a browser, make a request, or
 inspect a credential store. Set \code{check_credentials = TRUE} when an explicit
 credential-presence check is desired.
+}
+\note{
+The default check does not prove that the remote Codex service is
+reachable, that a model is available to the account, or that a request
+will succeed.
 }
 \examples{
 codex_available()

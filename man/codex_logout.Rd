@@ -7,12 +7,17 @@
 codex_logout()
 }
 \value{
-\code{TRUE}, invisibly.
+\code{TRUE}, invisibly. The process-local credential is cleared even if
+no persistent backend is available.
 }
 \description{
 This function touches only the package-scoped keyring entry (or the
 explicitly enabled encrypted fallback file). It never removes Codex CLI
 credentials or other applications' entries.
+}
+\note{
+Logout removes local credential material but does not contact the
+remote service or revoke a remote session.
 }
 \section{Conditions}{
 
