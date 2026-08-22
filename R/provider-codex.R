@@ -53,7 +53,7 @@ codex_ellmer_compatibility <- function() {
 
   required_internals <- c(
     "Chat", "TurnAccumulator", "chat_perform", "base_request", "chat_path",
-    "modify_list", "chat_body", "chat_request",
+    "modify_list", "chat_body", "as_user_turn", "chat_request",
     "stream_parse", "stream_content", "stream_merge_chunks", "value_turn",
     "value_tokens", "value_finish_reason", "has_batch_support", "tokens",
     "dollars", "get_token_cost", "ContentJson", "ContentToolRequestSearch",

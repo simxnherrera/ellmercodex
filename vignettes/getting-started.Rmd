@@ -34,7 +34,9 @@ the supported `ellmer` compatibility seam. Its default does not inspect a
 credential store or contact the network, and `TRUE` does not guarantee that a
 remote request will succeed. After authentication, `codex_models()` queries
 the observed account-specific catalog and returns the models and reasoning
-efforts the account currently advertises:
+efforts the account currently advertises. The package supplies its own verified
+compatibility value for the catalog query; set `ELLMERCODEX_CLIENT_VERSION`
+only when a different explicit value is needed:
 
 ```{r, eval = FALSE}
 models <- codex_models()
@@ -83,14 +85,15 @@ The fallback is encrypted and stored below
 
 ## Create a text chat
 
-Select a model explicitly because subscription eligibility is account- and
-workspace-specific:
+By default, `chat_codex()` selects a usable model from the authenticated
+account catalog. Select a model explicitly when you need a stable choice, and
+choose reasoning effort from that model's advertised values:
 
 ```{r, eval = FALSE}
 chat <- chat_codex(
   system_prompt = "Be concise.",
-  model = Sys.getenv("ELLMERCODEX_MODEL", "gpt-5.6-luna"),
-  effort = "medium"
+  model = models$id[[1]],
+  effort = models$supported_reasoning_efforts[[1]][[1]]
 )
 
 chat$chat("Remember that the codeword is amber. Reply: acknowledged")
@@ -103,9 +106,10 @@ streaming, reasoning effort, model parameters, registered function tools,
 async methods, callbacks, cancellation, cloning, rich image/PDF content,
 history, echo, and response metadata. The compatibility implementation is
 version-gated to exactly 0.4.2. The separate `parallel_chat*()` and
-`batch_chat*()` helpers are outside the stable core contract and are explicitly
-blocked because the Codex endpoint is stream-only. The underlying Codex
-transport remains an undocumented external compatibility dependency.
+`batch_chat*()` helpers are outside the stable core contract. Parallel helpers
+use the package blocker; batch helpers use ellmer's generic unsupported-provider
+error because the Codex endpoint is stream-only. The underlying Codex transport
+remains an undocumented external compatibility dependency.
 
 The constructor and the returned Chat object are documented separately.
 `?chat_codex` describes constructor arguments, credential side effects,

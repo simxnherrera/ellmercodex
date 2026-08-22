@@ -1,3 +1,15 @@
+# ellmercodex 0.1.6
+
+* Selects the default model from the authenticated account catalog, validates
+  reasoning effort against advertised model capabilities, and reports
+  actionable discovery failures instead of silently using a static model.
+* Preserves omitted usage values as unknown, tests the actual ellmer
+  parallel/batch boundaries, and consolidates tool execution in the
+  version-gated compatibility architecture.
+* Expands the opt-in live acceptance runner and documents the remaining
+  observed, undocumented transport risk without introducing a Codex CLI
+  runtime dependency.
+
 # ellmercodex 0.1.5
 
 * Fixed Codex Responses streaming history duplication by correlating streamed

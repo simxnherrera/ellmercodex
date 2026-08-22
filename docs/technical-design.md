@@ -54,9 +54,10 @@ codex_available() -> offline dependency/configuration checks by default
 ```
 
 `R/config.R` is the only location containing unstable endpoints, the observed
-client identifier, protocol header, callback URI, fallback model, originator,
-and request-header construction. Every value is marked as observed rather than
-a documented public contract.
+client identifier, protocol header, callback URI, model override, originator,
+and shared transport-header construction. Every value is marked as observed
+rather than a documented public contract. The package has no independent client
+registration or approval claim.
 
 ## Authentication lifecycle
 
@@ -128,9 +129,12 @@ made the second successful request.
   merge, and clone-safe private Chat execution methods. Ellmer's own
   `TurnAccumulator`, tool invocation/callback helpers, async primitives, and
   dangling-request handling remain authoritative.
-- `tool-calling.R` remains the standalone SSE parser and fixture-compatible
-  Responses tool representation used by transport diagnostics; Chat tool
-  lifecycle is deliberately delegated to ellmer rather than duplicated here.
+- `ellmer-compatibility.R` is the sole authoritative tool architecture. Its
+  Codex stream merge/content methods assemble ordered function-call items;
+  `codex_chat_impl_sync()` and `codex_chat_impl_async()` run the multi-round
+  loops; and ellmer remains authoritative for tool invocation, callbacks,
+  failures, sync/async modes, cancellation, and tool-result turns. There is no
+  second buffered tool parser or manual tool loop in the package.
 - `codex_parse_response()` remains as a fallback for ordinary JSON terminal
   payloads.
 - `codex_generate()` coordinates auth/refresh, request, and parsing but contains
@@ -219,10 +223,12 @@ declarations remain on ellmer's serializer path.
 `parallel_chat*()` and `batch_chat*()` were audited as part of the public
 ellmer surface. They request non-streaming responses or the OpenAI Batch API,
 which the Codex subscription endpoint does not provide. The Codex provider
-rejects those requests with an explicit
-`codex_ellmer_parallel_batch_blocker` before network I/O. This is a documented
-unsupported boundary, not a false-success fallback. The stable claim is
-limited to the `Chat` object and does not include these helpers.
+rejects parallel requests with an explicit
+`codex_ellmer_parallel_batch_blocker` before network I/O. Batch requests stop in
+ellmer's generic provider capability check before network I/O or state-file
+creation. This is a documented unsupported boundary, not a false-success
+fallback. The stable claim is limited to the `Chat` object and does not include
+these helpers.
 
 ## Compatibility status and release risks
 

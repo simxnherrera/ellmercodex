@@ -51,11 +51,11 @@ codex_originator <- function() {
 }
 
 codex_default_model <- function() {
-  # Model availability is account- and service-specific.  The environment
-  # override is useful for an explicitly selected model; it is not discovery.
-  model <- Sys.getenv("ELLMERCODEX_MODEL", unset = "gpt-5.6-luna")
-  if (!is.character(model) || length(model) != 1L || !nzchar(model)) {
-    "gpt-5.6-luna"
+  # This is an explicit operator override, not a package catalog. When it is
+  # absent, chat_codex() resolves a model from the authenticated catalog.
+  model <- Sys.getenv("ELLMERCODEX_MODEL", unset = "")
+  if (!is.character(model) || length(model) != 1L || is.na(model) || !nzchar(model)) {
+    NULL
   } else {
     model
   }
@@ -64,7 +64,7 @@ codex_default_model <- function() {
 codex_user_agent <- function() {
   version <- tryCatch(
     as.character(utils::packageVersion("ellmercodex")),
-    error = function(error) "0.1.5"
+    error = function(error) "0.1.6"
   )
   paste0("ellmercodex/", version)
 }
@@ -83,16 +83,37 @@ codex_auth_field <- function(auth, ...) {
   NULL
 }
 
-codex_request_headers <- function(auth) {
-  access_token <- codex_auth_field(auth, "access_token", "accessToken")
+codex_transport_headers <- function() {
+  # These headers describe the observed direct subscription transport. They
+  # are centralized so model discovery and Chat requests cannot drift apart.
+  c(
+    originator = codex_originator(),
+    `OpenAI-Beta` = codex_protocol_version(),
+    Accept = "text/event-stream",
+    `User-Agent` = codex_user_agent()
+  )
+}
+
+codex_request_routing_headers <- function(auth) {
   account_id <- codex_auth_field(
     auth,
     "account_id",
     "chatgpt_account_id",
     "chatgptAccountId"
   )
+  if (is.null(account_id)) {
+    rlang::abort(
+      "The Codex credential is missing the routing fields required by the transport.",
+      class = "codex_authentication_error"
+    )
+  }
+  c(`ChatGPT-Account-Id` = account_id, codex_transport_headers())
+}
 
-  if (is.null(access_token) || is.null(account_id)) {
+codex_request_headers <- function(auth) {
+  access_token <- codex_auth_field(auth, "access_token", "accessToken")
+
+  if (is.null(access_token)) {
     rlang::abort(
       "The Codex credential is missing the routing fields required by the transport.",
       class = "codex_authentication_error"
@@ -101,10 +122,6 @@ codex_request_headers <- function(auth) {
 
   c(
     Authorization = paste("Bearer", access_token),
-    `ChatGPT-Account-Id` = account_id,
-    originator = codex_originator(),
-    `OpenAI-Beta` = codex_protocol_version(),
-    Accept = "text/event-stream",
-    `User-Agent` = codex_user_agent()
+    codex_request_routing_headers(auth)
   )
 }

@@ -9,10 +9,11 @@ CI. Sources were inspected on 2026-08-21.
 
 The package implementation now targets the complete public Chat surface of
 exactly ellmer 0.4.2 while accepting the direct transport as an experimental
-compatibility risk. The separate ellmer parallel/batch helpers remain an
-explicit blocker because their non-streaming request model cannot be mapped to
-the Codex endpoint. See `docs/research-risk-review.md` for the package-phase
-review and release posture.
+compatibility risk. The separate ellmer parallel/batch helpers remain outside
+the stable core: parallel calls use the package blocker and batch calls stop in
+ellmer's generic unsupported-provider check because their request model cannot
+be mapped to the Codex endpoint. See `docs/research-risk-review.md` for the
+package-phase review and release posture.
 
 ## Conclusion and recommendation
 
@@ -175,8 +176,10 @@ tool invocation helpers. The full inventory is in
 The offline regression suite covers the complete Chat method inventory, clone
 closure independence, text/tool/text and text/image/text ordering, structured
 output, rich input, metadata, auth refresh, tool errors and recovery, sync and
-async tool modes, cancellation, and explicit parallel/batch blockers. Those
-tests are added or updated in this pass but are intentionally not run.
+async tool modes, cancellation, and explicit parallel/batch blockers. The
+source-loading verification runner now executes those checks offline: the
+2026-08-21 run passed 70 tests and 337 expectations with no warnings, without
+network or credential access.
 
 ## Risks and assumptions
 
@@ -245,5 +248,8 @@ the usable text exists only in preceding delta events. This evidence motivates
 the current provider/TurnAccumulator seam, which buffers those deltas while
 leaving public Chat methods and clone behavior intact. A live two-turn
 `chat_codex()` test then returned `acknowledged`, recalled `amber`, and retained
-four turns; the regression suite for the current architecture is intentionally
-not run in the present implementation pass.
+four turns. The current opt-in acceptance runner subsequently passed explicit
+OAuth, non-empty model discovery, default and explicit model selection,
+supported reasoning effort, ordinary and multi-turn output, streaming,
+structured output, tools, async methods, rich input, cancellation, cloning,
+and history. Live artifacts were redacted and written outside the repository.

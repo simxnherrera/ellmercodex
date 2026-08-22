@@ -340,6 +340,37 @@ test_that("usage and finish metadata are retained by the Codex converter", {
   expect_true(inherits(turn@cost, "ellmer_dollars"))
 })
 
+test_that("usage fields omitted by Codex remain unknown", {
+  skip_if_not_installed("ellmer")
+
+  chat <- interface_fixture_chat()
+  provider <- chat$get_provider()
+  result <- ellmer:::stream_merge_chunks(
+    provider,
+    NULL,
+    list(type = "response.output_text.delta", delta = "unknown usage")
+  )
+  result <- ellmer:::stream_merge_chunks(
+    provider,
+    result,
+    list(
+      type = "response.completed",
+      response = list(status = "completed", output = list())
+    )
+  )
+  turn <- ellmer:::value_turn(provider, result)
+
+  expect_true(all(is.na(as.numeric(turn@tokens))))
+  expect_null(turn@json$usage)
+
+  answer <- httr2::with_mocked_responses(
+    function(req) fixture_stream_response("stream-async-empty-terminal.sse"),
+    chat$chat("Say hello.")
+  )
+  expect_identical(as.character(answer), "Hello async")
+  expect_true(all(is.na(as.numeric(chat$last_turn()@tokens))))
+})
+
 test_that("expired injected credentials refresh once without keyring re-entry", {
   skip_if_not_installed("ellmer")
 
@@ -437,7 +468,7 @@ test_that("cancellation stops a tool round before another Codex request", {
   ))
 })
 
-test_that("non-streaming ellmer helper paths fail explicitly before network I/O", {
+test_that("all documented parallel and batch helpers fail offline", {
   skip_if_not_installed("ellmer")
 
   chat <- interface_fixture_chat()
@@ -451,8 +482,43 @@ test_that("non-streaming ellmer helper paths fail explicitly before network I/O"
     ),
     class = "codex_ellmer_parallel_batch_blocker"
   )
-  expect_error(
-    ellmer::parallel_chat(chat, prompts = list("fixture")),
-    class = "codex_ellmer_parallel_batch_blocker"
+  parallel_helpers <- list(
+    parallel_chat = function() ellmer::parallel_chat(chat, prompts = list("fixture")),
+    parallel_chat_text = function() ellmer::parallel_chat_text(chat, prompts = list("fixture")),
+    parallel_chat_structured = function() ellmer::parallel_chat_structured(
+      chat,
+      prompts = list("fixture"),
+      type = ellmer::type_string()
+    )
   )
+  for (helper in parallel_helpers) {
+    expect_error(helper(), class = "codex_ellmer_parallel_batch_blocker")
+  }
+
+  path <- tempfile(fileext = ".json")
+  on.exit(unlink(path), add = TRUE)
+  batch_helpers <- list(
+    batch_chat = function() ellmer::batch_chat(
+      chat, prompts = list("fixture"), path = path
+    ),
+    batch_chat_text = function() ellmer::batch_chat_text(
+      chat, prompts = list("fixture"), path = path
+    ),
+    batch_chat_structured = function() ellmer::batch_chat_structured(
+      chat,
+      prompts = list("fixture"),
+      path = path,
+      type = ellmer::type_string()
+    ),
+    batch_chat_completed = function() ellmer::batch_chat_completed(
+      chat, prompts = list("fixture"), path = path
+    )
+  )
+  for (helper in batch_helpers) {
+    expect_error(
+      helper(),
+      regexp = "Batch requests are not currently supported by this provider"
+    )
+  }
+  expect_false(file.exists(path))
 })

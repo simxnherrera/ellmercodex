@@ -207,6 +207,10 @@ save_turn_artifacts <- function(chat, prefix) {
   invisible(turns)
 }
 
+assistant_history <- function(turns) {
+  Filter(function(turn) identical(turn@role, "assistant"), turns)
+}
+
 runner_await_promise <- function(promise, timeout = 120) {
   if (!requireNamespace("later", quietly = TRUE)) {
     stop("The live async check needs the later package.", call. = FALSE)
@@ -283,6 +287,49 @@ assert_exact_text <- function(value, expected, label) {
   invisible(actual)
 }
 
+with_env_unset <- function(name, code) {
+  previous <- Sys.getenv(name, unset = NA_character_)
+  on.exit({
+    if (is.na(previous)) {
+      Sys.unsetenv(name)
+    } else {
+      do.call(Sys.setenv, setNames(list(previous), name))
+    }
+  }, add = TRUE)
+  Sys.unsetenv(name)
+  force(code)
+}
+
+catalog_model_row <- function(models, model) {
+  index <- match(model, models$id)
+  if (is.na(index)) {
+    stop(
+      "The selected live model was not returned by codex_models(): ",
+      model,
+      call. = FALSE
+    )
+  }
+  models[index, , drop = FALSE]
+}
+
+catalog_model_effort <- function(models, model) {
+  row <- catalog_model_row(models, model)
+  supported <- row$supported_reasoning_efforts[[1L]]
+  default <- row$default_reasoning_effort[[1L]]
+  if (!is.character(supported)) supported <- character()
+  if (is.character(default) && length(default) == 1L &&
+      !is.na(default) && nzchar(default) && default %in% supported) {
+    return(default)
+  }
+  if (is.character(supported) && length(supported) > 0L) {
+    return(supported[[1L]])
+  }
+  stop(
+    "The selected live model did not advertise a reasoning effort.",
+    call. = FALSE
+  )
+}
+
 write_model_artifacts <- function(models) {
   saveRDS(models, artifact("live-models.rds"))
   effort <- vapply(
@@ -317,8 +364,11 @@ run_live_checks <- function() {
     enabled = enabled,
     status = if (enabled) "not_run" else "skipped",
     passed = if (enabled) FALSE else NULL,
+    login = NULL,
     model_catalog = NULL,
     model = NULL,
+    default_model = NULL,
+    reasoning_effort = NULL,
     error = NULL
   )
   if (!enabled) {
@@ -331,21 +381,28 @@ run_live_checks <- function() {
       stop("codex_available() returned FALSE.", call. = FALSE)
     }
 
+    force_login <- truthy(Sys.getenv("ELLMERCODEX_LIVE_EXPLICIT_LOGIN", unset = "false"))
+    auth <- NULL
     auth_error <- NULL
-    auth <- tryCatch(
-      getFromNamespace("codex_auth", "ellmercodex")(),
-      error = function(error) {
-        auth_error <<- error
-        NULL
+    if (!force_login) {
+      auth <- tryCatch(
+        getFromNamespace("codex_auth", "ellmercodex")(),
+        error = function(error) {
+          auth_error <<- error
+          NULL
+        }
+      )
+      if (is.null(auth) && !is.null(auth_error) &&
+          !inherits(auth_error, "codex_auth_missing")) {
+        stop(auth_error)
       }
-    )
-    if (is.null(auth) && !is.null(auth_error) &&
-        !inherits(auth_error, "codex_auth_missing")) {
-      stop(auth_error)
     }
-    if (is.null(auth)) {
+    if (force_login || is.null(auth)) {
       timeout <- as.numeric(Sys.getenv("ELLMERCODEX_LOGIN_TIMEOUT", unset = "300"))
       auth <- ellmercodex::codex_login(persist = FALSE, timeout = timeout)
+      status$login <- list(mode = "explicit", performed = TRUE, persisted = FALSE)
+    } else {
+      status$login <- list(mode = "stored-session", performed = FALSE, persisted = NULL)
     }
     account <- ellmercodex::codex_account(auth)
     write_json(account, artifact("live-account-redacted.json"))
@@ -360,22 +417,52 @@ run_live_checks <- function() {
       count = catalog_count,
       configured_model = if (nzchar(configured_model)) configured_model else NULL
     )
-
-    model <- configured_model
-    if (!nzchar(model) && catalog_count > 0L) model <- models$id[[1L]]
-    if (!nzchar(model)) {
+    if (catalog_count == 0L) {
       stop(
-        "codex_models() returned no selectable models and ELLMERCODEX_MODEL was not set.",
+        "codex_models() returned no selectable models; the live acceptance requires non-empty discovery.",
         call. = FALSE
       )
     }
+
+    model <- configured_model
+    if (!nzchar(model)) {
+      usable <- which(!is.na(models$supported_in_api) & models$supported_in_api)
+      if (length(usable) == 0L) {
+        stop("The live catalog contained no usable models.", call. = FALSE)
+      }
+      model <- models$id[[usable[[1L]]]]
+    }
+    selected_row <- catalog_model_row(models, model)
+    if (!isTRUE(selected_row$supported_in_api[[1L]])) {
+      stop("The configured live model is not marked usable by the account catalog.", call. = FALSE)
+    }
+    effort <- catalog_model_effort(models, model)
     status$model <- model
+    status$reasoning_effort <- effort
+
+    default_chat <- with_env_unset(
+      "ELLMERCODEX_MODEL",
+      ellmercodex::chat_codex(echo = "none")
+    )
+    default_model <- default_chat$get_model()
+    if (!default_model %in% models$id) {
+      stop("chat_codex(model = NULL) selected a model absent from the live catalog.", call. = FALSE)
+    }
+    status$default_model <- default_model
+    default_value <- default_chat$chat("Reply with exactly: live default ok")
+    default_text <- require_nonempty_text(default_value, "default model chat")
+    assert_exact_text(default_text, "live default ok", "default model chat")
+    save_turn_artifacts(default_chat, "live-default-model")
 
     ordinary <- ellmercodex::chat_codex(
       model = model,
       system_prompt = "Reply briefly and follow exact-output requests.",
+      effort = effort,
       echo = "none"
     )
+    if (!identical(ordinary$get_provider()@params$reasoning_effort, effort)) {
+      stop("The live reasoning effort was not installed in ellmer parameters.", call. = FALSE)
+    }
     ordinary_value <- ordinary$chat("Reply with exactly: live chat ok")
     ordinary_text <- require_nonempty_text(ordinary_value, "chat")
     writeLines(
@@ -389,6 +476,37 @@ run_live_checks <- function() {
       ordinary_turns[[length(ordinary_turns)]]@text,
       "live chat ok",
       "chat history"
+    )
+
+    multi_turn <- ellmercodex::chat_codex(
+      model = model,
+      effort = effort,
+      echo = "none"
+    )
+    first_multi <- multi_turn$chat(
+      "Remember that the live codeword is amber. Reply exactly: live multi first"
+    )
+    second_multi <- multi_turn$chat(
+      "What is the live codeword? Reply with only: amber"
+    )
+    first_multi <- require_nonempty_text(first_multi, "multi-turn first")
+    second_multi <- require_nonempty_text(second_multi, "multi-turn second")
+    assert_exact_text(first_multi, "live multi first", "multi-turn first")
+    assert_exact_text(second_multi, "amber", "multi-turn second")
+    multi_turns <- save_turn_artifacts(multi_turn, "live-multi-turn")
+    multi_assistant_turns <- assistant_history(multi_turns)
+    if (length(multi_assistant_turns) != 2L) {
+      stop("The live multi-turn history did not contain exactly two assistant turns.", call. = FALSE)
+    }
+    assert_exact_text(
+      multi_assistant_turns[[1L]]@text,
+      "live multi first",
+      "multi-turn first history"
+    )
+    assert_exact_text(
+      multi_assistant_turns[[2L]]@text,
+      "amber",
+      "multi-turn second history"
     )
 
     streamed <- ellmercodex::chat_codex(model = model, echo = "none")
@@ -487,6 +605,28 @@ run_live_checks <- function() {
       stop("structured async returned an unexpected value or duplicate history.", call. = FALSE)
     }
 
+    clone_source <- ellmercodex::chat_codex(model = model, echo = "none")
+    clone_source_value <- clone_source$chat("Reply with exactly: live clone source")
+    clone <- clone_source$clone()
+    clone_value <- clone$chat("Reply with exactly: live clone response")
+    assert_exact_text(clone_source_value, "live clone source", "clone source")
+    assert_exact_text(clone_value, "live clone response", "clone response")
+    clone_source_turns <- save_turn_artifacts(clone_source, "live-clone-source")
+    clone_turns <- save_turn_artifacts(clone, "live-clone")
+    assert_exact_text(
+      clone_source$last_turn()@text,
+      "live clone source",
+      "clone source history"
+    )
+    assert_exact_text(
+      clone$last_turn()@text,
+      "live clone response",
+      "clone history"
+    )
+    if (length(clone_turns) <= length(clone_source_turns)) {
+      stop("The live clone did not retain an independent continuation history.", call. = FALSE)
+    }
+
     content_stream <- ellmercodex::chat_codex(model = model, echo = "none")
     content_chunks <- coro::collect(content_stream$stream(
       "Reply with exactly: live content stream ok",
@@ -541,7 +681,7 @@ run_live_checks <- function() {
       artifact("live-tool-callbacks.json")
     )
     tool_turns <- save_turn_artifacts(tool_chat, "live-tool-chat")
-    assert_exact_text(tool_text, "live tool ok", "tool chat")
+    assert_exact_text(tool_text, "live tool ok.", "tool chat")
     if (length(tool_requests) != 1L || length(tool_results) != 1L ||
         length(tool_turns[[length(tool_turns)]]@contents) != 1L) {
       stop("tool chat did not complete one request/result round cleanly.", call. = FALSE)
@@ -636,8 +776,10 @@ main <- function() {
   sink(log_connection, split = TRUE)
   sink(message_connection, type = "message")
   on.exit({
-    while (sink.number(type = "message") > 0L) sink(type = "message")
-    while (sink.number() > 0L) sink()
+    if (sink.number(type = "message") > 0L) {
+      sink(NULL, type = "message")
+    }
+    while (sink.number() > 0L) sink(NULL)
     close(message_connection)
     close(log_connection)
   }, add = TRUE)

@@ -1,18 +1,18 @@
 # Account-specific model discovery through the observed Codex catalog endpoint.
 
+codex_models_client_version_default <- function() "0.149.0"
+
 codex_models_client_version <- function() {
-  value <- Sys.getenv(
-    "ELLMERCODEX_CLIENT_VERSION",
-    unset = tryCatch(
-      as.character(utils::packageVersion("ellmercodex")),
-      error = function(error) "0.1.5"
-    )
-  )
-  if (!is.character(value) || length(value) != 1L || is.na(value) || !nzchar(value)) {
-    "0.1.5"
-  } else {
-    value
+  override <- Sys.getenv("ELLMERCODEX_CLIENT_VERSION", unset = "")
+  if (is.character(override) && length(override) == 1L &&
+      !is.na(override) && nzchar(override)) {
+    return(override)
   }
+
+  # Keep model discovery package-native. This is the last verified native
+  # client compatibility value; updating it is a package maintenance task, not
+  # a runtime lookup of another executable.
+  codex_models_client_version_default()
 }
 
 codex_models_unsupported_reason <- function() {
@@ -172,6 +172,110 @@ codex_models_parse <- function(value) {
   codex_models_result(lapply(models, codex_model_record))
 }
 
+codex_model_selection_abort <- function(message, parent = NULL) {
+  rlang::abort(
+    message,
+    class = "codex_model_selection_error",
+    parent = parent
+  )
+}
+
+codex_model_catalog_for_selection <- function(auth) {
+  tryCatch(
+    codex_models(auth = auth),
+    error = function(error) {
+      codex_model_selection_abort(
+        paste(
+          "The account-specific Codex model catalog could not be discovered.",
+          "chat_codex() cannot safely choose a default or validate reasoning",
+          "effort without it. Run codex_models() to inspect the failure, or",
+          "pass an explicitly verified model and omit effort."
+        ),
+        parent = error
+      )
+    }
+  )
+}
+
+codex_model_catalog_row <- function(models, model) {
+  matches <- which(identical(models$id, model) | models$id == model)
+  if (length(matches) != 1L) {
+    codex_model_selection_abort(
+      paste(
+        "The selected Codex model", shQuote(model),
+        "is not present exactly once in the current account catalog.",
+        "Run codex_models() and choose an advertised model."
+      )
+    )
+  }
+  models[matches[[1L]], , drop = FALSE]
+}
+
+codex_model_catalog_default <- function(models) {
+  eligible <- which(!is.na(models$supported_in_api) & models$supported_in_api)
+  if (length(eligible) == 0L) {
+    codex_model_selection_abort(
+      paste(
+        "The account-specific Codex catalog returned no models marked as",
+        "usable. Confirm the subscription and workspace, then retry",
+        "codex_models(); no model was selected silently."
+      )
+    )
+  }
+
+  priorities <- models$priority[eligible]
+  # The catalog's lowest advertised priority is the deterministic default;
+  # when priority is absent, retain the service's catalog order.
+  order_index <- order(
+    is.na(priorities),
+    priorities,
+    eligible,
+    na.last = TRUE
+  )
+  models$id[[eligible[[order_index[[1L]]]]]]
+}
+
+codex_validate_model_effort <- function(models, model, effort) {
+  if (is.null(effort)) return(invisible(NULL))
+  row <- codex_model_catalog_row(models, model)
+  supported <- row$supported_reasoning_efforts[[1L]]
+  if (!is.character(supported)) supported <- character()
+  if (!effort %in% supported) {
+    advertised <- if (length(supported)) paste(supported, collapse = ", ") else "none"
+    codex_model_selection_abort(
+      paste(
+        "Reasoning effort", shQuote(effort), "is not advertised for Codex model",
+        shQuote(model), ". Supported values:", advertised,
+        ". Use codex_models() to choose a compatible effort."
+      )
+    )
+  }
+  invisible(effort)
+}
+
+codex_select_model <- function(auth, model = NULL, effort = NULL) {
+  if (is.null(model)) model <- codex_default_model()
+  catalog <- NULL
+  if (is.null(model) || !is.null(effort)) {
+    catalog <- codex_model_catalog_for_selection(auth)
+  }
+  if (is.null(model)) {
+    if (nrow(catalog) == 0L) {
+      codex_model_selection_abort(
+        paste(
+          "The account-specific Codex model catalog is empty, so",
+          "chat_codex(model = NULL) cannot choose a model.",
+          "Authenticate again or inspect codex_models(); pass an explicit",
+          "model only after verifying that the account can use it."
+        )
+      )
+    }
+    model <- codex_model_catalog_default(catalog)
+  }
+  if (!is.null(effort)) codex_validate_model_effort(catalog, model, effort)
+  list(model = model, catalog = catalog)
+}
+
 codex_models_request_headers <- function(auth) {
   headers <- codex_request_headers(auth)
   headers[["Accept"]] <- "application/json"
@@ -187,8 +291,9 @@ codex_models_request_headers <- function(auth) {
 #'
 #' @param auth Optional package credential. If omitted, the current session or
 #'   package-owned credential is loaded and refreshed as needed.
-#' @param client_version Optional client-version query value. The default is
-#'   the package version, and `ELLMERCODEX_CLIENT_VERSION` can override it.
+#' @param client_version Optional client-version query value. If omitted or
+#'   `NULL`, the package's verified compatibility value is used;
+#'   `ELLMERCODEX_CLIENT_VERSION` can override it.
 #' @return A `codex_models` data frame with one row per catalog model. Its
 #'   columns are:
 #'     \item{`id`}{The model identifier accepted by \link{chat_codex}.}
@@ -232,6 +337,9 @@ codex_models <- function(
       parent = NULL
     )
   }
+  if (is.null(client_version)) {
+    client_version <- codex_models_client_version()
+  }
 
   explicit_auth <- !is.null(auth)
   if (is.null(auth)) auth <- codex_auth()
@@ -248,12 +356,10 @@ codex_models <- function(
       parent = NULL
     )
   }
-  if (!is.null(client_version)) {
-    endpoint <- httr2::url_modify(
-      endpoint,
-      query = list(client_version = client_version)
-    )
-  }
+  endpoint <- httr2::url_modify(
+    endpoint,
+    query = list(client_version = client_version)
+  )
 
   request <- httr2::request(endpoint) |>
     httr2::req_headers(!!!codex_models_request_headers(auth)) |>
@@ -294,12 +400,17 @@ print.codex_models <- function(x, ...) {
     cat("No Codex models were returned.\n")
     return(invisible(x))
   }
-  display <- x[c("id", "display_name", "default_reasoning_effort")]
-  display$supported_reasoning_efforts <- vapply(
-    x$supported_reasoning_efforts,
-    function(value) paste(value, collapse = ", "),
-    character(1)
-  )
+  display <- x[intersect(
+    c("id", "display_name", "default_reasoning_effort"),
+    names(x)
+  )]
+  if ("supported_reasoning_efforts" %in% names(x)) {
+    display$supported_reasoning_efforts <- vapply(
+      x$supported_reasoning_efforts,
+      function(value) paste(value, collapse = ", "),
+      character(1)
+    )
+  }
   print.data.frame(display, ...)
   invisible(x)
 }

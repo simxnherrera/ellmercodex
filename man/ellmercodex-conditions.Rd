@@ -26,6 +26,7 @@
 \alias{codex_incomplete_error}
 \alias{codex_chat_argument_error}
 \alias{codex_chat_error}
+\alias{codex_model_selection_error}
 \alias{codex_ellmer_missing}
 \alias{codex_ellmer_compatibility_error}
 \title{ellmercodex condition classes}
@@ -52,7 +53,7 @@ Transport and stream conditions are \code{codex_request_error},
 \code{codex_incomplete_error}.
 
 ellmer integration conditions are \code{codex_chat_argument_error},
-\code{codex_chat_error}, \code{codex_ellmer_missing}, and
+\code{codex_chat_error}, \code{codex_model_selection_error}, \code{codex_ellmer_missing}, and
 \code{codex_ellmer_compatibility_error}.
 
 Handle these classes with condition handlers rather than matching their

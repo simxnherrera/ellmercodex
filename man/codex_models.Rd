@@ -10,8 +10,9 @@ codex_models(auth = NULL, client_version = codex_models_client_version())
 \item{auth}{Optional package credential. If omitted, the current session or
 package-owned credential is loaded and refreshed as needed.}
 
-\item{client_version}{Optional client-version query value. The default is
-the package version, and \code{ELLMERCODEX_CLIENT_VERSION} can override it.}
+\item{client_version}{Optional client-version query value. If omitted or
+\code{NULL}, the package's verified compatibility value is used;
+\code{ELLMERCODEX_CLIENT_VERSION} can override it.}
 }
 \value{
 A \code{codex_models} data frame with one row per catalog model. Its

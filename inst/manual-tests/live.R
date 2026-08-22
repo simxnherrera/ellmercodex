@@ -21,15 +21,35 @@ if (!codex_available()) {
 }
 
 account <- codex_account()
-if (!isTRUE(account$authenticated[[1L]])) {
-  codex_login()
+force_login <- identical(
+  tolower(Sys.getenv("ELLMERCODEX_LIVE_EXPLICIT_LOGIN", unset = "false")),
+  "true"
+)
+if (force_login || !isTRUE(account$authenticated[[1L]])) {
+  auth <- codex_login(persist = FALSE)
   account <- codex_account()
 }
 print(account)
 
+models <- codex_models()
+if (nrow(models) == 0L) {
+  stop("codex_models() returned no selectable models.", call. = FALSE)
+}
+
 model <- Sys.getenv("ELLMERCODEX_MODEL", unset = "")
 if (!nzchar(model)) {
-  stop("Set ELLMERCODEX_MODEL to an account-eligible model.", call. = FALSE)
+  usable <- which(!is.na(models$supported_in_api) & models$supported_in_api)
+  if (length(usable) == 0L) stop("No usable live model was advertised.", call. = FALSE)
+  model <- models$id[[usable[[1L]]]]
+}
+selected <- models[match(model, models$id), , drop = FALSE]
+if (nrow(selected) != 1L || !isTRUE(selected$supported_in_api[[1L]])) {
+  stop("The selected live model is not marked usable by codex_models().", call. = FALSE)
+}
+
+default_chat <- chat_codex(model = NULL)
+if (!default_chat$get_model() %in% models$id) {
+  stop("chat_codex(model = NULL) selected a model absent from codex_models().", call. = FALSE)
 }
 
 chat <- chat_codex(

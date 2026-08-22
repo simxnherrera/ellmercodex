@@ -1,6 +1,3 @@
-codex_tool_response_from_body <- getFromNamespace("codex_tool_response_from_body", "ellmercodex")
-codex_parse_sse_tool_response <- getFromNamespace("codex_parse_sse_tool_response", "ellmercodex")
-codex_tool_make_assistant_turn <- getFromNamespace("codex_tool_make_assistant_turn", "ellmercodex")
 codex_ellmer_chat_openai <- getFromNamespace("codex_ellmer_chat_openai", "ellmercodex")
 codex_patch_chat <- getFromNamespace("codex_patch_chat", "ellmercodex")
 codex_stream_chunk_text <- getFromNamespace("codex_stream_chunk_text", "ellmercodex")
@@ -16,75 +13,6 @@ new_tool_fixture_chat <- function() {
   )
   codex_patch_chat(codex_ellmer_chat_openai(model = "fixture-model", auth = auth))
 }
-
-test_that("Responses tool events assemble complete calls and fragmented arguments", {
-  skip_if_not_installed("ellmer")
-
-  events <- codex_parse_sse(fixture_text("tool-fragmented.sse"))
-  parsed <- codex_parse_sse_tool_response(events)
-
-  expect_length(parsed$calls, 1L)
-  expect_identical(parsed$calls[[1L]]$id, "call_fragmented")
-  expect_identical(parsed$calls[[1L]]$item_id, "fc_fragmented")
-  expect_identical(parsed$calls[[1L]]$name, "get_weather")
-  expect_identical(parsed$calls[[1L]]$arguments$city, "Montevideo")
-  expect_identical(parsed$text, "")
-})
-
-test_that("JSON Responses tool output is parsed without losing call_id", {
-  skip_if_not_installed("ellmer")
-
-  parsed <- codex_tool_response_from_body(fixture_text("tool-call.json"))
-  expect_identical(parsed$calls[[1L]]$id, "call_json")
-  expect_identical(parsed$calls[[1L]]$item_id, "fc_json")
-  expect_identical(parsed$calls[[1L]]$arguments$city, "Montevideo")
-
-  final <- codex_tool_response_from_body(fixture_text("tool-final.json"))
-  expect_identical(final$text, "The weather result is sunny.")
-})
-
-test_that("assistant text stays ordered around a tool request", {
-  events <- list(
-    list(type = "response.output_text.delta", delta = "Before. "),
-    list(
-      type = "response.output_item.added",
-      item = list(
-        type = "function_call",
-        id = "fc_ordered",
-        call_id = "call_ordered",
-        name = "get_weather",
-        arguments = "{}"
-      )
-    ),
-    list(type = "response.output_text.delta", delta = "After."),
-    list(
-      type = "response.completed",
-      response = list(
-        status = "completed",
-        output = list(list(
-          type = "function_call",
-          id = "fc_ordered",
-          call_id = "call_ordered",
-          name = "get_weather",
-          arguments = "{}"
-        ))
-      )
-    )
-  )
-  parsed <- codex_parse_sse_tool_response(events)
-  tool <- ellmer::tool(
-    function() "ok",
-    name = "get_weather",
-    description = "Fixture weather.",
-    arguments = list()
-  )
-  assistant <- codex_tool_make_assistant_turn(parsed, list(get_weather = tool))$turn
-
-  expect_length(assistant@contents, 3L)
-  expect_identical(assistant@contents[[1L]]@text, "Before. ")
-  expect_true(inherits(assistant@contents[[2L]], "ellmer::ContentToolRequest"))
-  expect_identical(assistant@contents[[3L]]@text, "After.")
-})
 
 test_that("a registered tool completes an end-to-end loop and preserves tool history", {
   skip_if_not_installed("ellmer")
@@ -194,9 +122,11 @@ test_that("multiple calls and sequential rounds execute in order", {
   chat$register_tool(weather)
 
   seen <- 0L
+  request_bodies <- list()
   answer <- httr2::with_mocked_responses(
     function(req) {
       seen <<- seen + 1L
+      request_bodies[[length(request_bodies) + 1L]] <<- req$body$data
       fixture <- switch(
         as.character(seen),
         `1` = "tool-multiple.sse",
@@ -212,11 +142,8 @@ test_that("multiple calls and sequential rounds execute in order", {
   expect_identical(calls, c("Montevideo", "Salto", "Montevideo"))
   expect_identical(seen, 3L)
 
-  second_request_input <- getFromNamespace(
-    "codex_tool_body", "ellmercodex"
-  )(chat, chat$get_turns(include_system_prompt = TRUE))$input
   expect_true(any(vapply(
-    second_request_input,
+    request_bodies[[3L]]$input,
     function(item) is.list(item) && identical(item$type, "function_call_output"),
     logical(1)
   )))
@@ -366,13 +293,4 @@ test_that("content streaming yields text, tool request, result, and final text",
   expect_true(any(vapply(chunks, function(x) inherits(x, "ellmer::ContentToolResult"), logical(1))))
   text <- paste0(vapply(chunks, codex_stream_chunk_text, character(1)), collapse = "")
   expect_identical(sub("\\n$", "", text), "The weather result is sunny.")
-})
-
-test_that("the text-only parser rejects recognized tool events clearly", {
-  events <- codex_parse_sse(fixture_text("tool-no-text.sse"))
-  error <- expect_error(
-    getFromNamespace("codex_parse_sse_response", "ellmercodex")(events),
-    class = "codex_protocol_changed_error"
-  )
-  expect_match(conditionMessage(error), "tool-call event")
 })

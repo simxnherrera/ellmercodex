@@ -16,10 +16,11 @@ chat_codex(
 \arguments{
 \item{system_prompt}{Optional system prompt passed to ellmer.}
 
-\item{model}{Optional Codex model name. If omitted, the package default is
-used; set the ELLMERCODEX_MODEL environment variable to choose a different
-default. Model availability is account- and workspace-specific, so
-\code{\link[=codex_models]{codex_models()}} is the authoritative way to inspect available choices.}
+\item{model}{Optional Codex model name. If omitted, \code{chat_codex()} queries
+the authenticated account catalog and chooses its lowest-priority usable
+model. Set \code{ELLMERCODEX_MODEL} for an explicit environment override;
+model availability remains account- and workspace-specific. If discovery
+is empty or unavailable, construction fails with an actionable error.}
 
 \item{echo}{One of \code{"none"}, \code{"output"}, or \code{"all"}; controls whether \verb{$chat()}
 prints the completed text. The compatibility wrapper accepts \code{TRUE},
@@ -27,8 +28,8 @@ prints the completed text. The compatibility wrapper accepts \code{TRUE},
 \code{"output"}, respectively.}
 
 \item{effort}{Optional Codex reasoning effort. It is forwarded through
-ellmer's \code{reasoning_effort} parameter and should be one of the
-values advertised by \code{\link[=codex_models]{codex_models()}} for the selected model.}
+ellmer's \code{reasoning_effort} parameter and must be one of the values
+advertised by \code{\link[=codex_models]{codex_models()}} for the selected model.}
 
 \item{params}{Optional ellmer model parameters, usually created with
 \code{ellmer::params()}. A supplied \code{reasoning_effort} must agree with
@@ -61,8 +62,9 @@ model/provider configuration, rich content, and response metadata. The
 compatibility layer uses one version-gated provider/turn-submission seam
 while leaving public Chat methods and ellmer lifecycle semantics intact.
 The separate ellmer parallel/batch helpers are outside this stable core
-contract and are explicitly blocked because their non-streaming request
-model is incompatible with the Codex stream-only endpoint.
+contract. Parallel helpers use the package blocker, while batch helpers stop
+in ellmer's generic unsupported-provider check because the Codex endpoint is
+stream-only.
 
 \verb{$chat_structured()} intentionally follows ellmer's semantics and disables
 registered tools for that request. Call \verb{$chat()} first when tool-assisted
@@ -81,16 +83,15 @@ compatibility-shape failures use \code{codex_ellmer_compatibility_error}.
 \section{Side effects}{
 
 Constructing a chat reads the current process credential or this package's
-credential store and may refresh an expired stored credential. It does not
-open a browser. Requests occur only when the corresponding Chat method is
-called; constructing a chat does not generate a response.
+credential store and may refresh an expired stored credential. When \code{model}
+is omitted, or when an effort is supplied, it also queries the authenticated
+account catalog. It does not open a browser or generate a response.
 }
 
 \examples{
 \dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 chat <- chat_codex(
-  system_prompt = "Be concise.",
-  model = Sys.getenv("ELLMERCODEX_MODEL", "gpt-5.6-luna")
+  system_prompt = "Be concise."
 )
 chat$chat("Hello")
 

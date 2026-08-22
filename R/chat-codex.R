@@ -302,8 +302,20 @@ codex_structured_async <- function(chat, dots, type, echo = "none", convert = TR
     )
   }
 
-  private <- codex_ellmer_chat_tool_compatibility(chat)
-  as_user_turn <- codex_ellmer_internal("as_user_turn")
+  codex_ellmer_compatibility()
+  codex_install_private_submit_methods(chat)
+  private <- tryCatch(
+    chat$.__enclos_env__$private,
+    error = function(error) NULL
+  )
+  if (!is.environment(private)) {
+    rlang::abort(
+      "The ellmer Chat did not expose its private compatibility environment.",
+      class = "codex_ellmer_compatibility_error",
+      parent = NULL
+    )
+  }
+  as_user_turn <- utils::getFromNamespace("as_user_turn", "ellmer")
   finish_tools <- private$complete_dangling_tool_requests()
   user_turn <- as_user_turn(
     contents = c(finish_tools %||% list(), dots),
@@ -509,6 +521,38 @@ codex_chat_error <- function(error) {
   rlang::abort(message, class = "codex_chat_error", parent = NULL)
 }
 
+codex_chat_reasoning_effort <- function(effort, params) {
+  param_effort <- if (is.list(params)) params$reasoning_effort else NULL
+  values <- list(effort = effort, params = param_effort)
+  values <- values[!vapply(values, is.null, logical(1))]
+  if (length(values) == 0L) return(NULL)
+
+  valid <- vapply(
+    values,
+    function(value) {
+      is.character(value) && length(value) == 1L &&
+        !is.na(value) && nzchar(value)
+    },
+    logical(1)
+  )
+  if (!all(valid)) {
+    rlang::abort(
+      "Reasoning effort must be NULL or one non-empty string, matching ellmer::params().",
+      class = "codex_chat_argument_error",
+      parent = NULL
+    )
+  }
+  requested <- unname(values[[1L]])
+  if (length(values) == 2L && !identical(requested, unname(values[[2L]]))) {
+    rlang::abort(
+      "`effort` and `params$reasoning_effort` must match when both are supplied.",
+      class = "codex_chat_argument_error",
+      parent = NULL
+    )
+  }
+  requested
+}
+
 codex_patch_chat <- function(chat, default_echo = "none") {
   if (!inherits(chat, "Chat")) {
     rlang::abort(
@@ -539,21 +583,23 @@ codex_patch_chat <- function(chat, default_echo = "none") {
 #' compatibility layer uses one version-gated provider/turn-submission seam
 #' while leaving public Chat methods and ellmer lifecycle semantics intact.
 #' The separate ellmer parallel/batch helpers are outside this stable core
-#' contract and are explicitly blocked because their non-streaming request
-#' model is incompatible with the Codex stream-only endpoint.
+#' contract. Parallel helpers use the package blocker, while batch helpers stop
+#' in ellmer's generic unsupported-provider check because the Codex endpoint is
+#' stream-only.
 #'
 #' `$chat_structured()` intentionally follows ellmer's semantics and disables
 #' registered tools for that request. Call `$chat()` first when tool-assisted
 #' context is needed, then use `$chat_structured()` to extract structured data.
 #'
 #' @param system_prompt Optional system prompt passed to ellmer.
-#' @param model Optional Codex model name. If omitted, the package default is
-#'   used; set the ELLMERCODEX_MODEL environment variable to choose a different
-#'   default. Model availability is account- and workspace-specific, so
-#'   [codex_models()] is the authoritative way to inspect available choices.
+#' @param model Optional Codex model name. If omitted, `chat_codex()` queries
+#'   the authenticated account catalog and chooses its lowest-priority usable
+#'   model. Set `ELLMERCODEX_MODEL` for an explicit environment override;
+#'   model availability remains account- and workspace-specific. If discovery
+#'   is empty or unavailable, construction fails with an actionable error.
 #' @param effort Optional Codex reasoning effort. It is forwarded through
-#'   ellmer's `reasoning_effort` parameter and should be one of the
-#'   values advertised by [codex_models()] for the selected model.
+#'   ellmer's `reasoning_effort` parameter and must be one of the values
+#'   advertised by [codex_models()] for the selected model.
 #' @param params Optional ellmer model parameters, usually created with
 #'   `ellmer::params()`. A supplied `reasoning_effort` must agree with
 #'   `effort`, when both are provided.
@@ -579,16 +625,15 @@ codex_patch_chat <- function(chat, default_echo = "none") {
 #' compatibility-shape failures use `codex_ellmer_compatibility_error`.
 #' @section Side effects:
 #' Constructing a chat reads the current process credential or this package's
-#' credential store and may refresh an expired stored credential. It does not
-#' open a browser. Requests occur only when the corresponding Chat method is
-#' called; constructing a chat does not generate a response.
+#' credential store and may refresh an expired stored credential. When `model`
+#' is omitted, or when an effort is supplied, it also queries the authenticated
+#' account catalog. It does not open a browser or generate a response.
 #' @seealso
 #'   [codex_login()], [codex_account()], [codex_models()], [codex_logout()],
 #'   and [ellmer::chat_openai()]
 #' @examplesIf interactive()
 #' chat <- chat_codex(
-#'   system_prompt = "Be concise.",
-#'   model = Sys.getenv("ELLMERCODEX_MODEL", "gpt-5.6-luna")
+#'   system_prompt = "Be concise."
 #' )
 #' chat$chat("Hello")
 #'
@@ -628,15 +673,6 @@ chat_codex <- function(
       parent = NULL
     )
   }
-  if (!is.null(effort) &&
-      (!is.character(effort) || length(effort) != 1L || is.na(effort) ||
-       !nzchar(effort))) {
-    rlang::abort(
-      "`effort` must be NULL or one non-empty string.",
-      class = "codex_chat_argument_error",
-      parent = NULL
-    )
-  }
   if (!is.null(params) && !is.list(params)) {
     rlang::abort(
       "`params` must be NULL or a list created by `ellmer::params()`.",
@@ -651,14 +687,7 @@ chat_codex <- function(
       parent = NULL
     )
   }
-  if (!is.null(effort) && !is.null(params$reasoning_effort) &&
-      !identical(effort, params$reasoning_effort)) {
-    rlang::abort(
-      "`effort` and `params$reasoning_effort` must match when both are supplied.",
-      class = "codex_chat_argument_error",
-      parent = NULL
-    )
-  }
+  effort <- codex_chat_reasoning_effort(effort, params)
   if (!is.null(effort)) {
     params <- params %||% list()
     params$reasoning_effort <- effort
@@ -666,7 +695,7 @@ chat_codex <- function(
 
   codex_ellmer_compatibility()
   auth <- codex_auth()
-  if (is.null(model)) model <- codex_default_model()
+  model <- codex_select_model(auth = auth, model = model, effort = effort)$model
 
   chat <- codex_ellmer_chat_openai(
     system_prompt = system_prompt,

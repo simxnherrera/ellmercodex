@@ -14,17 +14,21 @@ Rscript --vanilla inst/manual-tests/test-all.R
 ```
 
 Set `ELLMERCODEX_RUN_LIVE_TESTS=true` to add real Codex checks. If the
-account-specific model catalog is empty, provide an explicitly selected model
-with `ELLMERCODEX_MODEL`:
+account-specific model catalog is empty, the live acceptance fails because
+non-empty discovery is part of the release contract. To exercise the explicit
+browser login path even when a package credential already exists, also set
+`ELLMERCODEX_LIVE_EXPLICIT_LOGIN=true`:
 
 
 ```sh
 ELLMERCODEX_RUN_LIVE_TESTS=true \
-ELLMERCODEX_MODEL=gpt-5.6-luna \
+ELLMERCODEX_LIVE_EXPLICIT_LOGIN=true \
 ELLMERCODEX_TEST_OUTPUT=/tmp/ellmercodex-live-test \
 Rscript --vanilla inst/manual-tests/test-all.R
 ```
 
 Live checks inspect only the package-scoped credential, use redacted account
-artifacts, and do not log out afterward. `live.R` remains as the smaller
-two-prompt compatibility smoke check.
+artifacts, and do not log out afterward. The runner tests both account-catalog
+default selection and an explicit model; set `ELLMERCODEX_MODEL` only when you
+want the explicit case to use a particular catalog model. `live.R` remains as
+the smaller two-prompt compatibility smoke check.

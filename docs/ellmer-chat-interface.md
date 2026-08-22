@@ -108,21 +108,24 @@ ellmer surface and were audited.
 In ellmer 0.4.2 these helpers construct non-streaming requests and, for batch,
 use the OpenAI Files/Batches API. The Codex subscription endpoint accepts only
 the stream-only Responses transport and does not expose that batch API. The
-Codex provider therefore fails these helper calls immediately with
-`codex_ellmer_parallel_batch_blocker`, before a request is sent. This is an
-explicit stable-core boundary, not a no-op or a false-success fallback. The
-package's stable contract covers the public `Chat` object above; it does not
-claim compatibility with these separately exported parallel/batch helpers.
+parallel helpers fail with `codex_ellmer_parallel_batch_blocker`; the batch
+helpers stop in ellmer's generic provider capability check with
+`Batch requests are not currently supported by this provider.` Both paths stop
+before a request is sent, and batch helpers stop before creating a state file.
+This is an explicit stable-core boundary, not a no-op or a false-success
+fallback. The package's stable contract covers the public `Chat` object above;
+it does not claim compatibility with these separately exported parallel/batch
+helpers.
 
 | Helper | Installed signature | Status |
 |---|---|---|
 | `parallel_chat` | `function(chat, prompts, max_active = 10, rpm = 500, on_error = c("return", "continue", "stop"))` | Explicit blocker before request construction |
 | `parallel_chat_text` | Same as `parallel_chat` | Explicit blocker before request construction |
 | `parallel_chat_structured` | `function(chat, prompts, type, convert = TRUE, include_tokens = FALSE, include_cost = FALSE, max_active = 10, rpm = 500, on_error = c("return", "continue", "stop"))` | Explicit blocker before request construction |
-| `batch_chat` | `function(chat, prompts, path, wait = TRUE, ignore_hash = FALSE)` | Explicit blocker: Codex has no compatible Batch API |
-| `batch_chat_text` | Same as `batch_chat` | Explicit blocker: Codex has no compatible Batch API |
-| `batch_chat_structured` | `function(chat, prompts, path, type, wait = TRUE, ignore_hash = FALSE, convert = TRUE, include_tokens = FALSE, include_cost = FALSE)` | Explicit blocker: Codex has no compatible Batch API |
-| `batch_chat_completed` | `function(chat, prompts, path)` | Explicit blocker: Codex has no compatible Batch API |
+| `batch_chat` | `function(chat, prompts, path, wait = TRUE, ignore_hash = FALSE)` | Ellmer generic unsupported-provider error before state-file creation |
+| `batch_chat_text` | Same as `batch_chat` | Ellmer generic unsupported-provider error before state-file creation |
+| `batch_chat_structured` | `function(chat, prompts, path, type, wait = TRUE, ignore_hash = FALSE, convert = TRUE, include_tokens = FALSE, include_cost = FALSE)` | Ellmer generic unsupported-provider error before state-file creation |
+| `batch_chat_completed` | `function(chat, prompts, path)` | Ellmer generic unsupported-provider error before state-file creation |
 
 Provider-native helper declarations that are accepted by ellmer are passed
 through the parent OpenAI Responses serializer. A returned Responses item

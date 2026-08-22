@@ -3,6 +3,10 @@
 `ellmercodex` lets you use a Codex subscription from R through an
 [`ellmer`](https://ellmer.tidyverse.org/) chat interface.
 
+The package does not invoke or require the Codex CLI at runtime. Authentication,
+model discovery, HTTPS requests, and SSE streaming are implemented directly in
+R.
+
 The stable package contract is deliberately bounded to the complete public
 `ellmer` 0.4.2 `Chat` object for interactive, single-conversation operations.
 The underlying subscription authentication and Responses transport are
@@ -16,7 +20,7 @@ Install the current tagged release from GitHub with [`pak`](https://pak.r-lib.or
 
 ```r
 install.packages("pak")
-pak::pak("simxnherrera/ellmercodex@v0.1.5")
+pak::pak("simxnherrera/ellmercodex@v0.1.6")
 ```
 
 ## Quick start
@@ -105,22 +109,29 @@ models[c("id", "display_name", "default_reasoning_effort",
          "supported_reasoning_efforts")]
 ```
 
+`codex_models()` uses the package's verified catalog compatibility value by
+default. Set `ELLMERCODEX_CLIENT_VERSION` only when the service requires a
+different explicit compatibility value. With `model = NULL`, `chat_codex()`
+selects the lowest-priority usable model returned by this account catalog and
+fails with an actionable error if discovery is empty or unavailable.
+
 Select a model explicitly when needed:
 
 ```r
 chat <- chat_codex(model = models$id[[1]])
 ```
 
-You can also set `ELLMERCODEX_MODEL` and omit the `model` argument:
+You can also set `ELLMERCODEX_MODEL` as an explicit model override and omit the
+`model` argument:
 
 ```r
-Sys.setenv(ELLMERCODEX_MODEL = "gpt-5.6-luna")
+Sys.setenv(ELLMERCODEX_MODEL = models$id[[1]])
 chat <- chat_codex()
 ```
 
 Reasoning effort uses ellmer's `reasoning_effort` parameter and is forwarded
-unchanged as Codex Responses `reasoning.effort`. Prefer one of the values
-advertised for the selected model:
+unchanged as Codex Responses `reasoning.effort`. The selected model's current
+catalog row is validated before a chat is constructed:
 
 ```r
 chat <- chat_codex(model = models$id[[1]], effort = "high")
@@ -209,12 +220,11 @@ See [`docs/ellmer-chat-interface.md`](docs/ellmer-chat-interface.md) for the
 derived signatures, state transitions, return shapes, and conversion rules.
 
 `parallel_chat*()` and `batch_chat*()` are outside the stable core contract.
-They are audited but explicitly blocked: the ellmer 0.4.2 helpers require
-non-streaming OpenAI requests or the OpenAI Batch API, while the Codex
-subscription endpoint requires SSE streaming. They fail with
-`codex_ellmer_parallel_batch_blocker` before sending a request rather than
-silently degrading. The package does not claim compatibility with those
-helpers.
+They are audited but explicitly unsupported: parallel helpers fail with
+`codex_ellmer_parallel_batch_blocker`, while batch helpers fail through
+ellmer's generic unsupported-provider check. Both stop before sending a request
+and the batch path does not create a state file. The package does not claim
+compatibility with those helpers.
 
 The Codex endpoint and its Responses event names are undocumented compatibility
 surfaces, so upstream protocol changes may require a package update. This is an

@@ -194,24 +194,7 @@ codex_provider_headers <- function(provider) {
   # same provider request method.
   codex_provider_access_token(reference)
   auth <- reference$auth
-  account_id <- codex_auth_field(
-    auth,
-    "account_id", "chatgpt_account_id", "chatgptAccountId"
-  )
-  if (!codex_auth_scalar_character(account_id)) {
-    rlang::abort(
-      "The Codex credential is missing its account identifier.",
-      class = "codex_authentication_error",
-      parent = NULL
-    )
-  }
-  c(
-    `ChatGPT-Account-Id` = account_id,
-    originator = codex_originator(),
-    `OpenAI-Beta` = codex_protocol_version(),
-    Accept = "text/event-stream",
-    `User-Agent` = codex_user_agent()
-  )
+  codex_request_routing_headers(auth)
 }
 
 codex_provider_credentials <- function(reference) {
@@ -966,22 +949,53 @@ codex_provider_value_tokens <- function(provider, json) {
   usage <- if (is.list(json)) json$usage else NULL
   if (!is.list(usage)) usage <- list()
   cached <- usage$input_tokens_details$cached_tokens %||%
-    usage$prompt_tokens_details$cached_tokens %||% 0
-  input_total <- usage$input_tokens %||% usage$prompt_tokens %||% 0
-  output <- usage$output_tokens %||% usage$completion_tokens %||% 0
+    usage$prompt_tokens_details$cached_tokens
+  input_total <- usage$input_tokens %||% usage$prompt_tokens
+  output <- usage$output_tokens %||% usage$completion_tokens
   numeric_value <- function(value) {
+    if (is.null(value) || length(value) != 1L || is.na(value)) {
+      return(NA_real_)
+    }
     value <- suppressWarnings(as.numeric(value))
-    if (length(value) != 1L || !is.finite(value)) 0 else value
+    if (length(value) != 1L || !is.finite(value)) NA_real_ else value
   }
   cached <- numeric_value(cached)
   input_total <- numeric_value(input_total)
   output <- numeric_value(output)
-  constructor <- utils::getFromNamespace("tokens", "ellmer")
-  constructor(
-    input = max(0, input_total - cached),
+  input <- if (is.na(input_total) || is.na(cached)) {
+    NA_real_
+  } else {
+    max(0, input_total - cached)
+  }
+  # ellmer 0.4.2's tokens() constructor turns NULL into zero and rejects NA.
+  # Keep the provider-facing list explicit so omitted Codex fields remain NA
+  # on the assistant turn; the submit seam skips ellmer's token logger for such
+  # turns because that logger cannot represent unknown values.
+  list(
+    input = input,
     output = output,
     cached_input = cached
   )
+}
+
+codex_result_has_unknown_tokens <- function(result) {
+  tokens <- codex_provider_value_tokens(NULL, result)
+  anyNA(unlist(tokens, use.names = FALSE))
+}
+
+codex_complete_turn <- function(accumulator, private, result, type = NULL) {
+  if (!codex_result_has_unknown_tokens(result)) {
+    return(accumulator$complete_turn(result, type = type))
+  }
+
+  # TurnAccumulator$complete_turn() logs through ellmer::tokens(), which
+  # cannot represent unknown values in ellmer 0.4.2. Its value_turn method is
+  # still authoritative for validation, structured output, and tool matching;
+  # only the impossible logging step is skipped.
+  duration <- proc.time()[["elapsed"]] - accumulator$start_time
+  turn <- accumulator$value_turn(result, type, duration = duration)
+  private$.turns[[accumulator$turn_idx]] <- turn
+  turn
 }
 
 codex_provider_value_cost <- function(provider, tokens, result) {
@@ -1055,13 +1069,7 @@ codex_new_provider <- function(model, auth, params = NULL, api_args = list(), pe
     base_url = sub("/responses$", "", codex_responses_url()),
     params = params %||% list(),
     extra_args = api_args,
-    extra_headers = c(
-      `ChatGPT-Account-Id` = codex_auth_field(auth, "account_id", "chatgpt_account_id", "chatgptAccountId"),
-      originator = codex_originator(),
-      `OpenAI-Beta` = codex_protocol_version(),
-      Accept = "text/event-stream",
-      `User-Agent` = codex_user_agent()
-    ),
+    extra_headers = codex_request_routing_headers(auth),
     credentials = function() codex_provider_credentials(reference),
     preserve_thinking = TRUE,
     service_tier = "default",
@@ -1517,7 +1525,7 @@ codex_submit_turns_sync <- function(
         provider,
         result
       )
-      turn <- accumulator$complete_turn(result, type = type)
+      turn <- codex_complete_turn(accumulator, private, result, type = type)
       completed <- TRUE
       utils::getFromNamespace("record_chat_otel_span_output", "ellmer")(
         chat_span,
@@ -1637,7 +1645,7 @@ codex_submit_turns_async <- function(
         provider,
         result
       )
-      turn <- accumulator$complete_turn(result, type = type)
+      turn <- codex_complete_turn(accumulator, private, result, type = type)
       completed <- TRUE
       utils::getFromNamespace("record_chat_otel_span_output", "ellmer")(
         chat_span,

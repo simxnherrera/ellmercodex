@@ -2,7 +2,7 @@
 
 codex_request_body <- function(
   prompt,
-  model = codex_default_model(),
+  model = NULL,
   instructions = "You are a helpful assistant. Follow the user's output instructions exactly.",
   effort = NULL
 ) {
@@ -114,7 +114,7 @@ codex_abort_response <- function(response) {
 codex_request <- function(
   prompt,
   auth,
-  model = codex_default_model(),
+  model = NULL,
   endpoint = codex_responses_url(),
   effort = NULL
 ) {
@@ -177,13 +177,17 @@ codex_parse_response <- function(value) {
 
 codex_generate <- function(
   prompt,
-  model = codex_default_model(),
+  model = NULL,
   auth = NULL,
   effort = NULL
 ) {
   explicit_auth <- !is.null(auth)
   if (is.null(auth)) {
     auth <- codex_auth()
+  }
+
+  if (is.null(model)) {
+    model <- codex_select_model(auth = auth, effort = effort)$model
   }
 
   # Refresh once when required.  There is intentionally no retry-on-401 or
