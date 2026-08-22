@@ -14,14 +14,30 @@ package-owned credential is loaded and refreshed as needed.}
 the package version, and \code{ELLMERCODEX_CLIENT_VERSION} can override it.}
 }
 \value{
-A \code{codex_models} data frame with one row per catalog model. The
-\code{supported} attribute is \code{TRUE}; reasoning options are list-columns.
+A \code{codex_models} data frame with one row per catalog model. Its
+columns are:
+\item{\code{id}}{The model identifier accepted by \link{chat_codex}.}
+\item{\code{owned_by}}{The service or owner label advertised by the catalog.}
+\item{\code{display_name}}{A human-readable model name.}
+\item{\code{description}}{The catalog description, when supplied.}
+\item{\code{default_reasoning_effort}}{The advertised default effort.}
+\item{\code{supported_reasoning_efforts}}{A list-column of effort names.}
+\item{\code{supported_in_api}}{Whether the catalog marks the model as API-supported.}
+\item{\code{priority}}{The catalog priority, when supplied.}
+\item{\code{default_service_tier}}{The advertised default service tier.}
+\item{\code{service_tiers}}{A list-column of advertised service tiers.}
+The \code{supported} and \code{source} attributes describe the catalog result.
 }
 \description{
 This makes one authenticated request to the observed Codex model catalog
 endpoint. The returned rows include each model's advertised reasoning effort
 levels, so callers can select an effort without copying a stale catalog into
 this package. Availability is account- and workspace-specific.
+}
+\note{
+The catalog is account- and workspace-specific and is queried at
+call time. Cache or select a model explicitly if a reproducible workflow
+must not change when the account's catalog changes.
 }
 \section{Conditions}{
 

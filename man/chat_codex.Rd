@@ -2,7 +2,7 @@
 % Please edit documentation in R/chat-codex.R
 \name{chat_codex}
 \alias{chat_codex}
-\title{Create an experimental Codex chat backed by ellmer}
+\title{Create a Codex chat backed by ellmer}
 \usage{
 chat_codex(
   system_prompt = NULL,
@@ -17,7 +17,9 @@ chat_codex(
 \item{system_prompt}{Optional system prompt passed to ellmer.}
 
 \item{model}{Optional Codex model name. If omitted, the package default is
-used.}
+used; set the ELLMERCODEX_MODEL environment variable to choose a different
+default. Model availability is account- and workspace-specific, so
+\code{\link[=codex_models]{codex_models()}} is the authoritative way to inspect available choices.}
 
 \item{echo}{One of \code{"none"}, \code{"output"}, or \code{"all"}; controls whether \verb{$chat()}
 prints the completed text. The compatibility wrapper accepts \code{TRUE},
@@ -25,18 +27,23 @@ prints the completed text. The compatibility wrapper accepts \code{TRUE},
 \code{"output"}, respectively.}
 
 \item{effort}{Optional Codex reasoning effort. It is forwarded through
-ellmer as \code{params(reasoning_effort = effort)} and should be one of the
+ellmer's \code{reasoning_effort} parameter and should be one of the
 values advertised by \code{\link[=codex_models]{codex_models()}} for the selected model.}
 
 \item{params}{Optional ellmer model parameters, usually created with
 \code{ellmer::params()}. A supplied \code{reasoning_effort} must agree with
-\code{effort}, when both are provided.}
+\code{effort}, when both are provided.
+Other ellmer-supported model parameters are passed through unchanged.}
 
 \item{api_args}{Optional named list of additional Responses arguments passed
-through ellmer on every request.}
+through ellmer on every request. This is an advanced escape hatch for
+arguments accepted by the observed transport; unsupported arguments may
+be rejected by the remote service.}
 }
 \value{
 An object inheriting from ellmer's \code{Chat} class.
+The returned object retains ellmer's public Chat methods, history,
+callbacks, registered tools, asynchronous methods, and R6 cloning behavior.
 }
 \description{
 \code{chat_codex()} returns a normal ellmer \code{Chat} object configured for the
@@ -46,15 +53,16 @@ credential is available; an existing credential is loaded and refreshed as
 needed.
 }
 \details{
-The returned chat is the complete public \code{ellmer} 0.4.2 \code{Chat}
-object, including ordinary and structured chat, synchronous and asynchronous
-streaming, tool declarations and multi-round execution, callbacks,
-cancellation, cloning, history, echo, model/provider configuration, rich
-content, and response metadata. The compatibility layer uses one
-version-gated provider/execution seam while leaving public Chat methods
-and ellmer lifecycle semantics intact. Parallel and batch ellmer helpers are
-explicitly blocked because their non-streaming request model is incompatible
-with the Codex stream-only endpoint.
+The returned chat is the complete public \code{ellmer} 0.4.2 \code{Chat} object for
+interactive, single-conversation operations, including ordinary and
+structured chat, synchronous and asynchronous streaming, tool declarations
+and multi-round execution, callbacks, cancellation, cloning, history, echo,
+model/provider configuration, rich content, and response metadata. The
+compatibility layer uses one version-gated provider/turn-submission seam
+while leaving public Chat methods and ellmer lifecycle semantics intact.
+The separate ellmer parallel/batch helpers are outside this stable core
+contract and are explicitly blocked because their non-streaming request
+model is incompatible with the Codex stream-only endpoint.
 
 \verb{$chat_structured()} intentionally follows ellmer's semantics and disables
 registered tools for that request. Call \verb{$chat()} first when tool-assisted
@@ -65,9 +73,17 @@ context is needed, then use \verb{$chat_structured()} to extract structured data
 Invalid arguments signal \code{codex_chat_argument_error}. Missing or
 incompatible ellmer installations signal \code{codex_ellmer_missing} or
 \code{codex_ellmer_compatibility_error}. Authentication failures found before
-the Chat is constructed retain their package condition classes. Transport and
-protocol errors retain their specific Codex/ellmer condition classes;
+the Chat is constructed retain their package condition classes. Transport
+and protocol errors retain their specific Codex/ellmer condition classes;
 compatibility-shape failures use \code{codex_ellmer_compatibility_error}.
+}
+
+\section{Side effects}{
+
+Constructing a chat reads the current process credential or this package's
+credential store and may refresh an expired stored credential. It does not
+open a browser. Requests occur only when the corresponding Chat method is
+called; constructing a chat does not generate a response.
 }
 
 \examples{
@@ -87,4 +103,8 @@ weather_tool <- ellmer::tool(
 chat$register_tool(weather_tool)
 chat$chat("What is the weather in Montevideo?")
 \dontshow{\}) # examplesIf}
+}
+\seealso{
+\code{\link[=codex_login]{codex_login()}}, \code{\link[=codex_account]{codex_account()}}, \code{\link[=codex_models]{codex_models()}}, \code{\link[=codex_logout]{codex_logout()}},
+and \code{\link[ellmer:chat_openai]{ellmer::chat_openai()}}
 }

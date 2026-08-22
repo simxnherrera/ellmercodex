@@ -5,11 +5,11 @@ codex_models_client_version <- function() {
     "ELLMERCODEX_CLIENT_VERSION",
     unset = tryCatch(
       as.character(utils::packageVersion("ellmercodex")),
-      error = function(error) "0.1.3"
+      error = function(error) "0.1.4"
     )
   )
   if (!is.character(value) || length(value) != 1L || is.na(value) || !nzchar(value)) {
-    "0.1.3"
+    "0.1.4"
   } else {
     value
   }
@@ -189,11 +189,25 @@ codex_models_request_headers <- function(auth) {
 #'   package-owned credential is loaded and refreshed as needed.
 #' @param client_version Optional client-version query value. The default is
 #'   the package version, and `ELLMERCODEX_CLIENT_VERSION` can override it.
-#' @return A `codex_models` data frame with one row per catalog model. The
-#'   `supported` attribute is `TRUE`; reasoning options are list-columns.
+#' @return A `codex_models` data frame with one row per catalog model. Its
+#'   columns are:
+#'     \item{`id`}{The model identifier accepted by \link{chat_codex}.}
+#'     \item{`owned_by`}{The service or owner label advertised by the catalog.}
+#'     \item{`display_name`}{A human-readable model name.}
+#'     \item{`description`}{The catalog description, when supplied.}
+#'     \item{`default_reasoning_effort`}{The advertised default effort.}
+#'     \item{`supported_reasoning_efforts`}{A list-column of effort names.}
+#'     \item{`supported_in_api`}{Whether the catalog marks the model as API-supported.}
+#'     \item{`priority`}{The catalog priority, when supplied.}
+#'     \item{`default_service_tier`}{The advertised default service tier.}
+#'     \item{`service_tiers`}{A list-column of advertised service tiers.}
+#'   The `supported` and `source` attributes describe the catalog result.
 #' @section Conditions:
 #' Missing credentials signal `codex_auth_missing`; HTTP and protocol failures
 #' use the same sanitized transport conditions as generation requests.
+#' @note The catalog is account- and workspace-specific and is queried at
+#'   call time. Cache or select a model explicitly if a reproducible workflow
+#'   must not change when the account's catalog changes.
 #' @examplesIf interactive()
 #' models <- codex_models()
 #' models[c("id", "default_reasoning_effort", "supported_reasoning_efforts")]

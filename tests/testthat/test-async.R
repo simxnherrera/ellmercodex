@@ -8,8 +8,8 @@ test_that("async chat repairs Codex streamed text and terminal history", {
   )
 
   expect_null(outcome$error)
-  expect_s3_class(outcome$value, "ellmer_output")
-  expect_identical(as.character(outcome$value), "Hello async")
+  expect_type(outcome$value, "character")
+  expect_identical(outcome$value, "Hello async")
   expect_identical(chat$last_turn()@text, "Hello async")
 })
 

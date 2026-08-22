@@ -110,9 +110,9 @@ use the OpenAI Files/Batches API. The Codex subscription endpoint accepts only
 the stream-only Responses transport and does not expose that batch API. The
 Codex provider therefore fails these helper calls immediately with
 `codex_ellmer_parallel_batch_blocker`, before a request is sent. This is an
-explicit compatibility blocker, not a no-op or a false-success fallback. The
-package cannot be called stable until Codex or ellmer provides a supported
-streaming parallel/batch seam.
+explicit stable-core boundary, not a no-op or a false-success fallback. The
+package's stable contract covers the public `Chat` object above; it does not
+claim compatibility with these separately exported parallel/batch helpers.
 
 | Helper | Installed signature | Status |
 |---|---|---|

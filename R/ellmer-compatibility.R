@@ -403,7 +403,7 @@ codex_stream_state_append_text <- function(state, text) {
     codex_sse_protocol_error("The Codex output text delta was malformed.")
   }
   if (!nzchar(text)) return(state)
-  last <- if (length(state$codex_order)) tail(state$codex_order, 1L) else NULL
+  last <- if (length(state$codex_order)) utils::tail(state$codex_order, 1L) else NULL
   if (is.character(last) && startsWith(last, "text:")) {
     index <- match(last, state$codex_keys)
     item <- state$codex_items[[index]]
@@ -427,7 +427,7 @@ codex_stream_state_append_thinking <- function(state, thinking, extra = NULL) {
   if (!is.character(thinking) || length(thinking) != 1L || is.na(thinking) || !nzchar(thinking)) {
     return(state)
   }
-  last <- if (length(state$codex_order)) tail(state$codex_order, 1L) else NULL
+  last <- if (length(state$codex_order)) utils::tail(state$codex_order, 1L) else NULL
   if (is.character(last) && startsWith(last, "reasoning:")) {
     index <- match(last, state$codex_keys)
     item <- state$codex_items[[index]]

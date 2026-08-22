@@ -12,8 +12,10 @@ process-local session and then the package's own credential store are
 checked.}
 }
 \value{
-A data frame with authentication state, a redacted account field,
-and the access-token expiry time.
+A one-row data frame with columns:
+\item{\code{authenticated}}{Logical; whether a valid package credential was found.}
+\item{\code{account}}{Always \code{"<redacted>"}; account identifiers are never returned.}
+\item{\code{expires_at}}{The access-token expiry as a UTC \code{POSIXct} value, or \code{NA} when unauthenticated.}
 }
 \description{
 The account identifier and all token material are deliberately replaced or

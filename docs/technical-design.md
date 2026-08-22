@@ -2,12 +2,14 @@
 
 ## Scope
 
-This design covers the experimental R package: `chat_codex()`, explicit
-browser login, secure persistence and refresh, SSE Responses calls, offline
+This design covers the bounded stable core: `chat_codex()`, explicit browser
+login, secure persistence and refresh, SSE Responses calls, offline
 availability diagnostics, account-specific model discovery, reasoning effort,
-and the complete public `ellmer` 0.4.2 Chat interface. The package uses a
-version-gated provider subclass plus one private Chat execution seam because
-the Codex endpoint is stream-only; it does not replace public Chat methods.
+and the complete public `ellmer` 0.4.2 Chat interface for interactive,
+single-conversation operations. The package uses a version-gated provider
+subclass plus one private Chat execution seam because the Codex endpoint is
+stream-only; it does not replace public Chat methods. The separately exported
+ellmer parallel/batch helpers are outside this core contract.
 
 Live testing resolved a key assumption: the subscription backend returns HTTP
 400 for `stream: false` and requires streaming. The authorized next phase added
@@ -219,7 +221,8 @@ ellmer surface. They request non-streaming responses or the OpenAI Batch API,
 which the Codex subscription endpoint does not provide. The Codex provider
 rejects those requests with an explicit
 `codex_ellmer_parallel_batch_blocker` before network I/O. This is a documented
-blocker and prevents the package from being called stable.
+unsupported boundary, not a false-success fallback. The stable claim is
+limited to the `Chat` object and does not include these helpers.
 
 ## Compatibility status and release risks
 
@@ -238,6 +241,6 @@ blocker and prevents the package from being called stable.
 
 The package addresses the complete Chat surface for the pinned ellmer 0.4.2
 release, subject to the undocumented Codex transport. The parallel/batch
-helper blocker and the undocumented endpoint are open release blockers; the
-package must not be labeled stable until they are resolved or the supported
-contract is explicitly changed by its owner.
+helpers remain unsupported by design. The stable claim is therefore a bounded
+Chat compatibility claim, not a claim of complete ellmer helper compatibility
+or a guarantee that the observed Codex backend will remain available.

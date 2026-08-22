@@ -1,3 +1,16 @@
+# ellmercodex 0.1.4
+
+* Expanded the public reference pages and getting-started vignette with the
+  authentication workflow, credential side effects, model-catalog columns,
+  condition handling, compatibility boundaries, and offline-check semantics.
+* Defined the stable contract as the complete public ellmer 0.4.2 `Chat`
+  object for interactive, single-conversation operations. The separately
+  exported parallel and batch helpers remain explicitly unsupported because
+  the subscription transport is stream-only; the package no longer presents
+  that limitation as a blocker to the bounded core contract.
+* Corrected offline streaming fixtures and compatibility assertions so the
+  release gate tests the actual ellmer 0.4.2 return and history semantics.
+
 # ellmercodex 0.1.3
 
 * Reworked the ellmer integration around a version-gated `CodexProvider` and
@@ -8,7 +21,8 @@
 * Added clone-safe credential references with refresh-token rotation and
   persistent updates across all Chat request paths. Non-streaming ellmer
   parallel/batch helpers now fail explicitly because the Codex subscription
-  endpoint is stream-only; this remains a blocker to stable status.
+  endpoint is stream-only; these helpers are outside the bounded Chat
+  compatibility contract.
 * Documented the complete installed ellmer 0.4.2 Chat interface and capability
   matrix in `docs/ellmer-chat-interface.md`.
 

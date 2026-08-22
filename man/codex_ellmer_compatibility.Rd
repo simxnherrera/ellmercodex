@@ -10,7 +10,7 @@ codex_ellmer_compatibility()
 The installed ellmer version, invisibly.
 }
 \description{
-The package supports exactly the inspected public \code{ellmer} 0.4.2 Chat
+The package supports exactly the inspected ellmer 0.4.2 Chat
 implementation. A later upstream release must be audited before it can be
 admitted because the transport uses version-gated private ellmer seams.
 }

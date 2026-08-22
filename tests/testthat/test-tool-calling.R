@@ -6,11 +6,7 @@ codex_patch_chat <- getFromNamespace("codex_patch_chat", "ellmercodex")
 codex_stream_chunk_text <- getFromNamespace("codex_stream_chunk_text", "ellmercodex")
 
 tool_fixture_response <- function(name) {
-  httr2::response(
-    status_code = 200L,
-    headers = list(`Content-Type` = "text/event-stream"),
-    body = charToRaw(fixture_text(name))
-  )
+  fixture_stream_response(name)
 }
 
 new_tool_fixture_chat <- function() {
@@ -369,7 +365,7 @@ test_that("content streaming yields text, tool request, result, and final text",
   expect_true(any(vapply(chunks, function(x) inherits(x, "ellmer::ContentToolRequest"), logical(1))))
   expect_true(any(vapply(chunks, function(x) inherits(x, "ellmer::ContentToolResult"), logical(1))))
   text <- paste0(vapply(chunks, codex_stream_chunk_text, character(1)), collapse = "")
-  expect_identical(text, "The weather result is sunny.")
+  expect_identical(sub("\\n$", "", text), "The weather result is sunny.")
 })
 
 test_that("the text-only parser rejects recognized tool events clearly", {

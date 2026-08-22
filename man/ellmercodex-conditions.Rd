@@ -54,4 +54,15 @@ Transport and stream conditions are \code{codex_request_error},
 ellmer integration conditions are \code{codex_chat_argument_error},
 \code{codex_chat_error}, \code{codex_ellmer_missing}, and
 \code{codex_ellmer_compatibility_error}.
+
+Handle these classes with condition handlers rather than matching their
+messages. More specific subclasses can be handled before the common
+\code{codex_auth_error} or \code{codex_request_error} parents.
+}
+\examples{
+error <- tryCatch(
+  codex_available(NA),
+  codex_auth_argument_error = identity
+)
+inherits(error, "codex_auth_error")
 }
