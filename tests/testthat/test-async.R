@@ -64,7 +64,7 @@ test_that("async streaming preserves content chunks, callbacks, and tool modes",
     )))
     text <- paste0(vapply(
       outcome$value,
-      getFromNamespace("codex_stream_chunk_text", "ellmercodex"),
+      fixture_chunk_text,
       character(1)
     ), collapse = "")
     expect_match(text, "The weather result is sunny\\.")

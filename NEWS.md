@@ -1,3 +1,10 @@
+# ellmercodex 0.1.62
+
+* Removed obsolete private OAuth callback/PKCE and legacy ellmer structured
+  stream-repair helpers now superseded by the httr2 and ellmer compatibility
+  paths. Updated tests and internal documentation; no public API behavior
+  changes.
+
 # ellmercodex 0.1.61
 
 * Replaced the OS-keyring credential backend with httr2's encrypted OAuth

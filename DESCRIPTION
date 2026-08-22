@@ -1,6 +1,6 @@
 Package: ellmercodex
 Title: Codex Integration for 'ellmer'
-Version: 0.1.61
+Version: 0.1.62
 Authors@R: person("Simon", "Herrera", email = "simxnherrera@gmail.com", role = c("aut", "cre"))
 Author: Simon Herrera [aut, cre]
 Maintainer: Simon Herrera <simxnherrera@gmail.com>

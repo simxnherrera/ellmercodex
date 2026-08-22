@@ -292,14 +292,6 @@ codex_stream_event_type <- function(event) {
   }
 }
 
-codex_stream_scalar <- function(value) {
-  if (is.character(value) && length(value) == 1L && !is.na(value) && nzchar(value)) {
-    value
-  } else {
-    NULL
-  }
-}
-
 codex_stream_item_type <- function(item) {
   type <- if (is.list(item)) item$type else NULL
   if (is.character(type) && length(type) == 1L && !is.na(type)) type else NULL
@@ -680,17 +672,6 @@ codex_stream_merge <- function(provider, result, chunk) {
     codex_sse_error(chunk)
   }
   state
-}
-
-codex_stream_output_text <- function(item) {
-  if (!is.list(item)) return(character())
-  if (identical(item$type, "message") && is.list(item$content)) {
-    return(vapply(item$content, function(content) {
-      if (is.list(content) && identical(content$type, "output_text") &&
-          is.character(content$text) && length(content$text) == 1L) content$text else ""
-    }, character(1)))
-  }
-  if (identical(item$type, "output_text") && is.character(item$text)) item$text else character()
 }
 
 codex_stream_output_format <- function(item) {

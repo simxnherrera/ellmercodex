@@ -34,9 +34,9 @@ owned by this package.
 }
 \section{Conditions}{
 
-Invalid arguments signal \code{codex_auth_argument_error}; callback, browser, and
-token failures use \code{codex_oauth_callback_error}, \code{codex_oauth_browser_error},
-or \code{codex_token_exchange_error} as appropriate.
+Invalid arguments signal \code{codex_auth_argument_error}; callback and token
+failures use \code{codex_oauth_callback_error} or
+\code{codex_token_exchange_error} as appropriate.
 }
 
 \examples{

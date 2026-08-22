@@ -30,16 +30,6 @@ codex_session_clear <- function() {
   invisible(TRUE)
 }
 
-codex_base64url_encode <- function(value) {
-  if (is.character(value)) value <- charToRaw(value)
-  if (!is.raw(value)) {
-    codex_auth_abort("The value to encode must be raw or character data.", "codex_oauth_argument_error")
-  }
-  encoded <- openssl::base64_encode(value)
-  encoded <- chartr("+/", "-_", encoded)
-  sub("=+$", "", encoded)
-}
-
 codex_base64url_decode <- function(value) {
   codex_auth_require_string(value, "value")
   if (!grepl("^[A-Za-z0-9_-]+$", value)) {
@@ -51,193 +41,6 @@ codex_base64url_decode <- function(value) {
   tryCatch(openssl::base64_decode(value), error = function(error) {
     codex_auth_abort("The encoded OAuth value was malformed.", "codex_oauth_argument_error")
   })
-}
-
-codex_pkce <- function() {
-  # 64 random bytes encode to a verifier well within RFC 7636's bounds.
-  verifier <- codex_base64url_encode(openssl::rand_bytes(64L))
-  challenge <- codex_base64url_encode(openssl::sha256(charToRaw(verifier)))
-  list(verifier = verifier, challenge = challenge)
-}
-
-codex_oauth_state <- function() {
-  codex_base64url_encode(openssl::rand_bytes(32L))
-}
-
-codex_validate_state <- function(expected, received) {
-  is.character(expected) && length(expected) == 1L && !is.na(expected) &&
-    is.character(received) && length(received) == 1L && !is.na(received) &&
-    nzchar(expected) && identical(expected, received)
-}
-
-codex_parse_query <- function(query) {
-  if (is.null(query) || length(query) == 0L || is.na(query) || !nzchar(query)) {
-    return(list())
-  }
-  query <- sub("^\\?", "", query)
-  if (!nzchar(query)) {
-    return(list())
-  }
-
-  decode <- function(value) {
-    # URLdecode() intentionally does not apply application/x-www-form-urlencoded
-    # '+' semantics, while QUERY_STRING values commonly use them.
-    utils::URLdecode(gsub("+", " ", value, fixed = TRUE))
-  }
-  pairs <- strsplit(query, "&", fixed = TRUE)[[1L]]
-  out <- lapply(pairs, function(pair) {
-    parts <- strsplit(pair, "=", fixed = TRUE)[[1L]]
-    name <- decode(parts[[1L]])
-    value <- if (length(parts) > 1L) decode(paste(parts[-1L], collapse = "=")) else ""
-    list(name = name, value = value)
-  })
-  names <- vapply(out, `[[`, "", "name")
-  values <- lapply(out, `[[`, "value")
-  # Invalid/empty names are not useful to the callback and should never become
-  # surprising names in a condition or diagnostic.
-  keep <- nzchar(names)
-  stats::setNames(values[keep], names[keep])
-}
-
-codex_authorize_url <- function(pkce, state) {
-  if (!is.list(pkce) || !codex_auth_scalar_character(pkce$challenge) ||
-        !codex_auth_scalar_character(pkce$verifier)) {
-    codex_auth_abort("The PKCE values were malformed.", "codex_oauth_argument_error")
-  }
-  codex_auth_require_string(state, "state")
-  params <- list(
-    response_type = "code",
-    client_id = codex_oauth_client_id(),
-    redirect_uri = codex_redirect_uri(),
-    scope = "openid profile email offline_access",
-    code_challenge = pkce$challenge,
-    code_challenge_method = "S256",
-    id_token_add_organizations = "true",
-    codex_cli_simplified_flow = "true",
-    state = state,
-    originator = codex_originator()
-  )
-  httr2::url_modify(codex_authorization_url(), query = params)
-}
-
-codex_callback_html <- function(success) {
-  status <- if (isTRUE(success)) "Authorization received" else "Authorization failed"
-  paste0(
-    "<!doctype html><html><head><meta charset='utf-8'><title>", status,
-    "</title></head><body><h1>", status,
-    "</h1><p>You may close this window and return to R.</p></body></html>"
-  )
-}
-
-codex_callback_result <- function(query, expected_state) {
-  query <- if (is.list(query)) query else list()
-  if (!codex_validate_state(expected_state, query$state)) {
-    return(list(code = NULL, error = "OAuth state validation failed."))
-  }
-
-  code <- query$code
-  if (codex_auth_scalar_character(code)) {
-    return(list(code = code, error = NULL))
-  }
-
-  error_code <- query$error
-  safe_error <- codex_auth_scalar_character(error_code) &&
-    grepl("^[A-Za-z0-9._-]{1,80}$", error_code)
-  if (safe_error) {
-    return(list(code = NULL, error = sprintf("Authorization failed (%s).", error_code)))
-  }
-
-  parameter_names <- setdiff(names(query), c("code", "state"))
-  parameter_names <- parameter_names[
-    grepl("^[A-Za-z0-9._-]{1,80}$", parameter_names)
-  ]
-  suffix <- if (length(parameter_names) == 0L) {
-    ""
-  } else {
-    sprintf(" Safe parameter names received: %s.", paste(parameter_names, collapse = ", "))
-  }
-  list(
-    code = NULL,
-    error = paste0("The OAuth callback did not contain an authorization code.", suffix)
-  )
-}
-
-codex_wait_for_callback <- function(expected_state, timeout = 300, on_ready = NULL) {
-  codex_auth_require_string(expected_state, "expected_state")
-  if (!is.numeric(timeout) || length(timeout) != 1L || !is.finite(timeout) || timeout <= 0) {
-    codex_auth_abort("`timeout` must be one positive number of seconds.", "codex_auth_argument_error")
-  }
-
-  result <- new.env(parent = emptyenv())
-  result$done <- FALSE
-  result$code <- NULL
-  result$error <- NULL
-
-  app <- list(call = function(request) {
-    path <- request$PATH_INFO %||% request$REQUEST_URI %||% ""
-    path <- sub("\\?.*$", "", path)
-    if (!identical(path, "/auth/callback")) {
-      return(list(
-        status = 404L,
-        headers = list("Content-Type" = "text/plain; charset=utf-8"),
-        body = "Not found"
-      ))
-    }
-
-    query <- codex_parse_query(request$QUERY_STRING %||% "")
-    callback <- codex_callback_result(query, expected_state)
-    result$error <- callback$error
-    result$code <- callback$code
-    result$done <- TRUE
-
-    ok <- is.null(result$error)
-    list(
-      status = if (ok) 200L else 400L,
-      headers = list("Content-Type" = "text/html; charset=utf-8"),
-      body = codex_callback_html(ok)
-    )
-  })
-
-  server <- tryCatch(
-    httpuv::startServer("127.0.0.1", codex_callback_port(), app),
-    error = function(error) {
-      codex_auth_abort(
-        sprintf(
-          paste0(
-            "Could not bind the required OAuth callback at 127.0.0.1:%d. ",
-            "Close any process using that port and try again."
-          ),
-          codex_callback_port()
-        ),
-        "codex_oauth_callback_error"
-      )
-    }
-  )
-  on.exit(try(httpuv::stopServer(server), silent = TRUE), add = TRUE)
-
-  # The listener must exist before opening the authorization URL.
-  if (is.function(on_ready)) {
-    tryCatch(on_ready(), error = function(error) {
-      codex_auth_abort(
-        "Could not open a browser for Codex authentication.",
-        "codex_oauth_browser_error"
-      )
-    })
-  }
-
-  started <- Sys.time()
-  while (!isTRUE(result$done)) {
-    httpuv::service(timeoutMs = 100L)
-    elapsed <- as.numeric(difftime(Sys.time(), started, units = "secs"))
-    if (elapsed >= timeout) {
-      codex_auth_abort("Timed out waiting for the OAuth browser callback.", "codex_oauth_timeout")
-    }
-  }
-
-  if (!is.null(result$error)) {
-    codex_auth_abort(result$error, "codex_oauth_callback_error")
-  }
-  result$code
 }
 
 codex_token_response <- function(response, operation = "token exchange") {
@@ -370,28 +173,6 @@ codex_token_expired <- function(auth, skew = 60, now = as.numeric(Sys.time())) {
   !is.finite(expires_at) || expires_at <= (now + skew)
 }
 
-codex_exchange_code <- function(code, verifier) {
-  codex_auth_require_string(code, "code")
-  codex_auth_require_string(verifier, "verifier")
-  request <- httr2::request(codex_token_url()) |>
-    httr2::req_body_form(
-      grant_type = "authorization_code",
-      code = code,
-      redirect_uri = codex_redirect_uri(),
-      client_id = codex_oauth_client_id(),
-      code_verifier = verifier
-    ) |>
-    httr2::req_timeout(30) |>
-    httr2::req_error(is_error = function(response) FALSE)
-  response <- tryCatch(httr2::req_perform(request), error = function(error) {
-    codex_auth_abort(
-      "Codex OAuth token exchange failed because of a network error.",
-      "codex_token_exchange_error"
-    )
-  })
-  codex_token_response(response, "token exchange")
-}
-
 codex_refresh <- function(auth, persist = TRUE) {
   if (!inherits(auth, "codex_auth") || !codex_auth_scalar_character(auth$refresh_token)) {
     codex_auth_abort("The Codex credential cannot be refreshed.", "codex_refresh_error")
@@ -444,20 +225,6 @@ codex_auth <- function(force_refresh = FALSE) {
   auth
 }
 
-codex_open_browser <- function(url) {
-  codex_auth_require_string(url, "url")
-  tryCatch(
-    utils::browseURL(url, verbose = FALSE),
-    error = function(error) {
-      codex_auth_abort(
-        "Could not open a browser for Codex authentication.",
-        "codex_oauth_browser_error"
-      )
-    }
-  )
-  invisible(TRUE)
-}
-
 #' Sign in to a Codex subscription with browser OAuth.
 #'
 #' `codex_login()` is the explicit authentication entry point. It opens a
@@ -480,9 +247,9 @@ codex_open_browser <- function(url) {
 #'   a remote session; use [codex_logout()] to remove the local credential
 #'   owned by this package.
 #' @section Conditions:
-#' Invalid arguments signal `codex_auth_argument_error`; callback, browser, and
-#' token failures use `codex_oauth_callback_error`, `codex_oauth_browser_error`,
-#' or `codex_token_exchange_error` as appropriate.
+#' Invalid arguments signal `codex_auth_argument_error`; callback and token
+#' failures use `codex_oauth_callback_error` or `codex_token_exchange_error` as
+#' appropriate.
 #' @examplesIf interactive()
 #' auth <- codex_login()
 #' codex_account(auth)

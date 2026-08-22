@@ -37,6 +37,12 @@ codex_oauth_flow <- function(
       "codex_auth_missing"
     )
   }
+  if (!requireNamespace("httpuv", quietly = TRUE)) {
+    codex_auth_abort(
+      "The browser OAuth flow requires the `httpuv` package.",
+      "codex_oauth_callback_error"
+    )
+  }
   if (!is.numeric(timeout) || length(timeout) != 1L || !is.finite(timeout) || timeout <= 0) {
     codex_auth_abort("`timeout` must be one positive number of seconds.", "codex_auth_argument_error")
   }

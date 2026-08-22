@@ -22,8 +22,3 @@ codex_auth_require_string <- function(value, name, allow_empty = FALSE) {
   }
   invisible(value)
 }
-
-codex_auth_error_message <- function(operation, include_retry = FALSE) {
-  suffix <- if (isTRUE(include_retry)) " Run codex_login() if the problem persists." else ""
-  paste0("Codex OAuth ", operation, " failed.", suffix)
-}

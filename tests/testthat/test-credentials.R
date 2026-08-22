@@ -33,9 +33,9 @@ testthat::test_that("httr2 encrypts the disk cache and reuses a cached token", {
 
   access_token <- paste(
     "header",
-    codex_base64url_encode(charToRaw(
+    fixture_base64url(
       '{"https://api.openai.com/auth":{"chatgpt_account_id":"fixture-account"}}'
-    )),
+    ),
     "signature",
     sep = "."
   )

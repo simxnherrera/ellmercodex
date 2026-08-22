@@ -10,6 +10,17 @@ fake_codex_auth <- function() {
   )
 }
 
+fixture_base64url <- function(value) {
+  encoded <- openssl::base64_encode(charToRaw(value))
+  sub("=+$", "", chartr("+/", "-_", encoded))
+}
+
+fixture_chunk_text <- function(chunk) {
+  if (is.character(chunk)) return(paste0(chunk, collapse = ""))
+  if (inherits(chunk, "ellmer::ContentText")) return(chunk@text)
+  ""
+}
+
 fixture_text <- function(name) {
   path <- testthat::test_path("fixtures", name)
   paste(readLines(path, warn = FALSE, encoding = "UTF-8"), collapse = "\n")

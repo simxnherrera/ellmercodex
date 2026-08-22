@@ -2,8 +2,6 @@ codex_ellmer_compatibility <- getFromNamespace("codex_ellmer_compatibility", "el
 codex_ellmer_chat_openai <- getFromNamespace("codex_ellmer_chat_openai", "ellmercodex")
 codex_patch_chat <- getFromNamespace("codex_patch_chat", "ellmercodex")
 codex_echo <- getFromNamespace("codex_echo", "ellmercodex")
-codex_repair_last_turn <- getFromNamespace("codex_repair_last_turn", "ellmercodex")
-codex_stream_chunk_text <- getFromNamespace("codex_stream_chunk_text", "ellmercodex")
 
 test_that("the installed ellmer release exposes the supported seam", {
   version <- codex_ellmer_compatibility()
@@ -51,7 +49,7 @@ test_that("ellmer reasoning effort is forwarded without translation", {
   expect_identical(provider@params$reasoning_effort, "high")
 })
 
-test_that("Codex compatibility keeps the public Chat lifecycle and repairs streamed text", {
+test_that("Codex compatibility keeps the public Chat lifecycle and merges streamed text", {
   skip_if_not_installed("ellmer")
 
   auth <- structure(
@@ -123,16 +121,5 @@ test_that("chat argument and compatibility failures use user-facing conditions",
       params = list(reasoning_effort = "low")
     ),
     class = "codex_chat_argument_error"
-  )
-  expect_error(
-    ellmercodex:::codex_structured_echo("invalid"),
-    class = "codex_chat_argument_error"
-  )
-  expect_error(
-    codex_repair_last_turn(
-      ellmer::chat_openai(credentials = function() fake_auth$access_token),
-      ""
-    ),
-    class = "codex_protocol_changed_error"
   )
 })

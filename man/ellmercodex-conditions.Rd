@@ -7,7 +7,6 @@
 \alias{codex_auth_argument_error}
 \alias{codex_oauth_argument_error}
 \alias{codex_oauth_callback_error}
-\alias{codex_oauth_browser_error}
 \alias{codex_oauth_timeout}
 \alias{codex_token_exchange_error}
 \alias{codex_refresh_error}
@@ -40,7 +39,7 @@ credential-store contents.
 Authentication and credential conditions inherit from \code{codex_auth_error}.
 The principal subclasses are \code{codex_auth_missing},
 \code{codex_auth_argument_error}, \code{codex_oauth_argument_error},
-\code{codex_oauth_callback_error}, \code{codex_oauth_browser_error},
+\code{codex_oauth_callback_error},
 \code{codex_oauth_timeout}, \code{codex_token_exchange_error},
 \code{codex_refresh_error}, \code{codex_account_error}, and
 \code{codex_credential_store_error}.

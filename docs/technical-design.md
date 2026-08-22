@@ -22,12 +22,12 @@ genuine-process restart all passed.
 explicit codex_login()
         |
         v
-auth.R: PKCE + state -> browser -> 127.0.0.1 callback -> token exchange
+credentials.R: httr2 PKCE -> browser -> 127.0.0.1 callback -> token exchange
         |
         +-------------------------+
         |                         |
         v                         v
-credentials.R: httr2 OAuth cache  auth object in memory
+credentials.R: httr2 OAuth cache  auth.R: in-memory auth object
         |                         |
         +------------+------------+
                      v
@@ -63,25 +63,20 @@ registration or approval claim.
 
 1. Loading the package defines functions only. It has no authentication,
    browser, credential, or network side effects.
-2. An explicit `codex_login()` creates 64 random bytes for a PKCE verifier and 32
-   random bytes for OAuth state using `openssl::rand_bytes()`.
-3. The verifier is base64url encoded; its challenge is the base64url-encoded
-   SHA-256 digest.
-4. A callback server binds only to `127.0.0.1:1455`. The registered redirect
-   remains exactly `http://localhost:1455/auth/callback`, matching Pi's
-   compatibility-sensitive behavior.
-5. Only after the server is listening does the function open the authorization
-   URL. The callback must have the expected path, a code, and an exact state
-   match.
-6. The code is exchanged with a form-encoded request. The callback server is
-   stopped through `on.exit()` after success, failure, interruption, or timeout.
-7. The account identifier is read from the namespaced JWT claim. JWT payloads
+2. An explicit `codex_login()` delegates to `codex_oauth_flow()` in
+   `R/credentials.R`, which uses httr2's PKCE-protected authorization-code flow.
+3. httr2 opens the browser and manages the loopback callback. The registered
+   redirect remains exactly `http://localhost:1455/auth/callback`, matching
+   Pi's compatibility-sensitive behavior.
+4. httr2 exchanges the authorization code and closes the callback listener;
+   `codex_oauth_flow()` maps timeout and browser failures to package conditions.
+5. The account identifier is read from the namespaced JWT claim. JWT payloads
    are decoded only to obtain routing metadata and expiry; this is not signature
    validation and must not be treated as authorization. The server-issued token
    remains the authority.
-8. Expiry uses the access-token `exp` claim when available, otherwise
+6. Expiry uses the access-token `exp` claim when available, otherwise
    `expires_in`, with a 60-second refresh margin.
-9. Refresh is handled by httr2 for package-managed credentials. A rotated
+7. Refresh is handled by httr2 for package-managed credentials. A rotated
    refresh token is retained in httr2's encrypted cache before the next request.
 
 The implementation never reads Codex CLI or Pi files, never accepts a supplied
@@ -154,7 +149,6 @@ therefore accepts either a declared `text/event-stream` media type or a safe
 | `codex_auth_missing` | No package credential in the configured store |
 | `codex_oauth_callback_error` | Callback bind, denial, missing code, or state failure |
 | `codex_oauth_timeout` | Browser flow did not return in time |
-| `codex_oauth_browser_error` | The system browser could not be opened |
 | `codex_token_exchange_error` | Exchange failure or malformed credential response |
 | `codex_refresh_error` | Refresh transport failure; authenticate again if persistent |
 | `codex_credential_store_error` | Credential conversion or cache configuration failure |
