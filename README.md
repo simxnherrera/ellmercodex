@@ -4,7 +4,7 @@
 
 [![R-CMD-check](https://github.com/simxnherrera/ellmercodex/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/simxnherrera/ellmercodex/actions/workflows/R-CMD-check.yaml)
 [![Version](https://img.shields.io/github/v/tag/simxnherrera/ellmercodex?label=version)](https://github.com/simxnherrera/ellmercodex/tags)
-[![License](https://img.shields.io/github/license/simxnherrera/ellmercodex)](https://github.com/simxnherrera/ellmercodex/blob/main/LICENSE.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/simxnherrera/ellmercodex/blob/main/LICENSE.md)
 
 <!-- badges: end -->
 
