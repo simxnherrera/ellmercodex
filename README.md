@@ -42,7 +42,8 @@ library(ellmercodex)
 codex_login()
 
 chat <- chat_codex(
-  system_prompt = "Be concise and helpful."
+  system_prompt = "Be concise and helpful.",
+  model = "gpt-5.6-luna"
 )
 
 chat$chat("Explain why reproducible examples matter in R packages.")
@@ -75,7 +76,7 @@ weather_tool <- ellmer::tool(
   arguments = list(city = ellmer::type_string())
 )
 
-chat <- chat_codex()
+chat <- chat_codex(model = "gpt-5.6-luna")
 chat$register_tool(weather_tool)
 chat$chat("What is the weather in Montevideo?")
 ```
@@ -123,17 +124,17 @@ different explicit compatibility value. With `model = NULL`, `chat_codex()`
 selects the lowest-priority usable model returned by this account catalog and
 fails with an actionable error if discovery is empty or unavailable.
 
-Select a model explicitly when needed:
+Select the Luna 5.6 model explicitly:
 
 ```r
-chat <- chat_codex(model = models$id[[1]])
+chat <- chat_codex(model = "gpt-5.6-luna")
 ```
 
 You can also set `ELLMERCODEX_MODEL` as an explicit model override and omit the
 `model` argument:
 
 ```r
-Sys.setenv(ELLMERCODEX_MODEL = models$id[[1]])
+Sys.setenv(ELLMERCODEX_MODEL = "gpt-5.6-luna")
 chat <- chat_codex()
 ```
 
@@ -142,12 +143,12 @@ unchanged as Codex Responses `reasoning.effort`. The selected model's current
 catalog row is validated before a chat is constructed:
 
 ```r
-chat <- chat_codex(model = models$id[[1]], effort = "high")
+chat <- chat_codex(model = "gpt-5.6-luna", effort = "max")
 
 # Equivalent ellmer-style parameter configuration:
 chat <- chat_codex(
-  model = models$id[[1]],
-  params = ellmer::params(reasoning_effort = "high")
+  model = "gpt-5.6-luna",
+  params = ellmer::params(reasoning_effort = "max")
 )
 ```
 
@@ -186,7 +187,7 @@ subscription transport, converted to ellmer `ContentJson`, and then passed
 through ellmer's normal schema conversion:
 
 ```r
-chat <- chat_codex(model = models$id[[1]])
+chat <- chat_codex(model = "gpt-5.6-luna")
 chat$chat_structured(
   "My name is Susan and I'm 13 years old.",
   type = ellmer::type_object(
