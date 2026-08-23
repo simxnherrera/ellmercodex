@@ -1,5 +1,11 @@
 # `ellmercodex` technical design
 
+This is the canonical technical description of `ellmercodex`. The
+[README](../README.md) is intentionally limited to installation and
+user-facing workflows; implementation details, compatibility claims, and
+release risks belong here. The exact public `ellmer` Chat inventory is kept in
+the companion [compatibility inventory](ellmer-chat-interface.md).
+
 ## Scope
 
 This design covers the bounded stable core: `chat_codex()`, explicit browser

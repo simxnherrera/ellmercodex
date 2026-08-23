@@ -9,36 +9,38 @@
 <!-- badges: end -->
 
 `ellmercodex` lets you use a Codex subscription from R through an
-[`ellmer`](https://ellmer.tidyverse.org/) chat interface.
+[`ellmer`](https://ellmer.tidyverse.org/) chat interface. The normal workflow
+is to sign in, create a chat, and then use the regular `ellmer` Chat methods.
 
-The package does not invoke or require the Codex CLI at runtime. Authentication,
-model discovery, HTTPS requests, and SSE streaming are implemented directly in
-R.
-
-The stable package contract is deliberately bounded to the complete public
-`ellmer` 0.4.2 `Chat` object for interactive, single-conversation operations.
-The underlying subscription authentication and Responses transport are
-compatibility behavior observed in Codex clients rather than a documented
-third-party API, so upstream changes may still require a package update. This
-package is independent and is not affiliated with or endorsed by OpenAI.
+The package is independent of OpenAI and does not require an API key or the
+Codex CLI. Subscription authentication and transport are compatibility surfaces
+that may change; see the [technical documentation](docs/technical-design.md)
+for the implementation, support boundaries, and current risks.
 
 ## Install
 
-Install the current tagged release from GitHub with [`pak`](https://pak.r-lib.org/):
+Install the current tagged release from GitHub with
+[`pak`](https://pak.r-lib.org/):
 
 ```r
 install.packages("pak")
 pak::pak("simxnherrera/ellmercodex@v0.1.62")
 ```
 
+To install the development version:
+
+```r
+pak::pak("simxnherrera/ellmercodex")
+```
+
 ## Quick start
 
-Load the package and sign in. `codex_login()` opens a browser for the sign-in
-flow and saves the package's credential for later sessions by default.
+Check the local integration, sign in, and create a chat:
 
 ```r
 library(ellmercodex)
 
+codex_available()
 codex_login()
 
 chat <- chat_codex(
@@ -50,23 +52,56 @@ chat$chat("Explain why reproducible examples matter in R packages.")
 chat$chat("Now summarize that in one sentence.")
 ```
 
-The returned object is a regular `ellmer` `Chat`, so each `$chat()` call keeps
-the conversation history. Use `$stream()` when you want streamed output:
+The returned object is an `ellmer` `Chat`, so each `$chat()` call keeps the
+conversation history. Use `$stream()` when you want streamed output:
 
 ```r
 chat$stream("Give me three ideas for naming an R package.")
 ```
 
-If you have already signed in and the credential is still available, you can
-skip `codex_login()` and call `chat_codex()` directly. The package refreshes a
-stored credential when needed.
+If you have already signed in and the credential is available, you can call
+`chat_codex()` directly. With `model = NULL`, the package selects a usable
+model from the authenticated account catalog.
+
+## Choose a model
+
+Model availability depends on your account and workspace. Query the catalog
+after signing in:
+
+```r
+models <- codex_models()
+models[c("id", "display_name", "default_reasoning_effort",
+         "supported_reasoning_efforts")]
+```
+
+Select a model explicitly when needed:
+
+```r
+chat <- chat_codex(model = "gpt-5.6-luna")
+```
+
+Reasoning effort can be supplied directly or through ellmer-style parameters:
+
+```r
+chat <- chat_codex(model = "gpt-5.6-luna", effort = "max")
+
+chat <- chat_codex(
+  model = "gpt-5.6-luna",
+  params = ellmer::params(reasoning_effort = "max")
+)
+```
+
+Use `ELLMERCODEX_MODEL` when you want an explicit model without passing
+`model` each time:
+
+```r
+Sys.setenv(ELLMERCODEX_MODEL = "gpt-5.6-luna")
+chat <- chat_codex()
+```
 
 ## Tool calling
 
-Registered `ellmer::tool()` definitions work with the normal ellmer Chat API.
-`chat_codex()` sends the definitions using the Codex Responses function-call
-protocol, executes each returned call locally, sends the result back, and
-continues until Codex produces its final response:
+Register tools with the normal `ellmer` API:
 
 ```r
 weather_tool <- ellmer::tool(
@@ -81,110 +116,12 @@ chat$register_tool(weather_tool)
 chat$chat("What is the weather in Montevideo?")
 ```
 
-The loop supports multiple and sequential calls, fragmented streaming
-arguments, tool errors and `ellmer::tool_reject()`, calls with no preceding
-assistant text, and streamed content through `$stream(stream = "content")`.
-Tool requests and results remain `ellmer::ContentToolRequest` and
-`ellmer::ContentToolResult` objects in the conversation history. Cloning,
-callbacks, dangling tool requests, cancellation, sync/async tool execution,
-and multiple tool rounds remain ellmer Chat behavior.
-
-Image and PDF content uses ellmer's normal constructors and is serialized as
-Codex Responses input. Terminal image content is retained when the adapter
-repairs streamed text, so multimodal turns do not collapse to text-only
-history:
-
-```r
-chat$chat(
-  ellmer::content_image_url("https://example.com/diagram.png"),
-  ellmer::ContentPDF("application/pdf", "<base64-data>", "report.pdf"),
-  "Explain these files."
-)
-```
-
-Response content is normalized in event order. Text, tool requests, images,
-PDFs, reasoning, terminal/provider items, usage, duration, finish metadata,
-and structured content remain attached to the ellmer assistant turn. Unknown
-Responses items are retained as `ContentJson` rather than discarded.
-
-## Choose a model
-
-Model availability depends on your account and workspace. Once authenticated,
-the Codex catalog can be queried directly:
-
-```r
-models <- codex_models()
-models[c("id", "display_name", "default_reasoning_effort",
-         "supported_reasoning_efforts")]
-```
-
-`codex_models()` uses the package's verified catalog compatibility value by
-default. Set `ELLMERCODEX_CLIENT_VERSION` only when the service requires a
-different explicit compatibility value. With `model = NULL`, `chat_codex()`
-selects the lowest-priority usable model returned by this account catalog and
-fails with an actionable error if discovery is empty or unavailable.
-
-Select a model explicitly:
-
-```r
-chat <- chat_codex(model = "gpt-5.6-luna")
-```
-
-You can also set `ELLMERCODEX_MODEL` as an explicit model override and omit the
-`model` argument:
-
-```r
-Sys.setenv(ELLMERCODEX_MODEL = "gpt-5.6-luna")
-chat <- chat_codex()
-```
-
-Reasoning effort uses ellmer's `reasoning_effort` parameter and is forwarded
-unchanged as Codex Responses `reasoning.effort`. The selected model's current
-catalog row is validated before a chat is constructed:
-
-```r
-chat <- chat_codex(model = "gpt-5.6-luna", effort = "max")
-
-# Equivalent ellmer-style parameter configuration:
-chat <- chat_codex(
-  model = "gpt-5.6-luna",
-  params = ellmer::params(reasoning_effort = "max")
-)
-```
-
-## Authentication and credentials
-
-Inspect the current sign-in state with a redacted account summary:
-
-```r
-codex_account()
-```
-
-To keep a credential only for the current R process, use:
-
-```r
-codex_login(persist = FALSE)
-```
-
-Sign out and remove the credential owned by this package with:
-
-```r
-codex_logout()
-```
-
-By default, `httr2` stores the credential in its encrypted, user-level OAuth
-cache. This follows the same general approach as the `gargle` cache used by
-`googledrive` and `googlesheets4`; it does not use the macOS Keychain or
-another OS keyring. Set `HTTR2_OAUTH_CACHE` to choose a different cache root.
-The package does not read credentials belonging to Codex CLI or other
-applications.
+Tool requests and results remain in the conversation history as the usual
+`ellmer` content objects.
 
 ## Structured output
 
-`chat_codex()` preserves ellmer's structured-output interface. Use any
-ellmer `type_*()` schema; the request is streamed to satisfy the Codex
-subscription transport, converted to ellmer `ContentJson`, and then passed
-through ellmer's normal schema conversion:
+Use ellmer's type system with `$chat_structured()`:
 
 ```r
 chat <- chat_codex(model = "gpt-5.6-luna")
@@ -197,16 +134,13 @@ chat$chat_structured(
 )
 ```
 
-As in ellmer, `$chat_structured()` intentionally disables registered tools for
-that request. Use `$chat()` first to gather tool-assisted context, then call
-`$chat_structured()` to extract structured data from the conversation.
+As in ellmer, structured requests do not use registered tools. Gather any
+tool-assisted context with `$chat()` first, then extract the result with
+`$chat_structured()`.
 
 ## Async chat and cancellation
 
-The returned chat supports ellmer's asynchronous methods. `$chat_async()`
-returns a promise, while `$stream_async()` returns an async generator of
-promises. Tool-aware async calls accept `tool_mode = "sequential"` or
-`"concurrent"` and preserve the registered tool callbacks:
+The returned chat also supports ellmer's asynchronous methods:
 
 ```r
 chat$chat_async("Summarize the conversation.")
@@ -221,26 +155,50 @@ stream <- chat$stream_async(
 # Call `controller$cancel()` from the UI to stop generation.
 ```
 
-## Stable core compatibility scope
+Images and PDFs can be passed with ellmer's normal content constructors:
 
-The returned object is the complete public ellmer 0.4.2 `Chat` surface:
-`initialize`, `get_turns`, `set_turns`, `add_turn`, `get_system_prompt`,
-`get_model`, `set_model`, `set_system_prompt`, `get_tokens`, `get_cost`,
-`last_turn`, `chat`, `chat_structured`, `chat_structured_async`, `chat_async`,
-`stream`, `stream_async`, `register_tool`, `register_tools`, `get_provider`,
-`get_tools`, `set_tools`, `on_tool_request`, `on_tool_result`, and `clone`.
-See [`docs/ellmer-chat-interface.md`](docs/ellmer-chat-interface.md) for the
-derived signatures, state transitions, return shapes, and conversion rules.
+```r
+chat$chat(
+  ellmer::content_image_url("https://example.com/diagram.png"),
+  ellmer::ContentPDF("application/pdf", "<base64-data>", "report.pdf"),
+  "Explain these files."
+)
+```
 
-`parallel_chat*()` and `batch_chat*()` are outside the stable core contract.
-They are audited but explicitly unsupported: parallel helpers fail with
-`codex_ellmer_parallel_batch_blocker`, while batch helpers fail through
-ellmer's generic unsupported-provider check. Both stop before sending a request
-and the batch path does not create a state file. The package does not claim
-compatibility with those helpers.
+## Authentication
 
-The Codex endpoint and its Responses event names are undocumented compatibility
-surfaces, so upstream protocol changes may require a package update. This is an
-external transport caveat on an otherwise stable, version-pinned core Chat
-contract; it is not a claim of OpenAI support or a guarantee that the observed
-backend will remain available.
+Inspect sign-in state with a redacted account summary:
+
+```r
+codex_account()
+```
+
+For a process-only session, use:
+
+```r
+codex_login(persist = FALSE)
+```
+
+Sign out and remove the credential owned by this package with:
+
+```r
+codex_logout()
+```
+
+## Documentation and support
+
+The README is intentionally focused on installation and user-facing workflows.
+For more detail:
+
+- The [getting-started vignette](vignettes/getting-started.Rmd) walks through
+  authentication, chats, tools, structured output, and conditions.
+- The [technical design](docs/technical-design.md) documents the architecture,
+  credential lifecycle, transport boundary, error taxonomy, and release risks.
+- The [ellmer compatibility inventory](docs/ellmer-chat-interface.md) records
+  the supported Chat methods, signatures, return shapes, and state transitions.
+- In an R session, use `?chat_codex`, `?codex_login`, `?codex_models`, and
+  `?ellmercodex-conditions` for the function reference.
+
+The stable scope is interactive, single-conversation use of the public
+`ellmer` 0.4.2 `Chat` object. The separate `parallel_chat*()` and
+`batch_chat*()` helpers are not supported by this package.
