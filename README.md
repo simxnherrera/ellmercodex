@@ -1,4 +1,4 @@
-# ellmercodex <img src="man/figures/logo.png" align="right" height="139" alt="ellmercodex hex sticker" />
+### ellmercodex <img src="man/figures/logo.png" align="right" height="180" alt="ellmercodex hex sticker" />
 
 `ellmercodex` lets you use a Codex subscription from R through an
 [`ellmer`](https://ellmer.tidyverse.org/) chat interface.
