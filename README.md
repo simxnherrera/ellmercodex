@@ -124,7 +124,7 @@ different explicit compatibility value. With `model = NULL`, `chat_codex()`
 selects the lowest-priority usable model returned by this account catalog and
 fails with an actionable error if discovery is empty or unavailable.
 
-Select the Luna 5.6 model explicitly:
+Select a model explicitly:
 
 ```r
 chat <- chat_codex(model = "gpt-5.6-luna")
