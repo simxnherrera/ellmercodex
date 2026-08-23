@@ -1,5 +1,13 @@
 # ellmercodex <img src="man/figures/logo.png" align="right" height="180" alt="ellmercodex hex sticker" />
 
+<!-- badges: start -->
+
+[![R-CMD-check](https://github.com/simxnherrera/ellmercodex/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/simxnherrera/ellmercodex/actions/workflows/R-CMD-check.yaml)
+[![Version](https://img.shields.io/github/v/tag/simxnherrera/ellmercodex?label=version)](https://github.com/simxnherrera/ellmercodex/tags)
+[![License](https://img.shields.io/github/license/simxnherrera/ellmercodex)](https://github.com/simxnherrera/ellmercodex/blob/main/LICENSE)
+
+<!-- badges: end -->
+
 `ellmercodex` lets you use a Codex subscription from R through an
 [`ellmer`](https://ellmer.tidyverse.org/) chat interface.
 
