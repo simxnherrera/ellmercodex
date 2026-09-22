@@ -1,3 +1,13 @@
+# ellmercodex 0.1.63
+
+* `chat_codex()` now supports ellmer 0.5.0 and later through a Model/Provider
+  adapter, request callbacks, and checked private Chat contracts. Provider
+  token counting and file management report unsupported operations before a
+  request; offline CI tests the minimum and latest ellmer releases (#3).
+* Documented a single-process Linux VM deployment that retains httr2 OAuth
+  credentials across restarts and redeploys, with offline lifecycle coverage
+  and an httr2 1.3.0 minimum for the cache path and pruning behavior (#2).
+
 # ellmercodex 0.1.62
 
 * Removed obsolete private OAuth callback/PKCE and legacy ellmer structured

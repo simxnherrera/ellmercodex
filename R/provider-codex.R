@@ -1,12 +1,11 @@
-# The installed ellmer 0.4.2 release is the compatibility source of truth.
-# The public Chat object remains the external seam; the version-gated provider
+# ellmer 0.5.0 is the minimum supported interface.
+# The public Chat object remains the external seam; the provider
 # and private turn-submission implementation live in ellmer-compatibility.R.
 
 #' Check the exported ellmer compatibility seam
 #'
-#' The package supports exactly the inspected ellmer 0.4.2 Chat
-#' implementation. A later upstream release must be audited before it can be
-#' admitted because the transport uses version-gated private ellmer seams.
+#' The package requires ellmer 0.5.0 or later and checks the private contracts
+#' needed by the Codex streaming transport before constructing a chat.
 #'
 #' @return The installed ellmer version, invisibly.
 #' @keywords internal
@@ -20,11 +19,11 @@ codex_ellmer_compatibility <- function() {
   }
 
   version <- utils::packageVersion("ellmer")
-  if (!identical(as.character(version), "0.4.2")) {
+  if (version < package_version("0.5.0")) {
     rlang::abort(
       paste0(
-        "`chat_codex()` supports exactly ellmer 0.4.2; installed ",
-        "version is ", version, "."
+        "`chat_codex()` requires ellmer >= 0.5.0; installed version is ",
+        version, "."
       ),
       class = "codex_ellmer_compatibility_error",
       parent = NULL
@@ -35,7 +34,7 @@ codex_ellmer_compatibility <- function() {
     "AssistantTurn", "AssistantPartialTurn", "ContentText",
     "ContentToolRequest", "ContentToolResult", "ContentImageInline",
     "ContentImageRemote", "ContentPDF", "ContentThinking", "UserTurn",
-    "params", "tool", "stream_controller"
+    "params", "tool", "stream_controller", "Model"
   )
   available <- vapply(
     required,
@@ -52,19 +51,19 @@ codex_ellmer_compatibility <- function() {
   }
 
   required_internals <- c(
-    "Chat", "TurnAccumulator", "chat_perform", "base_request", "chat_path",
-    "modify_list", "chat_body", "as_user_turn", "chat_request",
+    "Chat", "ProviderOpenAI", "TurnAccumulator", "chat_perform",
+    "base_request", "chat_path", "modify_list", "chat_body", "chat_request",
     "stream_parse", "stream_content", "stream_merge_chunks", "value_turn",
-    "value_tokens", "value_finish_reason", "has_batch_support", "tokens",
+    "value_tokens", "value_finish_reason", "has_batch_support",
     "dollars", "get_token_cost", "ContentJson", "ContentToolRequestSearch",
-    "type_needs_wrapper",
-    "wrap_type_if_needed", "extract_data", "check_echo", "match_tools",
     "invoke_tools", "invoke_tools_async", "turn_has_tool_request",
     "tool_results_as_turn", "echo_non_text_contents", "emitter", "content_text",
     "cat_line", "otel_chat_input", "local_chat_otel_span",
     "record_chat_otel_span_status", "record_chat_otel_span_output",
     "local_agent_otel_span", "warn_tool_errors", "turn_get_tool_errors",
-    "is_tool_request", "is_tool_result"
+    "is_tool_request", "is_tool_result", "new_tool_context",
+    "count_tokens", "file_upload", "file_list", "file_get",
+    "file_download", "file_delete"
   )
   available_internals <- vapply(
     required_internals,
@@ -75,7 +74,7 @@ codex_ellmer_compatibility <- function() {
     missing <- paste(required_internals[!available_internals], collapse = ", ")
     rlang::abort(
       paste0(
-        "The installed ellmer 0.4.2 release is missing compatibility symbols: ",
+        "The installed ellmer release is missing compatibility symbols: ",
         missing, "."
       ),
       class = "codex_ellmer_compatibility_error",
@@ -83,57 +82,70 @@ codex_ellmer_compatibility <- function() {
     )
   }
 
-  invisible(version)
-}
-
-codex_ellmer_structured_compatibility <- function() {
-  required <- c(
-    "ContentJson",
-    "extract_data",
-    "type_needs_wrapper",
-    "wrap_type_if_needed"
+  required_formals <- list(
+    chat_body = c("provider", "model", "stream", "turns", "tools", "type"),
+    chat_request = c("provider", "model", "stream", "turns", "tools", "type"),
+    stream_content = c("provider", "event", "completion"),
+    stream_parse = c("provider", "event"),
+    stream_merge_chunks = c("provider", "result", "chunk"),
+    value_turn = c("provider", "model", "result", "has_type"),
+    value_tokens = c("provider", "json"),
+    value_finish_reason = c("provider", "result"),
+    chat_perform = c("provider", "model", "mode", "turns", "tools", "type",
+                     "otel_span", "controller"),
+    local_agent_otel_span = c("provider", "model", "activate"),
+    local_chat_otel_span = c("provider", "model", "turns",
+                             "system_prompt", "parent"),
+    invoke_tools = c("turn", "echo", "on_tool_request",
+                     "on_tool_result", "yield_request", "otel_span",
+                     "tool_context"),
+    invoke_tools_async = c("turn", "echo", "on_tool_request",
+                           "on_tool_result", "yield_request", "otel_span",
+                           "tool_context"),
+    get_token_cost = c("provider_name", "model_name", "tokens", "variant")
   )
-  namespace <- asNamespace("ellmer")
-  available <- vapply(
-    required,
-    function(name) exists(name, envir = namespace, inherits = FALSE),
-    logical(1)
-  )
-  if (!all(available)) {
-    missing <- paste(required[!available], collapse = ", ")
+  for (name in names(required_formals)) {
+    actual <- names(formals(get(name, envir = asNamespace("ellmer"))))
+    if (!all(required_formals[[name]] %in% actual)) {
+      rlang::abort(
+        paste0("ellmer ", version, " changed the required `", name,
+               "()` contract; expected arguments: ",
+               paste(required_formals[[name]], collapse = ", "), "."),
+        class = "codex_ellmer_compatibility_error",
+        parent = NULL
+      )
+    }
+  }
+  accumulator <- utils::getFromNamespace("TurnAccumulator", "ellmer")
+  accumulator_methods <- c("initialize", "begin_turn", "update_turn",
+                           "complete_turn", "finalize_turn", "value_turn")
+  if (!all(vapply(accumulator_methods, function(name) {
+    is.function(accumulator$public_methods[[name]])
+  }, logical(1))) ||
+      !all(c("chat", "chat_private", "provider", "model", "controller",
+             "turns", "turn_idx", "start_time") %in%
+           names(accumulator$public_fields))) {
     rlang::abort(
-      paste0(
-        "The installed ellmer version is missing structured-output compatibility symbols: ",
-        missing, "."
-      ),
+      "ellmer changed the TurnAccumulator contract required by Codex.",
       class = "codex_ellmer_compatibility_error",
       parent = NULL
     )
   }
-  invisible(TRUE)
+  invisible(version)
 }
 
 codex_ellmer_chat_methods <- function(chat) {
   required <- c(
     "initialize", "get_turns", "set_turns", "add_turn", "get_system_prompt",
-    "get_model", "set_model", "set_system_prompt", "get_tokens", "get_cost",
+    "get_model", "get_model_object", "set_model", "set_system_prompt", "get_tokens", "get_cost",
     "last_turn", "chat", "chat_structured", "chat_structured_async", "chat_async",
     "stream", "stream_async", "register_tool", "register_tools", "get_provider",
-    "get_tools", "set_tools", "on_tool_request", "on_tool_result", "clone"
+    "get_tools", "set_tools", "on_tool_request", "on_tool_result",
+    "on_request_start", "on_request_end", "clone"
   )
-  interface <- codex_ellmer_chat_interface()
-  chat_class <- utils::getFromNamespace("Chat", "ellmer")
-  installed_methods <- chat_class$public_methods
   available <- tryCatch(
     vapply(required, function(name) {
-      method <- chat[[name]]
-      is.function(method) &&
-        is.function(installed_methods[[name]]) &&
-        identical(
-          formals(method),
-          formals(installed_methods[[name]])
-        ) &&
-        identical(names(formals(method)) %||% character(), interface$formal_names[[name]])
+      is.function(chat[[name]])
     }, logical(1)),
     error = function(error) rep(FALSE, length(required))
   )
@@ -141,18 +153,6 @@ codex_ellmer_chat_methods <- function(chat) {
     missing <- paste(required[!available], collapse = ", ")
     rlang::abort(
       paste0("The ellmer Chat object is missing public methods: ", missing, "."),
-      class = "codex_ellmer_compatibility_error",
-      parent = NULL
-    )
-  }
-  public_names <- tryCatch(names(chat), error = function(error) character())
-  unexpected <- setdiff(public_names, c(".__enclos_env__", required))
-  if (length(unexpected) > 0L) {
-    rlang::abort(
-      paste0(
-        "The installed ellmer Chat exposed unexpected public fields: ",
-        paste(unexpected, collapse = ", "), "."
-      ),
       class = "codex_ellmer_compatibility_error",
       parent = NULL
     )
@@ -180,7 +180,7 @@ codex_ellmer_chat_openai <- function(
   }
 
   persist <- tryCatch(codex_session_persists(), error = function(error) FALSE)
-  provider <- tryCatch(
+  provider_config <- tryCatch(
     codex_new_provider(
       model = model,
       auth = auth,
@@ -189,10 +189,11 @@ codex_ellmer_chat_openai <- function(
       persist = persist
     ),
     error = function(error) {
-      if (inherits(error, "codex_ellmer_compatibility_error")) stop(error)
+      if (inherits(error, c("codex_ellmer_compatibility_error",
+                            "codex_chat_error"))) stop(error)
       rlang::abort(
-        "The Codex ellmer provider could not be constructed.",
-        class = "codex_chat_error",
+        "The installed ellmer Provider or Model constructor changed.",
+        class = "codex_ellmer_compatibility_error",
         parent = error
       )
     }
@@ -200,14 +201,15 @@ codex_ellmer_chat_openai <- function(
   chat_class <- utils::getFromNamespace("Chat", "ellmer")
   chat <- tryCatch(
     chat_class$new(
-      provider = provider,
+      provider = provider_config$provider,
+      model = provider_config$model,
       system_prompt = system_prompt,
       echo = echo
     ),
     error = function(error) {
       rlang::abort(
-        "The Codex ellmer Chat could not be constructed.",
-        class = "codex_chat_error",
+        "The installed ellmer Chat constructor changed.",
+        class = "codex_ellmer_compatibility_error",
         parent = error
       )
     }

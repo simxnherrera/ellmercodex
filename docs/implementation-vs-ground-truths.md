@@ -1,3 +1,6 @@
+> Historical research snapshot: this document describes the earlier ellmer 0.4.2
+> integration. See [the current compatibility inventory](ellmer-chat-interface.md).
+
 # Implementation vs. Ground Truths
 
 Initial audit date: 2026-08-21. The requirements baseline is

@@ -54,12 +54,14 @@ credential is available; an existing credential is loaded and refreshed as
 needed.
 }
 \details{
-The returned chat is the complete public \code{ellmer} 0.4.2 \code{Chat} object for
+The returned chat is the public \code{ellmer} \code{Chat} object (0.5.0 or later) for
 interactive, single-conversation operations, including ordinary and
 structured chat, synchronous and asynchronous streaming, tool declarations
 and multi-round execution, callbacks, cancellation, cloning, history, echo,
-model/provider configuration, rich content, and response metadata. The
-compatibility layer uses one version-gated provider/turn-submission seam
+model/provider configuration, rich content, and response metadata.
+Provider token counting and file management are unavailable with the Codex
+subscription transport and fail before making a request. The
+compatibility layer uses one contract-checked provider/turn-submission seam
 while leaving public Chat methods and ellmer lifecycle semantics intact.
 The separate ellmer parallel/batch helpers are outside this stable core
 contract. Parallel helpers use the package blocker, while batch helpers stop

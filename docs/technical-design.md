@@ -11,8 +11,8 @@ the companion [compatibility inventory](ellmer-chat-interface.md).
 This design covers the bounded stable core: `chat_codex()`, explicit browser
 login, secure persistence and refresh, SSE Responses calls, offline
 availability diagnostics, account-specific model discovery, reasoning effort,
-and the complete public `ellmer` 0.4.2 Chat interface for interactive,
-single-conversation operations. The package uses a version-gated provider
+and the interactive `ellmer` Chat interface from 0.5.0 for interactive,
+single-conversation operations. The package uses a contract-checked provider
 subclass plus one private Chat execution seam because the Codex endpoint is
 stream-only; it does not replace public Chat methods. The separately exported
 ellmer parallel/batch helpers are outside this core contract.
@@ -124,7 +124,7 @@ Keychain prompt.
 - `codex_parse_sse()` handles CRLF/LF framing, `data:` fields, `[DONE]`, and
   bounded JSON parsing. `codex_parse_sse_response()` assembles output deltas and
   requires a terminal event.
-- `ellmer-compatibility.R` defines the version-gated `CodexProvider`, dynamic
+- `ellmer-compatibility.R` defines the contract-checked `CodexProvider`, dynamic
   credential reference, S7 request/stream/value methods, ordered output-item
   merge, and clone-safe private Chat execution methods. Ellmer's own
   `TurnAccumulator`, tool invocation/callback helpers, async primitives, and
@@ -179,13 +179,12 @@ and length bounded. Raw response headers and full bodies are never included.
 
 ## `ellmer` integration seam
 
-The installed target is exactly `ellmer` 0.4.2. Its public `Chat` object has 25
-public methods and no public fields; the complete inventory, exact signatures,
-return/state behavior, and helper audit are recorded in
+The minimum target is `ellmer` 0.5.0, with no upper version limit. Required
+contracts and the supported and unavailable operations are recorded in
 `docs/ellmer-chat-interface.md`.
 
 `chat_codex()` constructs the actual non-exported ellmer `Chat` R6 class with a
-version-gated S7 subclass of ellmer's OpenAI provider. The provider reuses
+contract-checked S7 subclass of ellmer's OpenAI provider. The provider reuses
 ellmer's OpenAI Responses serializer for every supported input Content and
 Turn type, while supplying Codex authentication, mandatory streaming, request
 construction, SSE parsing, merge, output conversion, token normalization,
@@ -197,7 +196,7 @@ methods is insufficient because ellmer's `chat()` and `chat_async()` normally
 use non-streaming value requests. The compatibility module therefore replaces
 only the four private Chat execution methods: `chat_impl`, `chat_impl_async`,
 `submit_turns`, and `submit_turns_async`. The two chat-loop methods are a small
-copy of ellmer's 0.4.2 lifecycle that filters tool-request yields already
+adaptation of ellmer's 0.5.0 lifecycle that filters tool-request yields already
 emitted at their exact provider position; validation, invocation, callbacks,
 async modes, and turn construction still use ellmer helpers. The submit
 methods still use ellmer's `TurnAccumulator`, so partial turns, duration,
@@ -237,14 +236,15 @@ these helpers.
    protocol changes.
 2. Streaming protocol and model selection without copying another
    client's private catalog.
-3. A single, narrowly tested, version-gated ellmer provider/Chat submission
+3. A single, narrowly tested, contract-checked ellmer provider/Chat submission
    seam, with the full public Chat lifecycle left to ellmer.
 4. httr2 cache behavior and refresh-token rotation tests.
 5. Offline-only CRAN tests; no package load, test, example, or check may start
    OAuth or make authenticated requests.
 
-The package addresses the complete Chat surface for the pinned ellmer 0.4.2
-release, subject to the undocumented Codex transport. The parallel/batch
-helpers remain unsupported by design. The stable claim is therefore a bounded
+The package addresses interactive Chat operations from ellmer 0.5.0 onward,
+subject to runtime contract checks and the undocumented Codex transport.
+Provider token counting, file management, and parallel/batch helpers remain
+unsupported by design. The stable claim is therefore a bounded
 Chat compatibility claim, not a claim of complete ellmer helper compatibility
 or a guarantee that the observed Codex backend will remain available.

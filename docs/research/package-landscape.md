@@ -1,3 +1,5 @@
+> Historical research snapshot: see [the current compatibility inventory](../ellmer-chat-interface.md).
+
 # Package landscape: `ellmercodex`
 
 Research checked 2026-08-23 against the repository's `DESCRIPTION`, README, and

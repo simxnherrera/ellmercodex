@@ -36,7 +36,7 @@ The architectural seam presented to users is the public `ellmer` Chat interface:
 R user -> ellmer Chat interface -> ellmercodex adapter -> Codex subscription service
 ```
 
-Codex-specific complexity belongs in a small number of internal modules: authentication and credential refresh, transport, request/response conversion, streaming and content normalization, tool lifecycle, model discovery, and version-gated `ellmer` compatibility.
+Codex-specific complexity belongs in a small number of internal modules: authentication and credential refresh, transport, request/response conversion, streaming and content normalization, tool lifecycle, model discovery, and contract-checked `ellmer` compatibility.
 
 ## Authentication and account boundaries
 

@@ -1,3 +1,6 @@
+> Historical research snapshot: this document describes the earlier ellmer 0.4.2
+> integration. See [the current compatibility inventory](ellmer-chat-interface.md).
+
 # Transport and release-risk review
 
 Checked 2026-08-20. This note records the boundary between what is documented

@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "17 8 * * 1"
 
 permissions:
   contents: read
@@ -11,6 +13,10 @@ permissions:
 jobs:
   R-CMD-check:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ellmer: [minimum, latest]
     env:
       # The package's test suite is fixture-only.  Keep this explicit so a
       # future opt-in test cannot accidentally turn CI into an OAuth client.
@@ -26,6 +32,12 @@ jobs:
         with:
           needs: check
           extra-packages: any::rcmdcheck
+      - name: Install minimum supported ellmer
+        if: matrix.ellmer == 'minimum'
+        run: |
+          Rscript -e 'if (packageVersion("ellmer") != package_version("0.5.0")) install.packages("https://cran.r-project.org/src/contrib/Archive/ellmer/ellmer_0.5.0.tar.gz", repos = NULL, type = "source")'
+      - name: Show ellmer version
+        run: Rscript -e 'cat(as.character(packageVersion("ellmer")), "\n")'
       - uses: r-lib/actions/check-r-package@v2
         with:
           upload-snapshots: true

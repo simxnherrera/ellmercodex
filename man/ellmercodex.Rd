@@ -8,7 +8,7 @@
 \description{
 \code{ellmercodex} provides a stable, explicitly bounded core integration between
 \link[ellmer:chat_openai]{ellmer} and subscription-backed Codex authentication.
-The stable compatibility target is the complete public ellmer 0.4.2 \code{Chat}
+The stable compatibility target is the public ellmer \code{Chat} (0.5.0 or later)
 object for interactive, single-conversation operations. The direct OAuth
 endpoints and Responses endpoint used by this package are undocumented
 compatibility observations, may change without notice, and are not an
@@ -29,12 +29,13 @@ efforts. \code{\link[=codex_logout]{codex_logout()}} removes only the credential
 
 The public API is deliberately small: \code{\link[=codex_login]{codex_login()}}, \code{\link[=codex_logout]{codex_logout()}},
 \code{\link[=codex_account]{codex_account()}}, \code{\link[=codex_models]{codex_models()}}, \code{\link[=codex_available]{codex_available()}}, and
-\code{\link[=chat_codex]{chat_codex()}}. The chat compatibility layer is version-gated to the
-inspected ellmer 0.4.2 public API and supports its complete Chat object:
+\code{\link[=chat_codex]{chat_codex()}}. The chat compatibility layer is checked against the
+required ellmer contracts at runtime and supports interactive Chat methods:
 text and content streaming, model parameters, per-model reasoning effort,
 structured output, multi-turn history, rich image/PDF content, asynchronous
 chat, tool loops, callbacks, cancellation, cloning, echo, and response
-metadata. The separately exported ellmer parallel/batch helpers are outside
+metadata. Provider token counting and file management are unavailable.
+The separately exported ellmer parallel/batch helpers are outside
 the stable core contract and are explicitly blocked for the Codex stream-only
 endpoint rather than silently degraded.
 }

@@ -1,4 +1,4 @@
-# Version-gated ellmer 0.4.2 compatibility layer.
+# ellmer 0.5.0 and later compatibility layer.
 #
 # The public Chat object remains the package's external seam. This file owns
 # the one private ellmer seam that is unavoidable for a stream-only Codex
@@ -12,80 +12,6 @@
 .codex_ellmer_compatibility_state <- new.env(parent = emptyenv())
 .codex_ellmer_compatibility_state$provider_class <- NULL
 .codex_ellmer_compatibility_state$methods_registered <- FALSE
-
-codex_ellmer_chat_interface <- function() {
-  list(
-    class = c("Chat", "R6"),
-    public_fields = character(),
-    methods = list(
-      initialize = "function(provider, system_prompt = NULL, echo = \"none\")",
-      get_turns = "function(include_system_prompt = FALSE)",
-      set_turns = "function(value)",
-      add_turn = "function(user, assistant, log_tokens = TRUE)",
-      get_system_prompt = "function()",
-      get_model = "function()",
-      set_model = "function(model)",
-      set_system_prompt = "function(value)",
-      get_tokens = "function(include_system_prompt = deprecated())",
-      get_cost = "function(include = c(\"all\", \"last\"))",
-      last_turn = "function(role = c(\"assistant\", \"user\", \"system\"))",
-      chat = "function(..., echo = NULL)",
-      chat_structured = "function(..., type, echo = \"none\", convert = TRUE)",
-      chat_structured_async = "function(..., type, echo = \"none\", convert = TRUE)",
-      chat_async = "function(..., tool_mode = c(\"concurrent\", \"sequential\"))",
-      stream = "function(..., stream = c(\"text\", \"content\"), controller = NULL)",
-      stream_async = paste0(
-        "function(..., tool_mode = c(\"concurrent\", \"sequential\"), ",
-        "stream = c(\"text\", \"content\"), controller = NULL)"
-      ),
-      register_tool = "function(tool)",
-      register_tools = "function(tools)",
-      get_provider = "function()",
-      get_tools = "function()",
-      set_tools = "function(tools)",
-      on_tool_request = "function(callback)",
-      on_tool_result = "function(callback)",
-      clone = "function(deep = FALSE)"
-    ),
-    formal_names = list(
-      initialize = c("provider", "system_prompt", "echo"),
-      get_turns = "include_system_prompt",
-      set_turns = "value",
-      add_turn = c("user", "assistant", "log_tokens"),
-      get_system_prompt = character(),
-      get_model = character(),
-      set_model = "model",
-      set_system_prompt = "value",
-      get_tokens = "include_system_prompt",
-      get_cost = "include",
-      last_turn = "role",
-      chat = c("...", "echo"),
-      chat_structured = c("...", "type", "echo", "convert"),
-      chat_structured_async = c("...", "type", "echo", "convert"),
-      chat_async = c("...", "tool_mode"),
-      stream = c("...", "stream", "controller"),
-      stream_async = c("...", "tool_mode", "stream", "controller"),
-      register_tool = "tool",
-      register_tools = "tools",
-      get_provider = character(),
-      get_tools = character(),
-      set_tools = "tools",
-      on_tool_request = "callback",
-      on_tool_result = "callback",
-      clone = "deep"
-    ),
-    inherited_public_behavior = list(
-      R6_clone = "clone(deep = FALSE)",
-      Chat_print = "print(x, ...)",
-      R6_format = "format(x, ...)"
-    ),
-    private_state_used_by_compatibility = c(
-      "provider", ".turns", "echo", "tools", "callback_on_tool_request",
-      "callback_on_tool_result", "chat_impl", "chat_impl_async",
-      "submit_turns", "submit_turns_async", "complete_dangling_tool_requests"
-    )
-  )
-}
 
 codex_ellmer_s7_class <- function() {
   codex_ellmer_compatibility()
@@ -108,7 +34,7 @@ codex_ellmer_s7_parent_method <- function(generic, class) {
   key <- paste0("ellmer::", class)
   if (!exists(key, envir = methods, inherits = FALSE)) {
     rlang::abort(
-      paste0("ellmer 0.4.2 does not expose the expected ", generic,
+      paste0("ellmer does not expose the expected ", generic,
              " method for ", class, "."),
       class = "codex_ellmer_compatibility_error",
       parent = NULL
@@ -119,7 +45,17 @@ codex_ellmer_s7_parent_method <- function(generic, class) {
 
 codex_ellmer_provider_method <- function(generic, class, method) {
   generic_object <- utils::getFromNamespace(generic, "ellmer")
-  S7::method(generic_object, class) <- method
+  tryCatch(
+    S7::method(generic_object, class) <- method,
+    error = function(error) {
+      rlang::abort(
+        paste0("ellmer changed the required ", generic,
+               "() provider method contract."),
+        class = "codex_ellmer_compatibility_error",
+        parent = error
+      )
+    }
+  )
   invisible(method)
 }
 
@@ -201,13 +137,14 @@ codex_provider_credentials <- function(reference) {
   codex_provider_access_token(reference)
 }
 
-codex_provider_body <- function(provider, stream = TRUE, turns = list(), tools = list(), type = NULL) {
+codex_provider_body <- function(provider, model, stream = TRUE, turns = list(), tools = list(), type = NULL) {
   # The parent OpenAI Responses serializer is the source of truth for all
   # ellmer Content and Turn input forms, including images, PDFs, tool
   # requests/results, and provider-native tool declarations.
   parent <- codex_ellmer_s7_parent_method("chat_body", "ProviderOpenAI")
   body <- parent(
     provider = provider,
+    model = model,
     stream = TRUE,
     turns = turns,
     tools = tools,
@@ -217,7 +154,7 @@ codex_provider_body <- function(provider, stream = TRUE, turns = list(), tools =
   body
 }
 
-codex_provider_request <- function(provider, stream = TRUE, turns = list(), tools = list(), type = NULL) {
+codex_provider_request <- function(provider, model, stream = TRUE, turns = list(), tools = list(), type = NULL) {
   if (!isTRUE(stream)) {
     rlang::abort(
       paste(
@@ -243,8 +180,8 @@ codex_provider_request <- function(provider, stream = TRUE, turns = list(), tool
   modify_list <- utils::getFromNamespace("modify_list", "ellmer")
   req <- base_request(provider)
   req <- httr2::req_url_path_append(req, chat_path(provider))
-  body <- codex_provider_body(provider, stream = TRUE, turns = turns, tools = tools, type = type)
-  body <- modify_list(body, provider@extra_args)
+  body <- codex_provider_body(provider, model, stream = TRUE, turns = turns, tools = tools, type = type)
+  body <- modify_list(body, model@extra_args)
   # api_args is allowed to contain arbitrary Responses arguments, but cannot
   # disable streaming on this transport.
   body$stream <- TRUE
@@ -741,20 +678,21 @@ codex_stream_content_from_item <- function(item) {
   codex_content_json(data = item)
 }
 
-codex_provider_stream_content <- function(provider, event) {
+codex_provider_stream_content <- function(provider, event, completion = NULL) {
   type <- codex_stream_event_type(event)
   if (identical(type, "response.output_text.delta")) {
-    if (is.null(event$delta)) return(NULL)
-    return(ellmer::ContentText(event$delta))
+    if (is.null(event$delta)) return(list())
+    return(list(ellmer::ContentText(event$delta)))
   }
   if (identical(type, "response.reasoning_summary_text.delta")) {
-    if (is.null(event$delta)) return(NULL)
-    return(ellmer::ContentThinking(event$delta))
+    if (is.null(event$delta)) return(list())
+    return(list(ellmer::ContentThinking(event$delta)))
   }
   if (identical(type, "response.output_item.done")) {
-    return(codex_stream_content_from_item(codex_stream_event_item(event)))
+    content <- codex_stream_content_from_item(codex_stream_event_item(event))
+    if (!is.null(content)) return(list(content))
   }
-  NULL
+  list()
 }
 
 codex_terminal_stream_contents <- function(
@@ -911,7 +849,7 @@ codex_flatten_content_lists <- function(values) {
   Reduce(c, values, init = list())
 }
 
-codex_provider_value_turn <- function(provider, result, has_type = FALSE) {
+codex_provider_value_turn <- function(provider, model, result, has_type = FALSE) {
   if (!is.list(result)) {
     rlang::abort(
       "The Codex stream did not produce a response object.",
@@ -950,7 +888,7 @@ codex_provider_value_turn <- function(provider, result, has_type = FALSE) {
     )
   }
   tokens <- codex_provider_value_tokens(provider, result)
-  cost <- codex_provider_value_cost(provider, tokens, result)
+  cost <- codex_provider_value_cost(provider, model, tokens, result)
   ellmer::AssistantTurn(
     contents = contents,
     json = codex_public_response(result),
@@ -982,7 +920,7 @@ codex_provider_value_tokens <- function(provider, json) {
   } else {
     max(0, input_total - cached)
   }
-  # ellmer 0.4.2's tokens() constructor turns NULL into zero and rejects NA.
+  # ellmer's tokens() constructor turns NULL into zero and rejects NA.
   # Keep the provider-facing list explicit so omitted Codex fields remain NA
   # on the assistant turn; the submit seam skips ellmer's token logger for such
   # turns because that logger cannot represent unknown values.
@@ -1004,7 +942,7 @@ codex_complete_turn <- function(accumulator, private, result, type = NULL) {
   }
 
   # TurnAccumulator$complete_turn() logs through ellmer::tokens(), which
-  # cannot represent unknown values in ellmer 0.4.2. Its value_turn method is
+  # cannot represent unknown values in ellmer. Its value_turn method is
   # still authoritative for validation, structured output, and tool matching;
   # only the impossible logging step is skipped.
   duration <- proc.time()[["elapsed"]] - accumulator$start_time
@@ -1013,7 +951,7 @@ codex_complete_turn <- function(accumulator, private, result, type = NULL) {
   turn
 }
 
-codex_provider_value_cost <- function(provider, tokens, result) {
+codex_provider_value_cost <- function(provider, model, tokens, result) {
   reported <- result$usage$cost %||% result$cost
   reported <- suppressWarnings(as.numeric(reported))
   if (length(reported) == 1L && is.finite(reported)) {
@@ -1022,7 +960,7 @@ codex_provider_value_cost <- function(provider, tokens, result) {
   get_token_cost <- utils::getFromNamespace("get_token_cost", "ellmer")
   variant <- result$service_tier %||% "default"
   tryCatch(
-    get_token_cost(provider, tokens, variant = variant),
+    get_token_cost(provider@name, model@name, tokens, variant = variant),
     error = function(error) utils::getFromNamespace("dollars", "ellmer")(NA_real_)
   )
 }
@@ -1069,6 +1007,31 @@ codex_register_ellmer_provider_methods <- function() {
   codex_ellmer_provider_method("value_tokens", class, codex_provider_value_tokens)
   codex_ellmer_provider_method("value_finish_reason", class, codex_provider_finish_reason_method)
   codex_ellmer_provider_method("has_batch_support", class, function(provider) FALSE)
+  unsupported <- function(capability) {
+    rlang::abort(
+      paste0("The Codex subscription transport does not support ", capability, "."),
+      class = "codex_ellmer_compatibility_error",
+      parent = NULL
+    )
+  }
+  codex_ellmer_provider_method("count_tokens", class, function(
+    provider, model, ..., system_prompt = NULL, tools = list(), type = NULL
+  ) unsupported("provider token counting"))
+  codex_ellmer_provider_method("file_upload", class, function(
+    provider, path, mime_type = NULL, expires_in_h = 48, ...
+  ) unsupported("provider file uploads"))
+  codex_ellmer_provider_method("file_list", class, function(provider, ...) {
+    unsupported("provider file listing")
+  })
+  codex_ellmer_provider_method("file_get", class, function(provider, id, ...) {
+    unsupported("provider file retrieval")
+  })
+  codex_ellmer_provider_method("file_download", class, function(
+    provider, id, path, ...
+  ) unsupported("provider file downloads"))
+  codex_ellmer_provider_method("file_delete", class, function(provider, id, ...) {
+    unsupported("provider file deletion")
+  })
   .codex_ellmer_compatibility_state$methods_registered <- TRUE
   invisible(TRUE)
 }
@@ -1080,24 +1043,23 @@ codex_new_provider <- function(model, auth, params = NULL, api_args = list(), pe
   reference <- codex_auth_reference(auth, persist = persist)
   provider <- class(
     name = "codex",
-    model = model,
     base_url = sub("/responses$", "", codex_responses_url()),
-    params = params %||% list(),
-    extra_args = api_args,
     extra_headers = codex_request_routing_headers(auth),
     credentials = function() codex_provider_credentials(reference),
     preserve_thinking = TRUE,
     service_tier = "default",
     auth_ref = reference
   )
-  provider
+  list(provider = provider, model = ellmer::Model(
+    name = model, params = params %||% list(), extra_args = api_args
+  ))
 }
 
 codex_ellmer_private_submit <- function(
   user_turn,
-  type = NULL,
   stream = FALSE,
   echo = "none",
+  type = NULL,
   yield_as_content = FALSE,
   controller = NULL,
   otel_span = NULL
@@ -1117,9 +1079,9 @@ codex_ellmer_private_submit <- function(
 
 codex_ellmer_private_submit_async <- function(
   user_turn,
-  type = NULL,
   stream = FALSE,
   echo = "none",
+  type = NULL,
   yield_as_content = FALSE,
   controller = NULL,
   otel_span = NULL
@@ -1138,6 +1100,8 @@ codex_ellmer_private_submit_async <- function(
 }
 
 codex_install_private_submit_methods <- function(chat) {
+  if (identical(attr(chat, "ellmercodex_compatibility"),
+                "ellmer-0.5.0-provider-stream")) return(chat)
   provider <- tryCatch(chat$get_provider(), error = function(error) NULL)
   if (is.null(provider) || !inherits(provider, "ellmercodex::CodexProvider")) {
     rlang::abort(
@@ -1155,18 +1119,20 @@ codex_install_private_submit_methods <- function(chat) {
     )
   }
   required <- c(
-    "provider", ".turns", "tools", "callback_on_tool_request",
-    "callback_on_tool_result", "submit_turns", "submit_turns_async",
+    "provider", "model", ".turns", "tools", "callback_on_tool_request",
+    "callback_on_tool_result", "callback_on_request_start",
+    "callback_on_request_end", "submit_turns", "submit_turns_async",
     "chat_impl", "chat_impl_async", "complete_dangling_tool_requests"
   )
   if (!all(vapply(required, exists, logical(1), envir = private, inherits = FALSE))) {
     rlang::abort(
-      "The installed ellmer Chat private state is incompatible with 0.4.2.",
+      "The installed ellmer Chat private state lacks a required streaming contract.",
       class = "codex_ellmer_compatibility_error",
       parent = NULL
     )
   }
-  callbacks <- c("callback_on_tool_request", "callback_on_tool_result")
+  callbacks <- c("callback_on_tool_request", "callback_on_tool_result",
+                 "callback_on_request_start", "callback_on_request_end")
   callbacks_ok <- vapply(callbacks, function(name) {
     manager <- private[[name]]
     is.environment(manager) && is.function(manager$invoke) &&
@@ -1174,10 +1140,34 @@ codex_install_private_submit_methods <- function(chat) {
   }, logical(1))
   if (!all(callbacks_ok)) {
     rlang::abort(
-      "The installed ellmer Chat callback managers are incompatible with 0.4.2.",
+      "The installed ellmer Chat callback managers lack invoke methods.",
       class = "codex_ellmer_compatibility_error",
       parent = NULL
     )
+  }
+
+  expected_private_formals <- list(
+    chat_impl = c("self", "private", "user_turn", "stream", "echo", "type",
+                  "yield_as_content", "controller"),
+    chat_impl_async = c("self", "private", "user_turn", "stream", "echo", "type",
+                        "tool_mode", "yield_as_content", "controller"),
+    submit_turns = c("self", "private", "user_turn", "stream", "echo", "type",
+                     "yield_as_content", "controller", "otel_span"),
+    submit_turns_async = c("self", "private", "user_turn", "stream", "echo",
+                           "type", "yield_as_content", "controller", "otel_span")
+  )
+  for (name in names(expected_private_formals)) {
+    inner <- tryCatch(
+      eval(body(private[[name]])[[2L]][[1L]]),
+      error = function(error) NULL
+    )
+    if (!is.function(inner) ||
+        !all(expected_private_formals[[name]] %in% names(formals(inner)))) {
+      rlang::abort(
+        paste0("ellmer changed Chat private ", name, "() arguments required by Codex."),
+        class = "codex_ellmer_compatibility_error", parent = NULL
+      )
+    }
   }
 
   methods <- list(
@@ -1204,7 +1194,7 @@ codex_install_private_submit_methods <- function(chat) {
     environment(method) <- chat$.__enclos_env__
     private[[name]] <- method
   }
-  attr(chat, "ellmercodex_compatibility") <- "ellmer-0.4.2-provider-stream"
+  attr(chat, "ellmercodex_compatibility") <- "ellmer-0.5.0-provider-stream"
   chat
 }
 
@@ -1230,6 +1220,7 @@ codex_chat_impl_sync <- function(
   user_turn,
   stream,
   echo,
+  type = NULL,
   yield_as_content = FALSE,
   controller = NULL
 ) {
@@ -1242,14 +1233,17 @@ codex_chat_impl_sync <- function(
     )
     agent_span <- utils::getFromNamespace("local_agent_otel_span", "ellmer")(
       private$provider,
+      private$model,
       activate = FALSE
     )
 
     while (!is.null(user_turn)) {
+      private$callback_on_request_start$invoke(c(private$.turns, list(user_turn)))
       streamed_tool_ids <- character()
       assistant_chunks <- private$submit_turns(
         user_turn,
         stream = stream,
+        type = type,
         echo = echo,
         yield_as_content = yield_as_content,
         controller = controller,
@@ -1262,6 +1256,7 @@ codex_chat_impl_sync <- function(
       }
 
       assistant_turn <- self$last_turn()
+      private$callback_on_request_end$invoke(assistant_turn)
       user_turn <- NULL
       if (isTRUE(controller$cancelled)) break
 
@@ -1273,7 +1268,12 @@ codex_chat_impl_sync <- function(
           on_tool_request = private$callback_on_tool_request$invoke,
           on_tool_result = private$callback_on_tool_result$invoke,
           yield_request = TRUE,
-          otel_span = agent_span
+          otel_span = agent_span,
+          tool_context = function(request) {
+            utils::getFromNamespace("new_tool_context", "ellmer")(
+              request, self$get_turns(include_system_prompt = TRUE)
+            )
+          }
         )
         tool_results <- list()
         is_tool_request <- utils::getFromNamespace("is_tool_request", "ellmer")
@@ -1315,6 +1315,7 @@ codex_chat_impl_async <- function(
   user_turn,
   stream,
   echo,
+  type = NULL,
   tool_mode = "concurrent",
   yield_as_content = FALSE,
   controller = NULL
@@ -1328,14 +1329,17 @@ codex_chat_impl_async <- function(
     )
     agent_span <- utils::getFromNamespace("local_agent_otel_span", "ellmer")(
       private$provider,
+      private$model,
       activate = FALSE
     )
 
     while (!is.null(user_turn)) {
+      coro::await(private$callback_on_request_start$invoke_async(c(private$.turns, list(user_turn))))
       streamed_tool_ids <- character()
       assistant_chunks <- private$submit_turns_async(
         user_turn,
         stream = stream,
+        type = type,
         echo = echo,
         yield_as_content = yield_as_content,
         controller = controller,
@@ -1348,6 +1352,7 @@ codex_chat_impl_async <- function(
       }
 
       assistant_turn <- self$last_turn()
+      coro::await(private$callback_on_request_end$invoke_async(assistant_turn))
       user_turn <- NULL
       if (isTRUE(controller$cancelled)) break
 
@@ -1355,12 +1360,16 @@ codex_chat_impl_async <- function(
       if (has_tool_request(assistant_turn)) {
         tool_calls <- utils::getFromNamespace("invoke_tools_async", "ellmer")(
           assistant_turn,
-          private$tools,
           echo = echo,
           on_tool_request = private$callback_on_tool_request$invoke_async,
           on_tool_result = private$callback_on_tool_result$invoke_async,
           yield_request = TRUE,
-          otel_span = agent_span
+          otel_span = agent_span,
+          tool_context = function(request) {
+            utils::getFromNamespace("new_tool_context", "ellmer")(
+              request, self$get_turns(include_system_prompt = TRUE)
+            )
+          }
         )
         is_tool_request <- utils::getFromNamespace("is_tool_request", "ellmer")
         is_tool_result <- utils::getFromNamespace("is_tool_result", "ellmer")
@@ -1417,6 +1426,7 @@ codex_ellmer_private_chat_impl <- function(
   user_turn,
   stream,
   echo,
+  type = NULL,
   yield_as_content = FALSE,
   controller = NULL
 ) {
@@ -1426,6 +1436,7 @@ codex_ellmer_private_chat_impl <- function(
     user_turn = user_turn,
     stream = stream,
     echo = echo,
+    type = type,
     yield_as_content = yield_as_content,
     controller = controller
   )
@@ -1435,6 +1446,7 @@ codex_ellmer_private_chat_impl_async <- function(
   user_turn,
   stream,
   echo,
+  type = NULL,
   tool_mode = "concurrent",
   yield_as_content = FALSE,
   controller = NULL
@@ -1445,6 +1457,7 @@ codex_ellmer_private_chat_impl_async <- function(
     user_turn = user_turn,
     stream = stream,
     echo = echo,
+    type = type,
     tool_mode = tool_mode,
     yield_as_content = yield_as_content,
     controller = controller
@@ -1455,9 +1468,9 @@ codex_submit_turns_sync <- function(
   self,
   private,
   user_turn,
-  type = NULL,
   stream = FALSE,
   echo = "none",
+  type = NULL,
   yield_as_content = FALSE,
   controller = NULL,
   otel_span = NULL
@@ -1478,11 +1491,12 @@ codex_submit_turns_sync <- function(
     )
     chat_span <- utils::getFromNamespace("local_chat_otel_span", "ellmer")(
       provider,
+      private$model,
       turns = otel_input$turns,
       system_prompt = otel_input$system_prompt,
       parent = otel_span
     )
-    accumulator <- accumulator_class$new(self, private, controller)
+    accumulator <- accumulator_class$new(self, private, controller, turns = request_turns)
     accumulator$begin_turn(user_turn)
     completed <- FALSE
     on.exit({
@@ -1491,6 +1505,7 @@ codex_submit_turns_sync <- function(
 
     request <- utils::getFromNamespace("chat_perform", "ellmer")(
       provider = provider,
+      model = private$model,
       mode = "stream",
       turns = request_turns,
       tools = tools,
@@ -1512,11 +1527,10 @@ codex_submit_turns_sync <- function(
         item <- codex_stream_event_item(chunk)
         streamed_key <- codex_stream_item_key(item, event = chunk)
       }
-      content <- utils::getFromNamespace("stream_content", "ellmer")(
-        provider,
-        chunk
+      contents <- utils::getFromNamespace("stream_content", "ellmer")(
+        provider, chunk
       )
-      if (!is.null(content)) {
+      for (content in contents) {
         if (!is.null(streamed_key)) {
           streamed_item_keys <- c(streamed_item_keys, streamed_key)
         }
@@ -1577,9 +1591,9 @@ codex_submit_turns_async <- function(
   self,
   private,
   user_turn,
-  type = NULL,
   stream = FALSE,
   echo = "none",
+  type = NULL,
   yield_as_content = FALSE,
   controller = NULL,
   otel_span = NULL
@@ -1600,11 +1614,12 @@ codex_submit_turns_async <- function(
     )
     chat_span <- utils::getFromNamespace("local_chat_otel_span", "ellmer")(
       provider,
+      private$model,
       turns = otel_input$turns,
       system_prompt = otel_input$system_prompt,
       parent = otel_span
     )
-    accumulator <- accumulator_class$new(self, private, controller)
+    accumulator <- accumulator_class$new(self, private, controller, turns = request_turns)
     accumulator$begin_turn(user_turn)
     completed <- FALSE
     on.exit({
@@ -1613,6 +1628,7 @@ codex_submit_turns_async <- function(
 
     request <- utils::getFromNamespace("chat_perform", "ellmer")(
       provider = provider,
+      model = private$model,
       mode = "async-stream",
       turns = request_turns,
       tools = tools,
@@ -1632,11 +1648,10 @@ codex_submit_turns_async <- function(
         item <- codex_stream_event_item(chunk)
         streamed_key <- codex_stream_item_key(item, event = chunk)
       }
-      content <- utils::getFromNamespace("stream_content", "ellmer")(
-        provider,
-        chunk
+      contents <- utils::getFromNamespace("stream_content", "ellmer")(
+        provider, chunk
       )
-      if (!is.null(content)) {
+      for (content in contents) {
         if (!is.null(streamed_key)) {
           streamed_item_keys <- c(streamed_item_keys, streamed_key)
         }

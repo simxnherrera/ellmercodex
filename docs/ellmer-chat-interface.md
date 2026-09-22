@@ -1,133 +1,41 @@
-# ellmer 0.4.2 compatibility inventory
+# ellmer Chat compatibility (0.5.0 or later)
 
-This inventory is derived from the installed `ellmer` 0.4.2 package, not from
-an assumed or reduced interface. `chat_codex()` returns the actual ellmer R6
-`Chat` object (`class(chat) == c("Chat", "R6")`) and keeps all of its public
-methods and public method signatures.
+`chat_codex()` returns ellmer's own `Chat` object. The minimum supported version
+is 0.5.0, with no upper version limit. The adapter checks required exported
+symbols, Provider generic signatures, and Chat method and private-state
+contracts before it can send a Codex request. An incompatible future ellmer
+release raises `codex_ellmer_compatibility_error` with the missing contract;
+it is not automatically certified by the open version range.
 
-## Chat methods
+## Supported Chat operations
 
-| Method | Installed 0.4.2 signature | Compatibility implementation |
-|---|---|---|
-| `initialize` | `function(provider, system_prompt = NULL, echo = "none")` | ellmer `Chat` constructor, with the version-gated `CodexProvider` |
-| `get_turns` | `function(include_system_prompt = FALSE)` | ellmer Chat state; system-turn filtering preserved |
-| `set_turns` | `function(value)` | ellmer validation and state replacement |
-| `add_turn` | `function(user, assistant, log_tokens = TRUE)` | ellmer state and token logging |
-| `get_system_prompt` | `function()` | ellmer Chat state |
-| `get_model` | `function()` | provider model field |
-| `set_model` | `function(model)` | provider model mutation |
-| `set_system_prompt` | `function(value)` | ellmer Chat state |
-| `get_tokens` | `function(include_system_prompt = deprecated())` | ellmer aggregation over normalized turns |
-| `get_cost` | `function(include = c("all", "last"))` | ellmer aggregation over normalized turns; unknown Codex prices remain typed `NA` rather than fabricated |
-| `last_turn` | `function(role = c("assistant", "user", "system"))` | ellmer Chat state |
-| `chat` | `function(..., echo = NULL)` | ellmer public method plus the version-gated private tool loop; Codex transport always uses SSE internally |
-| `chat_structured` | `function(..., type, echo = "none", convert = TRUE)` | ellmer structured lifecycle; Codex Responses schema body and `ContentJson` conversion |
-| `chat_structured_async` | `function(..., type, echo = "none", convert = TRUE)` | ellmer async structured lifecycle over the Codex async SSE transport |
-| `chat_async` | `function(..., tool_mode = c("concurrent", "sequential"))` | ellmer async tool helpers plus the version-gated loop and promise return shape |
-| `stream` | `function(..., stream = c("text", "content"), controller = NULL)` | ellmer stream generator; text/content selection and controller cancellation preserved |
-| `stream_async` | `function(..., tool_mode = c("concurrent", "sequential"), stream = c("text", "content"), controller = NULL)` | ellmer async generator; tool mode and cancellation preserved |
-| `register_tool` | `function(tool)` | ellmer `ToolDef` validation and registration |
-| `register_tools` | `function(tools)` | ellmer tool registration |
-| `get_provider` | `function()` | returns the version-gated `CodexProvider` |
-| `get_tools` | `function()` | ellmer Chat state |
-| `set_tools` | `function(tools)` | ellmer Chat state and validation |
-| `on_tool_request` | `function(callback)` | ellmer callback manager and removal function |
-| `on_tool_result` | `function(callback)` | ellmer callback manager and removal function |
-| `clone` | `function(deep = FALSE)` | inherited R6 clone; private execution methods are installed with the Chat enclosing environment so cloned methods point to the clone, never the original |
-
-There are no public Chat fields in the installed object. The relevant private
-fields are `provider`, `.turns`, `echo`, `tools`, the two callback managers,
-and ellmer's private chat/tool lifecycle methods. The compatibility layer
-rebinds only `chat_impl`, `chat_impl_async`, `submit_turns`, and
-`submit_turns_async`, in one version-gated module. The public methods remain
-ellmer's own methods.
-
-The inherited/ambient public behavior is also unchanged: `clone(deep = FALSE)`
-is R6 behavior, `print(chat)` uses ellmer's `print.Chat` summary, and
-`format(chat)` uses the inherited R6 formatter.
-
-## Return shapes and state transitions
-
-The following are the observed 0.4.2 behaviors preserved by the adapter.
-
-| Method | Return shape and side effect |
+| Operation | Behavior with Codex |
 |---|---|
-| `initialize` | Initializes the provider, echo mode, callback managers, and optional system turn; returns the initialized R6 object through normal R6 construction. |
-| `get_turns` | Returns a list of `Turn` objects; omits the leading system turn by default and includes it when requested; does not mutate state. |
-| `set_turns` | Normalizes and replaces Chat history, preserving the system prompt rules; returns the Chat invisibly. |
-| `add_turn` | Validates and appends one user/assistant pair, optionally logs assistant usage, and returns the Chat invisibly. |
-| `get_system_prompt` | Returns one character string or `NULL`; does not mutate state. |
-| `get_model` | Returns the provider model string; does not mutate state. |
-| `set_model` | Validates and mutates the provider model; returns the Chat invisibly. |
-| `set_system_prompt` | Removes/replaces the leading system turn or adds one; returns the Chat invisibly. |
-| `get_tokens` | Returns an ellmer tibble with input, output, cached-input, cost, and input-preview columns for complete assistant turns; excludes partial turns and optionally excludes the system turn. |
-| `get_cost` | Returns an `ellmer_dollars` scalar for all or the last complete assistant turn; returns zero when no complete turn exists. |
-| `last_turn` | Returns the last matching `Turn` or `NULL`; does not mutate state. |
-| `chat` | Returns an `ellmer_output` string, or invisibly returns it when echoing; appends user/partial/assistant turns, executes all tool rounds, invokes callbacks, and completes dangling requests first. |
-| `chat_structured` | Returns the value converted from the requested ellmer type; appends the normalized `ContentJson` assistant turn and follows ellmer's structured-output tool policy. |
-| `chat_structured_async` | Returns a promise resolving to the converted typed value; performs the same state transition asynchronously. |
-| `chat_async` | Returns a promise resolving to assistant text; uses ellmer's sequential/concurrent async tool loop and updates history before settlement. |
-| `stream` | Returns a coro generator yielding text strings or ordered Content objects; turns become partial during iteration, complete on terminal response, or retain an interrupted partial turn on cancellation. |
-| `stream_async` | Returns an async coro generator with the same content/state semantics and async tool mode selection. |
-| `register_tool` | Validates/replaces one named `ToolDef`, mutates the tool registry, and returns the Chat invisibly. |
-| `register_tools` | Validates and registers a list of `ToolDef` objects, mutating the registry and returning the Chat invisibly. |
-| `get_provider` | Returns the `CodexProvider` S7 object; does not mutate state. |
-| `get_tools` | Returns the named registered-tool list; does not mutate state. |
-| `set_tools` | Validates and replaces the tool registry; returns the Chat invisibly. |
-| `on_tool_request` | Registers a callback and returns ellmer's callback-removal function. |
-| `on_tool_result` | Registers a callback and returns ellmer's callback-removal function. |
-| `clone` | Returns an independent R6 Chat with copied history/registrations and clone-remapped method environments; the source Chat is not mutated. |
+| `chat()`, `chat_async()` | Text, history and multi-round function tools over the streaming Responses endpoint. |
+| `chat_structured()`, `chat_structured_async()` | Native JSON schema output and ellmer type conversion; registered tools are disabled for that request. |
+| `stream()`, `stream_async()` | Text or Content chunks, controller cancellation and partial turns. Structured streaming passes the `type` argument to the request. |
+| `register_tool()`, `register_tools()`, `get_tools()`, `set_tools()` | Ellmer tool definitions and registry. Tool functions should return strings, JSON, Content objects, or lists of Content objects; convert other complex values to JSON explicitly. |
+| `on_tool_request()`, `on_tool_result()`, `on_request_start()`, `on_request_end()` | Ellmer callbacks, including a callback for every Codex request in a tool loop. |
+| `get_turns()`, `set_turns()`, `add_turn()`, `get_rounds()`, `last_turn()`, `last_round()` | Ellmer history and round views. |
+| `get_model()`, `set_model()`, `get_model_object()`, `get_provider()` | The model name, parameters and extra arguments live on ellmer's `Model`; provider settings and credentials live on `CodexProvider`. |
+| `get_tokens()`, `get_cost()` | Aggregation of reported usage. Unknown usage and prices remain unknown. |
+| `clone()` | An independent R6 Chat; patched private methods bind to the clone. |
 
-## State and conversion guarantees
+Image and PDF content is serialized through ellmer's OpenAI Responses
+serializer. Unrecognized response items remain available as `ContentJson`.
+Codex's streaming endpoint is used even for `$chat()` and
+`$chat_structured()`. A non-streaming request is blocked before transmission.
 
-- Each request begins with ellmer's `complete_dangling_tool_requests()` path.
-- ellmer owns turns, partial turns, callbacks, tool-loop rounds, cancellation,
-  echo selection, async promises/generators, cloning, token aggregation, and
-  cost aggregation.
-- The Codex provider forces `stream = TRUE` in every Chat request, including
-  sync, async, structured, and tool rounds, because the supported subscription
-  endpoint rejects non-streaming requests.
-- SSE merge state keeps the event order of text segments, function calls,
-  reasoning, images, PDFs, and other output items. Terminal output fills in
-  omitted items without moving streamed text across a tool call.
-- Usage is normalized into ellmer's input/output/cached-input token shape;
-  duration and finish metadata are written by `TurnAccumulator` and the
-  provider converter. A cost is computed when ellmer has a matching price and
-  is typed `NA` when the account-specific Codex model has no installed price.
-- Unknown Responses output items are retained as `ContentJson` with the full
-  original item instead of being silently dropped.
+## Unavailable operations
 
-## Public ellmer helpers outside Chat
+| Operation | Result |
+|---|---|
+| `token_count()` and related provider token counting | `codex_ellmer_compatibility_error`; the Codex subscription transport has no supported token-count endpoint. |
+| `file_upload()`, `file_list()`, `file_get()`, `file_download()`, `file_delete()` | `codex_ellmer_compatibility_error`; the Codex subscription transport does not provide the provider file API. Inline image and PDF content remains supported. |
+| `parallel_chat*()` | A typed blocker before a non-streaming request. |
+| `batch_chat*()` | Ellmer's unsupported-provider error before batch state creation. |
 
-The installed package also exports `parallel_chat()`,
-`parallel_chat_text()`, `parallel_chat_structured()`, `batch_chat()`,
-`batch_chat_text()`, `batch_chat_structured()`, and
-`batch_chat_completed()`. They are not Chat methods, but are part of the
-ellmer surface and were audited.
-
-In ellmer 0.4.2 these helpers construct non-streaming requests and, for batch,
-use the OpenAI Files/Batches API. The Codex subscription endpoint accepts only
-the stream-only Responses transport and does not expose that batch API. The
-parallel helpers fail with `codex_ellmer_parallel_batch_blocker`; the batch
-helpers stop in ellmer's generic provider capability check with
-`Batch requests are not currently supported by this provider.` Both paths stop
-before a request is sent, and batch helpers stop before creating a state file.
-This is an explicit stable-core boundary, not a no-op or a false-success
-fallback. The package's stable contract covers the public `Chat` object above;
-it does not claim compatibility with these separately exported parallel/batch
-helpers.
-
-| Helper | Installed signature | Status |
-|---|---|---|
-| `parallel_chat` | `function(chat, prompts, max_active = 10, rpm = 500, on_error = c("return", "continue", "stop"))` | Explicit blocker before request construction |
-| `parallel_chat_text` | Same as `parallel_chat` | Explicit blocker before request construction |
-| `parallel_chat_structured` | `function(chat, prompts, type, convert = TRUE, include_tokens = FALSE, include_cost = FALSE, max_active = 10, rpm = 500, on_error = c("return", "continue", "stop"))` | Explicit blocker before request construction |
-| `batch_chat` | `function(chat, prompts, path, wait = TRUE, ignore_hash = FALSE)` | Ellmer generic unsupported-provider error before state-file creation |
-| `batch_chat_text` | Same as `batch_chat` | Ellmer generic unsupported-provider error before state-file creation |
-| `batch_chat_structured` | `function(chat, prompts, path, type, wait = TRUE, ignore_hash = FALSE, convert = TRUE, include_tokens = FALSE, include_cost = FALSE)` | Ellmer generic unsupported-provider error before state-file creation |
-| `batch_chat_completed` | `function(chat, prompts, path)` | Ellmer generic unsupported-provider error before state-file creation |
-
-Provider-native helper declarations that are accepted by ellmer are passed
-through the parent OpenAI Responses serializer. A returned Responses item
-that has no dedicated ellmer Content class is retained as `ContentJson`, with
-its exact provider payload available in the assistant turn.
+The boundary depends on ellmer's private Chat execution methods and an
+undocumented Codex transport. CI runs the offline fixtures against ellmer
+0.5.0 and the latest published release, with no authentication or real
+requests.

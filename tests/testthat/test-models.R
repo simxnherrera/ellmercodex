@@ -167,7 +167,7 @@ testthat::test_that("reasoning effort is validated against the selected model", 
     )
   )
   testthat::expect_identical(
-    chat$get_provider()@params$reasoning_effort,
+    chat$get_model_object()@params$reasoning_effort,
     "high"
   )
 

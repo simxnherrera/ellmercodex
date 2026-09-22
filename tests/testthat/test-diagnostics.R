@@ -3,7 +3,7 @@ testthat::test_that("availability diagnostics are offline and redacted", {
   testthat::expect_true(is.list(diagnostics))
   testthat::expect_true(is.logical(diagnostics$available))
   testthat::expect_true(diagnostics$ellmer$compatible)
-  testthat::expect_match(diagnostics$ellmer$version, "^0\\.4\\.")
+  testthat::expect_match(diagnostics$ellmer$version, "^0\\.5\\.")
   testthat::expect_false(diagnostics$authentication$checked)
   testthat::expect_identical(diagnostics$authentication$status, "not_checked")
   testthat::expect_true(diagnostics$model_discovery$supported)

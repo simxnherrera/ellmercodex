@@ -2,7 +2,7 @@
 #'
 #' `ellmercodex` provides a stable, explicitly bounded core integration between
 #' [ellmer][ellmer::chat_openai] and subscription-backed Codex authentication.
-#' The stable compatibility target is the complete public ellmer 0.4.2 `Chat`
+#' The stable compatibility target is the public ellmer `Chat` (0.5.0 or later)
 #' object for interactive, single-conversation operations. The direct OAuth
 #' endpoints and Responses endpoint used by this package are undocumented
 #' compatibility observations, may change without notice, and are not an
@@ -22,12 +22,13 @@
 #'
 #' The public API is deliberately small: [codex_login()], [codex_logout()],
 #' [codex_account()], [codex_models()], [codex_available()], and
-#' [chat_codex()]. The chat compatibility layer is version-gated to the
-#' inspected ellmer 0.4.2 public API and supports its complete Chat object:
+#' [chat_codex()]. The chat compatibility layer is checked against the
+#' required ellmer contracts at runtime and supports interactive Chat methods:
 #' text and content streaming, model parameters, per-model reasoning effort,
 #' structured output, multi-turn history, rich image/PDF content, asynchronous
 #' chat, tool loops, callbacks, cancellation, cloning, echo, and response
-#' metadata. The separately exported ellmer parallel/batch helpers are outside
+#' metadata. Provider token counting and file management are unavailable.
+#' The separately exported ellmer parallel/batch helpers are outside
 #' the stable core contract and are explicitly blocked for the Codex stream-only
 #' endpoint rather than silently degraded.
 #'

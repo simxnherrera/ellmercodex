@@ -1,3 +1,6 @@
+> Historical research snapshot: this document describes the earlier ellmer 0.4.2
+> integration. See [the current compatibility inventory](ellmer-chat-interface.md).
+
 # `ellmercodex` feasibility study
 
 Status: investigation, offline checks, Pi-style OAuth, buffered SSE transport,

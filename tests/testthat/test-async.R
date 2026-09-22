@@ -18,7 +18,13 @@ test_that("async streaming preserves content chunks, callbacks, and tool modes",
 
   for (mode in c("sequential", "concurrent")) {
     chat <- new_async_fixture_chat()
-    seen <- list(request = 0L, result = 0L)
+    seen <- list(request = 0L, result = 0L, start = 0L, end = 0L)
+    chat$on_request_start(function(turns) {
+      seen$start <<- seen$start + 1L
+    })
+    chat$on_request_end(function(turn) {
+      seen$end <<- seen$end + 1L
+    })
     chat$on_tool_request(function(request) {
       seen$request <<- seen$request + 1L
     })
@@ -70,6 +76,8 @@ test_that("async streaming preserves content chunks, callbacks, and tool modes",
     expect_match(text, "The weather result is sunny\\.")
     expect_identical(seen$request, 1L)
     expect_identical(seen$result, 1L)
+    expect_identical(seen$start, 2L)
+    expect_identical(seen$end, 2L)
     expect_identical(chat$last_turn()@text, "The weather result is sunny.")
   }
 })

@@ -13,7 +13,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 `ellmercodex` connects `ellmer` text chats to observed, subscription-backed
 Codex authentication and response behavior. Its stable core is the public
-`ellmer` 0.4.2 `Chat` object for interactive,
+`ellmer` `Chat` object (0.5.0 or later) for interactive,
 single-conversation work. The direct OAuth and response transport are
 undocumented compatibility surfaces, may change without notice, and are not
 endorsed or supported by OpenAI.
@@ -64,7 +64,7 @@ session.
 Set `persist = FALSE` to keep the credential only in the current R process:
 
 ```{r, eval = FALSE}
-codex_login(persist = FALSE)
+auth <- codex_login(persist = FALSE)
 chat <- chat_codex(model = Sys.getenv("ELLMERCODEX_MODEL"))
 ```
 
@@ -79,8 +79,10 @@ Sys.setenv(HTTR2_OAUTH_CACHE = "/path/to/a/private/cache")
 ```
 
 The default cache is below `tools::R_user_dir("httr2", "cache")`, in an
-`ellmercodex` subdirectory. httr2 refreshes cached access tokens as needed and
-prunes old cached tokens.
+`ellmercodex` subdirectory. Set the override before the first cache access in
+each R process. httr2 refreshes cached access tokens as needed and prunes
+cached tokens older than 30 days when it loads. For an app hosted on a Linux
+VM, follow the [single-process deployment guide](hosted-oauth.md).
 
 ## Create a text chat
 
@@ -99,16 +101,16 @@ chat$chat("Remember that the codeword is amber. Reply: acknowledged")
 chat$chat("What was the codeword?")
 ```
 
-The returned object is an `ellmer` 0.4.2 `Chat`. The complete public Chat
-surface remains available: ordinary and structured chat, text/content
+The returned object is an `ellmer` `Chat` (0.5.0 or later). Interactive Chat
+methods remain available: ordinary and structured chat, text/content
 streaming, reasoning effort, model parameters, registered function tools,
 async methods, callbacks, cancellation, cloning, rich image/PDF content,
-history, echo, and response metadata. The compatibility implementation is
-version-gated to exactly 0.4.2. The separate `parallel_chat*()` and
-`batch_chat*()` helpers are outside the stable core contract. Parallel helpers
-use the package blocker; batch helpers use ellmer's generic unsupported-provider
-error because the Codex endpoint is stream-only. The underlying Codex transport
-remains an undocumented external compatibility dependency.
+history, echo, and response metadata. The compatibility implementation checks
+required ellmer contracts at runtime. Provider token counting and file
+management are unsupported and fail before a request. The separate
+`parallel_chat*()` and `batch_chat*()` helpers are outside the stable core
+contract because the Codex endpoint is stream-only. The underlying Codex
+transport remains an undocumented external compatibility dependency.
 
 The constructor and the returned Chat object are documented separately.
 `?chat_codex` describes constructor arguments, credential side effects,
