@@ -29,6 +29,14 @@ Rscript --vanilla inst/manual-tests/test-all.R
 
 Live checks inspect only the package-scoped credential, use redacted account
 artifacts, and do not log out afterward. The runner tests both account-catalog
-default selection and an explicit model; set `ELLMERCODEX_MODEL` only when you
-want the explicit case to use a particular catalog model. `live.R` remains as
-the smaller two-prompt compatibility smoke check.
+default selection and an explicit model. Set `ELLMERCODEX_MODEL` to choose the
+explicit model. If it is absent from `codex_models()`, also set
+`ELLMERCODEX_LIVE_EFFORT` to an effort accepted by the service, for example
+`medium` for `gpt-6-luna`. `live.R` remains the smaller two-prompt smoke check
+and accepts the same variables. To check every GPT-6 model ID with `medium`
+effort, run the dedicated family smoke test:
+
+```sh
+ELLMERCODEX_RUN_LIVE_TESTS=true \
+Rscript --vanilla inst/manual-tests/live-model-family.R
+```

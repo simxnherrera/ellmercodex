@@ -6,6 +6,8 @@
 ^cran-comments\.md$
 ^ellmercodex\.Rcheck$
 ^ellmercodex_[0-9].*\.tar\.gz$
+^LICENSE\.md$
+^scripts$
 ^docs$
 ^inst/COORDINATION\.md$
 ^poc$

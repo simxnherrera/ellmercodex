@@ -118,7 +118,10 @@ Keychain prompt.
   = "auto")`, matching ellmer's OpenAI Responses mapping.
 - `codex_models()` calls the observed `/codex/models` endpoint and normalizes
   model slugs, display names, defaults, supported reasoning efforts, and
-  service tiers. It does not bundle a private or copied model catalog.
+  service tiers. It does not bundle a private or copied model catalog. Because
+  discovery can lag behind generation, an explicitly selected ID absent from
+  the catalog reaches the generation endpoint with its requested effort; that
+  endpoint validates access and supported values.
 - `codex_request()` performs HTTP and classifies status failures without exposing
   raw headers or bodies.
 - `codex_parse_sse()` handles CRLF/LF framing, `data:` fields, `[DONE]`, and

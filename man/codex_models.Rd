@@ -33,7 +33,9 @@ The \code{supported} and \code{source} attributes describe the catalog result.
 This makes one authenticated request to the observed Codex model catalog
 endpoint. The returned rows include each model's advertised reasoning effort
 levels, so callers can select an effort without copying a stale catalog into
-this package. Availability is account- and workspace-specific.
+this package. Availability is account- and workspace-specific. The catalog
+may lag behind models accepted by the chat service; explicitly supplied IDs
+absent from the catalog are passed to the service for validation.
 }
 \note{
 The catalog is account- and workspace-specific and is queried at

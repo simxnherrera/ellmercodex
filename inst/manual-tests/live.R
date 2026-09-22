@@ -42,10 +42,17 @@ if (!nzchar(model)) {
   if (length(usable) == 0L) stop("No usable live model was advertised.", call. = FALSE)
   model <- models$id[[usable[[1L]]]]
 }
-selected <- models[match(model, models$id), , drop = FALSE]
-if (nrow(selected) != 1L || !isTRUE(selected$supported_in_api[[1L]])) {
+selected_index <- match(model, models$id)
+selected <- if (is.na(selected_index)) {
+  NULL
+} else {
+  models[selected_index, , drop = FALSE]
+}
+if (!is.null(selected) && !isTRUE(selected$supported_in_api[[1L]])) {
   stop("The selected live model is not marked usable by codex_models().", call. = FALSE)
 }
+effort <- Sys.getenv("ELLMERCODEX_LIVE_EFFORT", unset = "")
+if (!nzchar(effort)) effort <- NULL
 
 default_chat <- chat_codex(model = NULL)
 if (!default_chat$get_model() %in% models$id) {
@@ -54,7 +61,8 @@ if (!default_chat$get_model() %in% models$id) {
 
 chat <- chat_codex(
   system_prompt = "Reply briefly and follow the requested output format.",
-  model = model
+  model = model,
+  effort = effort
 )
 first <- as.character(chat$chat(
   "Remember that the codeword is amber. Include the word acknowledged in your reply."

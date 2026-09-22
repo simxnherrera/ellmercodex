@@ -1,3 +1,8 @@
+# ellmercodex 0.1.64
+
+* `chat_codex()` now accepts explicitly selected models omitted from the
+  account catalog. The service validates those model IDs and reasoning efforts.
+
 # ellmercodex 0.1.63
 
 * `chat_codex()` now supports ellmer 0.5.0 and later through a Model/Provider

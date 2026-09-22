@@ -34,9 +34,11 @@ the supported `ellmer` compatibility seam. Its default does not inspect a
 credential store or contact the network, and `TRUE` does not guarantee that a
 remote request will succeed. After authentication, `codex_models()` queries
 the observed account-specific catalog and returns the models and reasoning
-efforts the account currently advertises. The package supplies its own verified
-compatibility value for the catalog query; set `ELLMERCODEX_CLIENT_VERSION`
-only when a different explicit value is needed:
+efforts the account currently advertises. That catalog can lag behind the chat
+service: explicitly selected model IDs absent from it are still passed to the
+service, which validates access and reasoning effort. The package supplies its
+own verified compatibility value for the catalog query; set
+`ELLMERCODEX_CLIENT_VERSION` only when a different explicit value is needed:
 
 ```{r, eval = FALSE}
 models <- codex_models()
@@ -88,7 +90,7 @@ VM, follow the [single-process deployment guide](hosted-oauth.md).
 
 By default, `chat_codex()` selects a usable model from the authenticated
 account catalog. Select a model explicitly when you need a stable choice, and
-choose reasoning effort from that model's advertised values:
+choose reasoning effort from the catalog when it lists the model:
 
 ```{r, eval = FALSE}
 chat <- chat_codex(
@@ -99,6 +101,13 @@ chat <- chat_codex(
 
 chat$chat("Remember that the codeword is amber. Reply: acknowledged")
 chat$chat("What was the codeword?")
+```
+
+For example, if the account catalog omits the GPT-6 family but the chat service
+accepts it, select a model explicitly:
+
+```{r, eval = FALSE}
+chat <- chat_codex(model = "gpt-6-luna", effort = "medium")
 ```
 
 The returned object is an `ellmer` `Chat` (0.5.0 or later). Interactive Chat

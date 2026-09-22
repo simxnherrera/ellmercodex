@@ -203,6 +203,46 @@ testthat::test_that("reasoning effort is validated against the selected model", 
   )
 })
 
+testthat::test_that(
+  "unlisted explicit models defer effort validation to the service",
+  {
+    testthat::local_mocked_bindings(
+      codex_auth = function() fake_codex_auth(),
+      .package = "ellmercodex"
+    )
+    catalog_response <- function(req) httr2::response_json(body = list(
+      models = list(
+        list(
+          slug = "fixture-listed-model",
+          display_name = "Fixture Model",
+          supported_in_api = TRUE,
+          priority = 1L,
+          supported_reasoning_levels = list(list(effort = "low"))
+        )
+      )
+    ))
+
+    models <- c("gpt-6-astra", "gpt-6-sol", "gpt-6-luna")
+    chats <- lapply(models, function(model) {
+      httr2::with_mocked_responses(
+        catalog_response,
+        ellmercodex::chat_codex(
+          model = model,
+          effort = "medium",
+          echo = "none"
+        )
+      )
+    })
+
+    efforts <- vapply(
+      chats,
+      function(chat) chat$get_model_object()@params$reasoning_effort,
+      character(1)
+    )
+    testthat::expect_identical(efforts, rep("medium", length(models)))
+  }
+)
+
 testthat::test_that("default selection fails actionably when discovery is empty or unavailable", {
   testthat::local_mocked_bindings(
     codex_auth = function() fake_codex_auth(),

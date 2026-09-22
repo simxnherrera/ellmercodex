@@ -29,7 +29,7 @@ Instala la versión etiquetada más reciente desde GitHub usando
 
 ```r
 install.packages("pak")
-pak::pak("simxnherrera/ellmercodex@v0.1.63")
+pak::pak("simxnherrera/ellmercodex@v0.1.64")
 ```
 
 Para instalar la versión de desarrollo:
@@ -191,6 +191,16 @@ modelos[c("id", "display_name", "default_reasoning_effort",
           "supported_reasoning_efforts")]
 ```
 
+El catálogo refleja los modelos que anuncia el endpoint de tu cuenta y puede
+quedar rezagado respecto del servicio de chat. Puedes pasar explícitamente un
+ID aceptado aunque no aparezca en `codex_models()`; el servicio validará el
+modelo y el esfuerzo. Si están habilitados para tu cuenta, puedes pasar
+`gpt-6-astra`, `gpt-6-sol` o `gpt-6-luna` aunque el catálogo no los liste:
+
+```r
+chat <- chat_codex(model = "gpt-6-luna", effort = "medium")
+```
+
 Puedes seleccionar un modelo y el esfuerzo de razonamiento explícitamente:
 
 ```r
@@ -311,7 +321,7 @@ Install the current tagged release from GitHub with
 
 ```r
 install.packages("pak")
-pak::pak("simxnherrera/ellmercodex@v0.1.63")
+pak::pak("simxnherrera/ellmercodex@v0.1.64")
 ```
 
 To install the development version:
@@ -359,6 +369,17 @@ after signing in:
 models <- codex_models()
 models[c("id", "display_name", "default_reasoning_effort",
          "supported_reasoning_efforts")]
+```
+
+The catalog reflects the models advertised by your account's discovery
+endpoint and can lag behind the chat service. You can explicitly pass a model
+ID accepted by the service even when it is absent from `codex_models()`; the
+service validates the model and reasoning effort. If your account has access,
+you can pass `gpt-6-astra`, `gpt-6-sol`, or `gpt-6-luna` when the catalog omits
+them:
+
+```r
+chat <- chat_codex(model = "gpt-6-luna", effort = "medium")
 ```
 
 Select a model explicitly when needed:

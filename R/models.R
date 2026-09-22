@@ -237,6 +237,10 @@ codex_model_catalog_default <- function(models) {
 
 codex_validate_model_effort <- function(models, model, effort) {
   if (is.null(effort)) return(invisible(NULL))
+  # The account catalog can lag behind the generation endpoint. Keep strict
+  # validation for advertised models, but let the service validate explicit
+  # model IDs that it does not list.
+  if (!(model %in% models$id)) return(invisible(effort))
   row <- codex_model_catalog_row(models, model)
   supported <- row$supported_reasoning_efforts[[1L]]
   if (!is.character(supported)) supported <- character()
@@ -287,7 +291,9 @@ codex_models_request_headers <- function(auth) {
 #' This makes one authenticated request to the observed Codex model catalog
 #' endpoint. The returned rows include each model's advertised reasoning effort
 #' levels, so callers can select an effort without copying a stale catalog into
-#' this package. Availability is account- and workspace-specific.
+#' this package. Availability is account- and workspace-specific. The catalog
+#' may lag behind models accepted by the chat service; explicitly supplied IDs
+#' absent from the catalog are passed to the service for validation.
 #'
 #' @param auth Optional package credential. If omitted, the current session or
 #'   package-owned credential is loaded and refreshed as needed.

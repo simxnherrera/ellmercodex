@@ -43,8 +43,8 @@ Codex CLI dependency.
 | Auth/account: explicit browser OAuth, safe storage, refresh rotation, injected-credential continuity, no foreign auth-file scraping or secret exposure | **Partial** | `codex_login()`/`codex_account()` in `R/auth.R` implement the explicit OAuth boundary and redacted account output. `R/credentials.R` delegates encrypted token caching and refresh rotation to httr2, while `R/ellmer-compatibility.R` keeps injected credentials process-local without re-entering the persistent cache. However, `R/config.R` uses an observed native client ID and direct undocumented endpoints; the repository has no independent registration evidence. |
 | Public API: exactly six public helpers and a normal usable Chat | **Implemented** | `NAMESPACE` exports exactly `codex_login`, `codex_logout`, `codex_account`, `codex_models`, `codex_available`, and `chat_codex` (apart from S3 print methods). `chat_codex()` in `R/chat-codex.R` constructs the Chat and maps `effort` to reasoning parameters. |
 | Full `ellmer` compatibility: ordinary/multiturn, sync/async, structured, tools, rich content, cancellation, clone/history, callbacks, errors, and metadata | **Implemented for the supported ellmer range** | The private seam and loops are implemented in `R/ellmer-compatibility.R`; ordered stream/rich conversion, unknown usage preservation, tools, async paths, clone/history, cancellation, and error recovery have deterministic fixtures. The live runner also passed ordinary/multiturn output, streaming, structured output, tools, async, rich input, cancellation, cloning, and history. Parallel/batch helpers remain the documented stable-core exception. |
-| Models/reasoning: account-specific catalog, appropriate dynamic `model = NULL`, explicit fallback, selectable compatible effort | **Implemented with documented transport risk** | `R/models.R` selects the lowest-priority usable row from the authenticated catalog, honors `ELLMERCODEX_MODEL` only as an explicit override, and turns empty/unavailable discovery into `codex_model_selection_error`. `chat_codex()` validates `effort` and `params$reasoning_effort` against the selected row. Offline fixtures cover selection/errors; the live catalog was non-empty and the runner passed both default and explicit selection plus a supported effort. |
-| Quality/release: offline coverage, opt-in live validation, CRAN-safe docs/examples, and release hygiene | **Verified for `v0.1.62`** | The source-loading runner passed 70 tests and 337 expectations with no warnings. R CMD build and check for `0.1.62` completed with no errors and only the expected new-submission NOTE. The final diff was reviewed and no generated build artifacts remain. |
+| Models/reasoning: account-specific catalog, appropriate dynamic `model = NULL`, explicit model selection, selectable compatible effort | **Implemented with documented transport risk** | `R/models.R` selects the lowest-priority usable row from the authenticated catalog and honors `ELLMERCODEX_MODEL` as an explicit override. Catalog-listed model efforts are checked locally; explicit IDs absent from the catalog are passed to the generation endpoint for validation. Offline fixtures cover this path, and opt-in live acceptance exercises the GPT-6 family without fabricating catalog rows. |
+| Quality/release: offline coverage, opt-in live validation, CRAN-safe docs/examples, and release hygiene | **Verified for `v0.1.64`** | The full `R CMD check --as-cran` passed with no errors, warnings, or notes. Opt-in live checks accepted `gpt-6-astra`, `gpt-6-sol`, and `gpt-6-luna` with `medium` effort. |
 | Non-goals: no coding-agent filesystem/shell/background/multi-agent runtime | **Implemented** | The public and transport code is a direct-R chat client with no CLI, app-server, local proxy, agent loop, shell, filesystem, background worker, or multi-agent runtime. The obsolete manual tool parser and its fixtures were removed. |
 | Decision rules: preserve direct Chat semantics, make limitations visible, and avoid silent degradation | **Implemented with the parallel/batch exception** | The stream-only boundary is explicit; actual parallel and batch entry points were tested offline; docs now distinguish the package blocker for parallel helpers from ellmer's generic unsupported-provider error for batch helpers. Missing token values remain `NA`/unknown, and default model discovery no longer silently falls back to a hardcoded model. |
 
@@ -58,8 +58,12 @@ Codex CLI dependency.
   were no longer reachable after those paths moved to httr2 and the
   version-gated compatibility seam. It also synchronizes tests and internal
   documentation without changing the public API.
-- `docs/project-ground-truths.md` is itself untracked and is the audit input;
-  it is not release evidence.
+- `v0.1.63` added support for the public `ellmer` 0.5.0 Chat seam and expanded
+  deployment and package documentation.
+- `v0.1.64` allows explicit model IDs omitted by the account catalog to reach
+  the generation endpoint for validation; live checks cover the GPT-6 family.
+- `docs/project-ground-truths.md` is an internal requirements baseline and is
+  not release evidence.
 
 ## What is already solid
 
@@ -75,7 +79,8 @@ Codex CLI dependency.
   images/PDFs, cancellation, history, cloning, and async tool loops.
 - The account-specific model catalog is queried at construction when needed;
   no runtime Codex executable is consulted. Effort values are checked against
-  the selected row's advertised capabilities.
+  advertised capabilities when available and passed to the service for models
+  omitted from the catalog.
 - The provider leaves omitted token counts as unknown and records supplied
   usage without fabricating zeros. A missing price remains an unknown cost.
 - The unsupported parallel/batch boundary is intentional and documented as a

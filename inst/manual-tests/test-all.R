@@ -302,13 +302,7 @@ with_env_unset <- function(name, code) {
 
 catalog_model_row <- function(models, model) {
   index <- match(model, models$id)
-  if (is.na(index)) {
-    stop(
-      "The selected live model was not returned by codex_models(): ",
-      model,
-      call. = FALSE
-    )
-  }
+  if (is.na(index)) return(NULL)
   models[index, , drop = FALSE]
 }
 
@@ -433,10 +427,24 @@ run_live_checks <- function() {
       model <- models$id[[usable[[1L]]]]
     }
     selected_row <- catalog_model_row(models, model)
-    if (!isTRUE(selected_row$supported_in_api[[1L]])) {
+    if (!is.null(selected_row) && !isTRUE(selected_row$supported_in_api[[1L]])) {
       stop("The configured live model is not marked usable by the account catalog.", call. = FALSE)
     }
-    effort <- catalog_model_effort(models, model)
+    configured_effort <- Sys.getenv("ELLMERCODEX_LIVE_EFFORT", unset = "")
+    if (nzchar(configured_effort)) {
+      if (!is.null(selected_row) &&
+          !configured_effort %in% selected_row$supported_reasoning_efforts[[1L]]) {
+        stop("The configured live effort is not advertised for the selected model.", call. = FALSE)
+      }
+      effort <- configured_effort
+    } else if (!is.null(selected_row)) {
+      effort <- catalog_model_effort(models, model)
+    } else {
+      stop(
+        "Set ELLMERCODEX_LIVE_EFFORT when the explicit model is absent from codex_models().",
+        call. = FALSE
+      )
+    }
     status$model <- model
     status$reasoning_effort <- effort
 

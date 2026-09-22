@@ -98,6 +98,7 @@ If the Codex subscription service cannot supply a capability that an API-key pro
 - `codex_models()` is a real user requirement and should return the models actually usable by the logged-in account whenever reliable discovery is possible.
 - An empty result is not an acceptable steady-state experience when the account can chat with Codex models.
 - Dynamic account-specific discovery is preferred. If a fallback catalog is unavoidable, it must be centralized, evidence-based, and explicitly identified as a fallback rather than silently presented as live discovery.
+- The account catalog can lag behind models accepted by the generation endpoint. Explicit IDs absent from the catalog may be passed through for server validation; do not fabricate live catalog rows.
 - `chat_codex(model = NULL)` should choose an appropriate current default rather than scatter a hard-coded model through the package.
 - Reasoning effort must be selectable through the package in a way compatible with both Codex's supported values and `ellmer`'s parameter conventions.
 

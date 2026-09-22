@@ -100,8 +100,10 @@ codex_patch_chat <- function(chat, default_echo = "none") {
 #'   model availability remains account- and workspace-specific. If discovery
 #'   is empty or unavailable, construction fails with an actionable error.
 #' @param effort Optional Codex reasoning effort. It is forwarded through
-#'   ellmer's `reasoning_effort` parameter and must be one of the values
-#'   advertised by [codex_models()] for the selected model.
+#'   ellmer's `reasoning_effort` parameter. When the selected model appears in
+#'   [codex_models()], the value must be one of its advertised efforts. For an
+#'   explicit model absent from that catalog, the service validates the model
+#'   and value.
 #' @param params Optional ellmer model parameters, usually created with
 #'   `ellmer::params()`. A supplied `reasoning_effort` must agree with
 #'   `effort`, when both are provided.

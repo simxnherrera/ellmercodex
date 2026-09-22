@@ -28,8 +28,10 @@ prints the completed text. The compatibility wrapper accepts \code{TRUE},
 \code{"output"}, respectively.}
 
 \item{effort}{Optional Codex reasoning effort. It is forwarded through
-ellmer's \code{reasoning_effort} parameter and must be one of the values
-advertised by \code{\link[=codex_models]{codex_models()}} for the selected model.}
+ellmer's \code{reasoning_effort} parameter. When the selected model appears in
+\code{\link[=codex_models]{codex_models()}}, the value must be one of its advertised efforts. For an
+explicit model absent from that catalog, the service validates the model
+and value.}
 
 \item{params}{Optional ellmer model parameters, usually created with
 \code{ellmer::params()}. A supplied \code{reasoning_effort} must agree with
