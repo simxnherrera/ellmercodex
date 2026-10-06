@@ -37,7 +37,7 @@ O instala la versión etiquetada más reciente desde GitHub usando
 
 ```r
 install.packages("pak")
-pak::pak("simxnherrera/ellmercodex@v0.1.64")
+pak::pak("simxnherrera/ellmercodex@v0.2.0")
 ```
 
 Para instalar la versión de desarrollo:
@@ -349,7 +349,7 @@ Or install the current tagged release from GitHub with
 
 ```r
 install.packages("pak")
-pak::pak("simxnherrera/ellmercodex@v0.1.64")
+pak::pak("simxnherrera/ellmercodex@v0.2.0")
 ```
 
 To install the development version:

@@ -1,6 +1,6 @@
 Package: ellmercodex
 Title: 'Codex' Integration for 'ellmer'
-Version: 0.1.64
+Version: 0.2.0
 Authors@R: person("Simon", "Herrera", email = "simxnherrera@gmail.com", role = c("aut", "cre", "cph"))
 URL: https://github.com/simxnherrera/ellmercodex
 BugReports: https://github.com/simxnherrera/ellmercodex/issues
