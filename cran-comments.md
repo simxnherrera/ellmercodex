@@ -2,14 +2,16 @@
 
 0 errors | 0 warnings | 1 note
 
-* The local macOS check completed successfully, including package vignette
-  generation and re-building of vignette outputs.
-* The only NOTE from `R CMD check --as-cran` is the expected
-  "New submission" incoming-feasibility note for a package not yet on CRAN.
+* This is a new submission. The only NOTE is the expected "New submission"
+  incoming-feasibility note.
+* win-builder (R-devel) also reported a relative link in the vignette that
+  does not resolve in the installed package; it now points to the guide on
+  GitHub.
 
 ## Test environments
 
 * Local: macOS 27.0.1, arm64, R 4.6.1
+* win-builder: Windows, R-devel (2026-10-05 r90641 ucrt)
 * GitHub Actions: ubuntu-latest (R devel, release, oldrel-1; ellmer 0.5.0 and
   latest), windows-latest (R release), macos-latest (R release)
 

@@ -90,7 +90,7 @@ refreshed automatically; refreshes are serialized across R processes because
 refresh tokens rotate. The first sign-in creates a registration bound to the
 chosen account and workspace, and later sign-ins reuse it. To use another
 account or workspace, call `codex_logout()` first. For an app hosted on a
-Linux VM, follow the [single-process deployment guide](hosted-oauth.md).
+Linux VM, follow the [single-process deployment guide](https://github.com/simxnherrera/ellmercodex/blob/main/docs/hosted-oauth.md).
 
 ## Create a text chat
 
