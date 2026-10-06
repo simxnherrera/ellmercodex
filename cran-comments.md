@@ -56,7 +56,7 @@ To keep this safe for 'ellmer' and CRAN:
   dependency check failure. Local and CI runs still fail on drift.
 * I have asked the 'ellmer' maintainers to export the provider generics and to
   support stream-only providers, which would remove this code entirely:
-  <ISSUE_URL>
+  <https://github.com/tidyverse/ellmer/issues/1173>
 
 ## Method references
 

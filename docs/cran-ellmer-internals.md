@@ -110,8 +110,11 @@ política y desaparece junto con el grupo B.
   `docs/technical-design.md`; antes heredaba los reintentos de ellmer.
 - Hecho: `skip_if_ellmer_contract_changed()` en los tests que construyen chats
   (solo actúa en CRAN) y sección en `cran-comments.md`.
-- Pendiente: abrir el issue upstream y poner su URL en `cran-comments.md`
-  (`<ISSUE_URL>`).
+- Hecho: issue upstream abierto el 2026-10-06,
+  <https://github.com/tidyverse/ellmer/issues/1173>, y enlazado en
+  `cran-comments.md`. El texto publicado agrega el enlace a las limitaciones
+  de la vista previa de OpenAI y aclara por qué #595 (cerrado) no cubre este
+  caso.
 
 ## Migración a "Sign in with ChatGPT" (rama `siwc-auth`)
 
