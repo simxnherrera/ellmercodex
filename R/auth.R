@@ -268,13 +268,13 @@ codex_authorization_request_url <- function(
 }
 
 codex_callback_page <- function(ok) {
-  paste0(
-    "<!doctype html><html><head><meta charset=\"utf-8\"><title>ellmercodex</title></head>",
-    "<body><p>",
-    if (ok) "Sign-in complete. You can close this page and return to R."
-    else "Sign-in did not complete. Return to R for details.",
-    "</p></body></html>"
-  )
+  # Plain text, like httr2's former callback page; browsers show it in a
+  # monospaced font.
+  if (ok) {
+    "Sign-in complete. You can close this page and return to R."
+  } else {
+    "Sign-in did not complete. Return to R for details."
+  }
 }
 
 # A minimal loopback listener with an explicit timeout. It accepts exactly one
@@ -298,7 +298,7 @@ codex_oauth_listen <- function(redirect_uri, timeout = 300) {
     ok <- is.list(state$query) && !is.null(state$query$code) && is.null(state$query$error)
     list(
       status = 200L,
-      headers = list(`Content-Type` = "text/html; charset=utf-8"),
+      headers = list(`Content-Type` = "text/plain; charset=utf-8"),
       body = codex_callback_page(ok)
     )
   })
