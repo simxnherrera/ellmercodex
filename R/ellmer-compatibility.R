@@ -129,8 +129,7 @@ codex_provider_headers <- function(provider) {
   # transport. All sync, async, tool, and helper requests reach it through the
   # same provider request method.
   codex_provider_access_token(reference)
-  auth <- reference$auth
-  codex_request_routing_headers(auth)
+  codex_transport_headers()
 }
 
 codex_provider_credentials <- function(reference) {
@@ -151,6 +150,76 @@ codex_provider_body <- function(provider, model, stream = TRUE, turns = list(), 
     type = type
   )
   body$stream <- TRUE
+  body
+}
+
+codex_tool_namespace <- function() {
+  "ellmer"
+}
+
+# Body fields that ChatGPT plan usage rejects, from OpenAI's preview
+# limitations for the documented flow.
+codex_prohibited_body_fields <- function() {
+  c(
+    "background", "conversation", "max_output_tokens", "max_tool_calls",
+    "metadata", "moderation", "multi_agent", "prompt",
+    "prompt_cache_retention", "previous_response_id", "safety_identifier",
+    "temperature", "top_logprobs", "top_p", "truncation", "user"
+  )
+}
+
+# Adapt ellmer's OpenAI Responses body to the documented ChatGPT plan usage
+# restrictions:
+# * explicit `system` messages are rejected, so they become `developer`
+#   messages;
+# * function tools must be grouped in a namespace, and replayed function calls
+#   name that namespace;
+# * prohibited fields fail before any request is sent.
+codex_responses_body_adapt <- function(body) {
+  present <- intersect(names(body), codex_prohibited_body_fields())
+  present <- present[!vapply(body[present], is.null, logical(1))]
+  if (length(present)) {
+    rlang::abort(
+      paste0(
+        "ChatGPT plan usage does not accept these Responses arguments: ",
+        paste(present, collapse = ", "),
+        ". Remove them from `params` or `api_args`."
+      ),
+      class = "codex_chat_argument_error",
+      parent = NULL
+    )
+  }
+  body$store <- FALSE
+  body$stream <- TRUE
+
+  namespace <- codex_tool_namespace()
+  if (is.list(body$input)) {
+    body$input <- lapply(body$input, function(item) {
+      if (!is.list(item)) return(item)
+      if (identical(item$role, "system")) item$role <- "developer"
+      if (identical(item$type, "function_call") && is.null(item$namespace)) {
+        item$namespace <- namespace
+      }
+      item
+    })
+  }
+
+  if (is.list(body$tools) && length(body$tools)) {
+    is_function <- vapply(
+      body$tools,
+      function(tool) is.list(tool) && identical(tool$type, "function"),
+      logical(1)
+    )
+    if (any(is_function)) {
+      grouped <- list(
+        type = "namespace",
+        name = namespace,
+        description = "Tools registered with the ellmer chat.",
+        tools = unname(body$tools[is_function])
+      )
+      body$tools <- c(unname(body$tools[!is_function]), list(grouped))
+    }
+  }
   body
 }
 
@@ -180,8 +249,8 @@ codex_provider_request <- function(provider, model, stream = TRUE, turns = list(
   body <- codex_provider_body(provider, model, stream = TRUE, turns = turns, tools = tools, type = type)
   if (length(model@extra_args)) body <- utils::modifyList(body, model@extra_args)
   # api_args is allowed to contain arbitrary Responses arguments, but cannot
-  # disable streaming on this transport.
-  body$stream <- TRUE
+  # disable streaming or storage settings on this transport.
+  body <- codex_responses_body_adapt(body)
   req <- httr2::req_body_json(req, body)
   httr2::req_headers(req, !!!provider@extra_headers)
 }
@@ -204,17 +273,32 @@ codex_provider_base_request <- function(provider) {
 codex_provider_error_body <- function(resp) {
   type <- httr2::resp_content_type(resp)
   if (identical(type, "application/json")) {
-    error <- httr2::resp_body_json(resp)$error
+    value <- httr2::resp_body_json(resp)
+    error <- value$error
     if (rlang::is_string(error)) {
       error
     } else if (is.list(error)) {
-      error$message
+      if (rlang::is_string(error$code)) paste0(error$message, " (", error$code, ")") else error$message
+    } else if (rlang::is_string(value$detail)) {
+      # Pre-stream admission errors can use `{"detail": ...}`; it is
+      # diagnostic text, not a stable code.
+      value$detail
     } else {
       jsonlite::prettify(httr2::resp_body_string(resp))
     }
   } else if (identical(type, "text/plain")) {
     httr2::resp_body_string(resp)
   }
+}
+
+# Pull the next stream chunk, converting httr2's HTTP errors (raised before a
+# stream opens) into the package's documented transport conditions.
+codex_stream_next <- function(request) {
+  tryCatch(request(), httr2_http = function(error) {
+    response <- error$resp
+    if (!inherits(response, "httr2_response")) stop(error)
+    codex_abort_response(response)
+  })
 }
 
 codex_provider_stream_parse <- function(provider, event) {
@@ -629,7 +713,7 @@ codex_stream_merge <- function(provider, result, chunk) {
       state$codex_items[[index]] <- item
       state$output <- state$codex_items
     }
-  } else if (type %in% c("response.completed", "response.done", "response.incomplete")) {
+  } else if (type %in% c("response.completed", "response.incomplete")) {
     state <- codex_stream_state_merge_terminal(state, codex_stream_terminal(chunk))
   } else if (identical(type, "response.failed")) {
     codex_sse_error(chunk, "Codex generation failed.")
@@ -899,6 +983,19 @@ codex_provider_value_turn <- function(provider, model, result, has_type = FALSE)
       parent = NULL
     )
   }
+  # Only `response.completed` is a successful inference.
+  if (identical(result$status, "incomplete")) {
+    reason <- if (is.list(result$incomplete_details)) result$incomplete_details$reason else NULL
+    rlang::abort(
+      paste0(
+        "The Codex response was incomplete",
+        if (rlang::is_string(reason)) paste0(" (", codex_sanitize_error_detail(reason), ")") else "",
+        "."
+      ),
+      class = "codex_incomplete_error",
+      parent = NULL
+    )
+  }
   output <- result$output
   if (!is.list(output)) output <- list()
   contents <- codex_flatten_content_lists(
@@ -1071,8 +1168,8 @@ codex_new_provider <- function(model, auth, params = NULL, api_args = list(), pe
   reference <- codex_auth_reference(auth, persist = persist)
   provider <- class(
     name = "codex",
-    base_url = sub("/responses$", "", codex_responses_url()),
-    extra_headers = codex_request_routing_headers(auth),
+    base_url = codex_api_base_url(),
+    extra_headers = codex_transport_headers(),
     credentials = function() codex_provider_credentials(reference),
     preserve_thinking = TRUE,
     service_tier = "default",
@@ -1548,7 +1645,7 @@ codex_submit_turns_sync <- function(
     streamed_text <- FALSE
     result <- NULL
     repeat {
-      chunk <- request()
+      chunk <- codex_stream_next(request)
       if (coro::is_exhausted(chunk)) break
       streamed_key <- NULL
       if (identical(codex_stream_event_type(chunk), "response.output_item.done")) {

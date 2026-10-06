@@ -22,10 +22,7 @@ testthat::test_that("model discovery normalizes Codex model metadata", {
         )
       ))
     },
-    ellmercodex::codex_models(
-      auth = fake_codex_auth(),
-      client_version = "fixture-client"
-    )
+    ellmercodex::codex_models(auth = fake_codex_auth())
   )
 
   testthat::expect_s3_class(result, "codex_models")
@@ -39,56 +36,34 @@ testthat::test_that("model discovery normalizes Codex model metadata", {
     c("low", "medium", "high")
   )
   testthat::expect_identical(result$service_tiers[[1L]], "default")
-  testthat::expect_match(seen$request$url, "/codex/models")
-  testthat::expect_match(seen$request$url, "client_version=fixture-client")
+  testthat::expect_identical(seen$request$url, "https://api.openai.com/v1/models")
   testthat::expect_identical(seen$request$headers$Accept, "application/json")
+  testthat::expect_null(seen$request$headers$`ChatGPT-Account-Id`)
   testthat::expect_output(
     print(result[c("id", "display_name")]),
     "fixture-model"
   )
 })
 
-testthat::test_that("model discovery does not require the Codex executable", {
-  old_path <- Sys.getenv("PATH", unset = NA_character_)
-  old_version <- Sys.getenv("ELLMERCODEX_CLIENT_VERSION", unset = NA_character_)
-  on.exit({
-    if (is.na(old_path)) Sys.unsetenv("PATH") else Sys.setenv(PATH = old_path)
-    if (is.na(old_version)) {
-      Sys.unsetenv("ELLMERCODEX_CLIENT_VERSION")
-    } else {
-      Sys.setenv(ELLMERCODEX_CLIENT_VERSION = old_version)
-    }
-  }, add = TRUE)
-  Sys.setenv(PATH = "")
-  Sys.unsetenv("ELLMERCODEX_CLIENT_VERSION")
-
+testthat::test_that("model discovery keeps only listed models and ignores client_version", {
   seen <- new.env(parent = emptyenv())
-  httr2::with_mocked_responses(
+  result <- httr2::with_mocked_responses(
     function(req) {
       seen$request <- req
-      httr2::response_json(body = list(models = list()))
+      httr2::response_json(body = list(models = list(
+        list(slug = "listed-model", display_name = "Listed", visibility = "list"),
+        list(slug = "hidden-model", display_name = "Hidden", visibility = "hide"),
+        list(slug = "plain-model")
+      )))
     },
-    ellmercodex::codex_models(auth = fake_codex_auth())
+    ellmercodex::codex_models(auth = fake_codex_auth(), client_version = "ignored")
   )
-
-  version <- codex_models_client_version()
-  testthat::expect_identical(version, "0.149.0")
-  testthat::expect_match(seen$request$url, paste0("client_version=", version))
-
-  seen_without_version <- new.env(parent = emptyenv())
-  httr2::with_mocked_responses(
-    function(req) {
-      seen_without_version$request <- req
-      httr2::response_json(body = list(models = list()))
-    },
-    ellmercodex::codex_models(
-      auth = fake_codex_auth(),
-      client_version = NULL
-    )
-  )
-  testthat::expect_match(
-    seen_without_version$request$url,
-    paste0("client_version=", version)
+  testthat::expect_identical(result$id, c("listed-model", "plain-model"))
+  testthat::expect_identical(result$display_name[[1L]], "Listed")
+  testthat::expect_false(grepl("client_version", seen$request$url))
+  testthat::expect_error(
+    ellmercodex::codex_models(auth = fake_codex_auth(), client_version = ""),
+    class = "codex_auth_argument_error"
   )
 })
 

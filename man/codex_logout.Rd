@@ -2,28 +2,37 @@
 % Please edit documentation in R/credentials.R
 \name{codex_logout}
 \alias{codex_logout}
-\title{Remove only ellmercodex's stored Codex credential.}
+\title{Sign out and remove ellmercodex's stored credential.}
 \usage{
-codex_logout()
+codex_logout(revoke = TRUE)
+}
+\arguments{
+\item{revoke}{Whether to revoke the refresh token at OpenAI's documented
+revocation endpoint before deleting it locally. Revocation is best effort:
+local credentials are removed even when the network request fails, in
+which case a \code{codex_revocation_warning} warning is signalled.}
 }
 \value{
 \code{TRUE}, invisibly. The process-local credential is cleared even if
-no persistent backend is available.
+no persistent credential exists.
 }
 \description{
-This function clears only the package-named httr2 token cache and the
-process-local session. It never removes Codex CLI credentials or another
-application's entries.
+This function revokes the refresh token with OpenAI (by default), clears
+the process-local session, and deletes this package's own credential file.
+It never removes Codex CLI credentials or another application's entries.
+The host identifier is kept because the documented flow requires it to stay
+stable for this host.
 }
 \note{
-Logout removes local credential material but does not contact the
-remote service or revoke a remote session.
+To use a different ChatGPT account or workspace, call
+\code{codex_logout()} and then \code{\link[=codex_login]{codex_login()}}; the next sign-in creates a new
+registration instead of reauthorizing the previous one.
 }
 \section{Conditions}{
 
-Logout is best effort and signals no backend details. Storage failures are
-reported as \code{codex_credential_store_error} by the explicit login/refresh
-paths that write credentials.
+Logout signals no backend details. Storage failures are reported as
+\code{codex_credential_store_error} by the explicit login and refresh paths that
+write credentials.
 }
 
 \examples{

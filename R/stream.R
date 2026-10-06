@@ -185,6 +185,7 @@ codex_parse_sse <- function(value, max_event_bytes = 1024L * 1024L) {
 }
 
 codex_sse_error <- function(event, message = "The Codex stream returned an error.") {
+  codex_abort_plan_error(event)
   error <- if (is.list(event)) event$error else NULL
   if (!is.list(error) && is.list(event$response)) error <- event$response$error
 
@@ -252,7 +253,7 @@ codex_parse_sse_response <- function(events) {
       if (is.character(event$text) && length(event$text) == 1L) {
         done_text <- c(done_text, event$text)
       }
-    } else if (type %in% c("response.completed", "response.done", "response.incomplete")) {
+    } else if (type %in% c("response.completed", "response.incomplete")) {
       if (is.null(terminal_type)) {
         terminal <- event$response
         if (!is.list(terminal) && is.list(event$output)) terminal <- event

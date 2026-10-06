@@ -2,13 +2,15 @@
 % Please edit documentation in R/auth.R
 \name{codex_login}
 \alias{codex_login}
-\title{Sign in to a Codex subscription with browser OAuth.}
+\title{Sign in with ChatGPT in the browser.}
 \usage{
 codex_login(persist = TRUE, timeout = 300)
 }
 \arguments{
 \item{persist}{Whether to save the credential for later sessions. The
-default is \code{TRUE}; use \code{FALSE} for a process-only session.}
+default is \code{TRUE}; the credential is written to this package's own
+directory (see Details) with owner-only permissions. Use \code{FALSE} for a
+process-only session.}
 
 \item{timeout}{Maximum callback wait in seconds. This must be one positive
 number. The loopback listener is closed when authentication succeeds,
@@ -20,23 +22,37 @@ An internal \code{codex_auth} object. Use \code{\link[=codex_account]{codex_acco
 account summary; token fields are intentionally not printed.
 }
 \description{
-\code{codex_login()} is the explicit authentication entry point. It opens a
-browser only when called by the user, uses httr2's PKCE-protected OAuth code
-flow, and stores the resulting credential in httr2's encrypted user-level
-cache by default. It does not use the OS keyring. The package never reads
-credentials created by Codex CLI or another application.
+\code{codex_login()} is the explicit authentication entry point. It follows
+OpenAI's documented "Sign in with ChatGPT" flow for open-source, locally
+hosted apps: it opens the system browser for registration and consent,
+listens once on the loopback callback, exchanges the PKCE-protected code
+for tokens with the issued client ID, verifies the ID token, and checks that
+ChatGPT plan usage (\code{chatgpt.tokens.use.direct}) was granted.
+}
+\details{
+The first sign-in creates a registration bound to the selected ChatGPT
+account and workspace. Later sign-ins reauthorize that registration. Use
+\code{\link[=codex_logout]{codex_logout()}} first to sign in with a different account or workspace.
+The package never reads credentials created by Codex CLI or another
+application.
+
+Credentials are stored in \code{tools::R_user_dir("ellmercodex", "config")}, or in the directory named by the \code{ELLMERCODEX_HOME}
+environment variable. The same directory holds a stable, opaque host
+identifier (\code{ext_agent_host_id}) that is created before the first
+sign-in, even when \code{persist = FALSE}, because the flow requires it to be
+stable for each host.
 }
 \note{
 This function is interactive: it opens the default browser and
-listens on the local loopback callback at port 1455. It does not revoke
-a remote session; use \code{\link[=codex_logout]{codex_logout()}} to remove the local credential
-owned by this package.
+listens on \verb{http://127.0.0.1:1455/callback} (set
+\code{ELLMERCODEX_CALLBACK_PORT} to use another port).
 }
 \section{Conditions}{
 
 Invalid arguments signal \code{codex_auth_argument_error}; callback and token
-failures use \code{codex_oauth_callback_error} or
-\code{codex_token_exchange_error} as appropriate.
+failures use \code{codex_oauth_callback_error}, \code{codex_oauth_timeout}, or
+\code{codex_token_exchange_error} as appropriate. If ChatGPT plan usage was not
+granted, \code{codex_plan_scope_error} is signalled.
 }
 
 \examples{

@@ -19,8 +19,8 @@ A one-row data frame with columns:
 }
 \description{
 The account identifier and all token material are deliberately replaced or
-omitted. Calling this function does not open a browser; an expired cached
-credential may be refreshed by httr2.
+omitted. Calling this function does not open a browser; an expired stored
+credential may be refreshed.
 }
 \section{Conditions}{
 

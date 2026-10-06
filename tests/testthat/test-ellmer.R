@@ -17,7 +17,7 @@ test_that("the public OpenAI factory creates an offline-compatible Chat", {
   skip_if_not_installed("ellmer")
 
   auth <- structure(
-    list(access_token = "fixture-access-token", account_id = "fixture-account"),
+    list(access_token = "fixture-access-token", client_id = "oaiapp_fixtureclient"),
     class = c("codex_auth", "list")
   )
   local_mocked_bindings(
@@ -29,9 +29,8 @@ test_that("the public OpenAI factory creates an offline-compatible Chat", {
   expect_s3_class(chat, "Chat")
   provider <- chat$get_provider()
   expect_identical(provider@service_tier, "default")
-  expect_true(grepl("/backend-api/codex$", provider@base_url))
-  expect_identical(provider@extra_headers[["ChatGPT-Account-Id"]], "fixture-account")
-  expect_identical(provider@extra_headers[["originator"]], "ellmercodex")
+  expect_identical(provider@base_url, "https://api.openai.com/v1")
+  expect_setequal(names(provider@extra_headers), c("Accept", "User-Agent"))
   expect_identical(provider@credentials(), "fixture-access-token")
 })
 
@@ -39,7 +38,7 @@ test_that("ellmer reasoning effort is forwarded without translation", {
   skip_if_not_installed("ellmer")
 
   auth <- structure(
-    list(access_token = "fixture-access-token", account_id = "fixture-account"),
+    list(access_token = "fixture-access-token", client_id = "oaiapp_fixtureclient"),
     class = c("codex_auth", "list")
   )
   chat <- codex_ellmer_chat_openai(
@@ -58,7 +57,7 @@ test_that("Codex compatibility keeps the public Chat lifecycle and merges stream
     list(
       access_token = "fixture-access-token",
       refresh_token = "fixture-refresh-token",
-      account_id = "fixture-account",
+      client_id = "oaiapp_fixtureclient",
       expires_at = as.numeric(Sys.time()) + 3600
     ),
     class = c("codex_auth", "list")
@@ -85,7 +84,7 @@ test_that("Codex structured output uses ellmer conversion after SSE merge", {
     list(
       access_token = "fixture-access-token",
       refresh_token = "fixture-refresh-token",
-      account_id = "fixture-account",
+      client_id = "oaiapp_fixtureclient",
       expires_at = as.numeric(Sys.time()) + 3600
     ),
     class = c("codex_auth", "list")
@@ -109,7 +108,7 @@ test_that("Codex structured output uses ellmer conversion after SSE merge", {
 
 test_that("chat argument and compatibility failures use user-facing conditions", {
   fake_auth <- structure(
-    list(access_token = "fixture-access-token", account_id = "fixture-account"),
+    list(access_token = "fixture-access-token", client_id = "oaiapp_fixtureclient"),
     class = c("codex_auth", "list")
   )
   expect_identical(codex_echo("all"), "all")

@@ -81,9 +81,97 @@ codex_error_detail <- function(response) {
   codex_error_detail_value(value)
 }
 
+# Documented ChatGPT plan usage error codes and the package conditions they
+# map to. The more specific class comes first; the second keeps the
+# established transport parent stable for existing handlers.
+codex_plan_error_info <- function(code) {
+  if (!is.character(code) || length(code) != 1L || is.na(code)) {
+    return(NULL)
+  }
+  switch(
+    code,
+    subscription_sharing_usage_limit_exceeded = list(
+      class = c("codex_usage_limit_error", "codex_rate_limit_error"),
+      message = paste(
+        "The ChatGPT plan usage limit was reached. Pause requests and check",
+        "usage in ChatGPT settings."
+      )
+    ),
+    subscription_sharing_usage_unavailable = ,
+    subscription_sharing_user_unavailable = list(
+      class = c("codex_usage_unavailable_error", "codex_server_error"),
+      message = paste(
+        "ChatGPT plan usage is temporarily unavailable. Credentials were kept;",
+        "retry later with backoff."
+      )
+    ),
+    subscription_sharing_user_not_eligible = list(
+      class = c("codex_plan_ineligible_error", "codex_authentication_error"),
+      message = paste(
+        "ChatGPT plan usage is unavailable for this user, workspace, or policy.",
+        "Signing in again will not help."
+      )
+    ),
+    subscription_sharing_invalid_user = list(
+      class = "codex_authentication_error",
+      message = "The ChatGPT subscriber could not be validated. Run codex_login() again."
+    ),
+    subscription_sharing_route_not_supported = ,
+    chatpass_v2_scope_not_authorized = ,
+    chatpass_v2_invalid_authorization_context = list(
+      class = "codex_authentication_error",
+      message = "The ChatGPT plan authorization does not permit this request."
+    ),
+    subscription_sharing_unsupported_capability = list(
+      class = c("codex_unsupported_capability_error", "codex_malformed_request_error"),
+      message = paste(
+        "The request used an input, tool, or model that ChatGPT plan usage",
+        "does not support. Remove it before retrying."
+      )
+    ),
+    NULL
+  )
+}
+
+codex_error_fields <- function(value) {
+  error <- if (is.list(value)) value$error else NULL
+  if (!is.list(error) && is.list(value) && is.list(value$response)) error <- value$response$error
+  code <- if (is.list(error)) error$code else NULL
+  param <- if (is.list(error)) error$param else NULL
+  list(
+    code = if (is.character(code) && length(code) == 1L && !is.na(code)) code else NULL,
+    param = if (is.character(param) && length(param) == 1L && !is.na(param)) param else NULL
+  )
+}
+
+# Signal a documented plan error when `value` carries one; otherwise return
+# NULL so the caller can fall back to its generic mapping.
+codex_abort_plan_error <- function(value, detail = NULL) {
+  fields <- codex_error_fields(value)
+  info <- codex_plan_error_info(fields$code)
+  if (is.null(info)) {
+    return(invisible(NULL))
+  }
+  message <- info$message
+  if (!is.null(fields$param)) {
+    message <- paste0(message, " Parameter: ", codex_sanitize_error_detail(fields$param), ".")
+  }
+  rlang::abort(
+    paste0(message, " (", fields$code, ")"),
+    class = info$class,
+    code = fields$code,
+    param = fields$param
+  )
+}
+
 codex_abort_response <- function(response) {
   status <- tryCatch(httr2::resp_status(response), error = function(error) NA_integer_)
-  detail <- codex_error_detail(response)
+  value <- tryCatch(
+    httr2::resp_body_json(response, simplifyVector = FALSE),
+    error = function(error) NULL
+  )
+  codex_abort_plan_error(value)
+  detail <- codex_error_detail_value(value)
   suffix <- if (is.null(detail) || !nzchar(detail)) "" else paste0(" ", detail)
 
   if (status %in% c(401L, 403L, 402L)) {

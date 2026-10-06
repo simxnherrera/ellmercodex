@@ -4,15 +4,14 @@
 \alias{codex_models}
 \title{List models available to the authenticated Codex account.}
 \usage{
-codex_models(auth = NULL, client_version = codex_models_client_version())
+codex_models(auth = NULL, client_version = NULL)
 }
 \arguments{
 \item{auth}{Optional package credential. If omitted, the current session or
 package-owned credential is loaded and refreshed as needed.}
 
-\item{client_version}{Optional client-version query value. If omitted or
-\code{NULL}, the package's verified compatibility value is used;
-\code{ELLMERCODEX_CLIENT_VERSION} can override it.}
+\item{client_version}{Deprecated and ignored. The documented catalog does
+not take a client version. Kept so existing calls keep working.}
 }
 \value{
 A \code{codex_models} data frame with one row per catalog model. Its
@@ -30,8 +29,9 @@ columns are:
 The \code{supported} and \code{source} attributes describe the catalog result.
 }
 \description{
-This makes one authenticated request to the observed Codex model catalog
-endpoint. The returned rows include each model's advertised reasoning effort
+This makes one authenticated request to OpenAI's documented model catalog
+(\verb{GET https://api.openai.com/v1/models}) with the ChatGPT plan access token,
+and keeps the models marked for listing (\code{visibility: "list"}). The returned rows include each model's advertised reasoning effort
 levels, so callers can select an effort without copying a stale catalog into
 this package. Availability is account- and workspace-specific. The catalog
 may lag behind models accepted by the chat service; explicitly supplied IDs

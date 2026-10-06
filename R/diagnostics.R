@@ -8,7 +8,7 @@ codex_diagnostic_dependencies <- function() {
 codex_diagnostic_configuration <- function() {
   fn_env <- environment(codex_diagnostic_configuration)
   required <- c(
-    "codex_oauth_client_id", "codex_authorization_url", "codex_token_url",
+    "codex_dynamic_client_id", "codex_authorization_url", "codex_token_url",
     "codex_responses_url", "codex_models_endpoint", "codex_redirect_uri",
     "codex_request_headers"
   )
@@ -24,16 +24,15 @@ codex_diagnostic_configuration <- function() {
   # shape are useful without leaking account, code, or secret material.
   list(
     functions_available = configured,
-    callback_configured = if (exists("codex_callback_port", mode = "function", envir = fn_env, inherits = TRUE)) {
-      isTRUE(tryCatch(codex_callback_port() == 1455L, error = function(error) FALSE))
-    } else {
-      FALSE
-    },
-    originator_configured = if (exists("codex_originator", mode = "function", envir = fn_env, inherits = TRUE)) {
-      isTRUE(tryCatch(identical(codex_originator(), "ellmercodex"), error = function(error) FALSE))
-    } else {
-      FALSE
-    }
+    callback_configured = isTRUE(tryCatch(
+      grepl("^http://127\\.0\\.0\\.1:[0-9]+/callback$", codex_redirect_uri()),
+      error = function(error) FALSE
+    )),
+    client_configured = isTRUE(tryCatch(
+      identical(codex_dynamic_client_id(), "dynamic_agent_client") &&
+        grepl("^https://", codex_responses_url()),
+      error = function(error) FALSE
+    ))
   )
 }
 
@@ -84,7 +83,7 @@ codex_diagnostics <- function(check_credentials = FALSE) {
     "ellmer", "httr2", "httpuv", "jsonlite", "openssl", "promises", "rlang", "coro", "S7"
   )])
   available <- isTRUE(dependencies_ok) && isTRUE(configuration$functions_available) &&
-    isTRUE(configuration$callback_configured) && isTRUE(configuration$originator_configured) &&
+    isTRUE(configuration$callback_configured) && isTRUE(configuration$client_configured) &&
     isTRUE(ellmer$compatible)
   if (isTRUE(check_credentials)) available <- available && identical(authentication$status, "present")
 
@@ -102,8 +101,8 @@ codex_diagnostics <- function(check_credentials = FALSE) {
         error = function(error) FALSE
       )),
       reason = paste(
-        "Model discovery uses the authenticated Codex catalog endpoint;",
-        "the endpoint is an undocumented compatibility surface."
+        "Model discovery uses the documented /v1/models endpoint with the",
+        "ChatGPT plan access token."
       )
     )
   )

@@ -1,53 +1,80 @@
-# Centralized configuration for the observed Codex compatibility transport.
+# Centralized configuration for the documented "Sign in with ChatGPT" flow.
 #
-# These values are deliberately kept in one file.  The authorization and
-# subscription transport endpoints are observed implementation details, not a
-# documented public API.  Keeping them centralized makes an eventual migration
-# to a repaired or documented direct surface auditable.
+# These values follow OpenAI's ChatGPT plan usage documentation for
+# open-source and locally hosted apps:
+# https://developers.openai.com/siwc/token-sharing-open-source
+# Keeping them in one file makes protocol changes auditable.
 
-codex_oauth_client_id <- function() {
-  # Observed in the openai/codex native client.  This is not an
-  # ellmercodex-specific registration or a claim that arbitrary native clients
-  # may reuse it.
-  "app_EMoamEEZ73f0CkXaXp7hrann"
+codex_oauth_issuer <- function() {
+  "https://auth.openai.com"
+}
+
+codex_oidc_discovery_url <- function() {
+  paste0(codex_oauth_issuer(), "/.well-known/openid-configuration")
+}
+
+codex_dynamic_client_id <- function() {
+  # First-time registration uses this documented placeholder. The callback
+  # returns the issued, user- and workspace-bound client ID, which is used for
+  # the code exchange, refreshes, and later reauthorization.
+  "dynamic_agent_client"
+}
+
+codex_agent_name <- function() {
+  # Sent as `agent_name_hint` on first registration only. It names this
+  # package honestly; never impersonate another client.
+  "ellmercodex"
 }
 
 codex_authorization_url <- function() {
-  "https://auth.openai.com/oauth/authorize"
+  "https://auth.openai.com/api/accounts/authorize"
 }
 
 codex_token_url <- function() {
-  "https://auth.openai.com/oauth/token"
+  "https://auth.openai.com/api/accounts/oauth/token"
+}
+
+codex_oauth_scope <- function() {
+  "openid profile email offline_access resource.invoke chatgpt.tokens.use.direct"
+}
+
+codex_plan_scope <- function() {
+  # Required before inference with the ChatGPT plan.
+  "chatgpt.tokens.use.direct"
+}
+
+codex_api_base_url <- function() {
+  "https://api.openai.com/v1"
+}
+
+codex_oauth_resource <- function() {
+  codex_api_base_url()
 }
 
 codex_responses_url <- function() {
-  # Undocumented direct subscription transport observed in independent clients.
-  "https://chatgpt.com/backend-api/codex/responses"
+  paste0(codex_api_base_url(), "/responses")
 }
 
 codex_models_endpoint <- function() {
-  # The account-specific model catalog is an observed sibling of Responses.
-  paste0(sub("/responses$", "", codex_responses_url()), "/models")
-}
-
-codex_protocol_version <- function() {
-  # Observed compatibility header; not a stable public protocol guarantee.
-  "responses=experimental"
+  paste0(codex_api_base_url(), "/models")
 }
 
 codex_callback_port <- function() {
-  # The registered redirect URI currently uses this compatibility-sensitive port.
-  1455L
+  # Only the port may vary between sign-ins. A fixed default keeps SSH port
+  # forwarding predictable; ELLMERCODEX_CALLBACK_PORT overrides it.
+  value <- Sys.getenv("ELLMERCODEX_CALLBACK_PORT", unset = "")
+  port <- suppressWarnings(as.integer(value))
+  if (length(port) == 1L && !is.na(port) && port >= 1024L && port <= 65535L) {
+    port
+  } else {
+    1455L
+  }
 }
 
-codex_redirect_uri <- function() {
-  sprintf("http://localhost:%d/auth/callback", codex_callback_port())
-}
-
-codex_originator <- function() {
-  # Identify this package honestly.  Never impersonate Codex, Pi, or another
-  # client in an authorization or generation request.
-  "ellmercodex"
+codex_redirect_uri <- function(port = codex_callback_port()) {
+  # The documentation requires the IPv4 loopback literal (never `localhost`)
+  # and the `/callback` path.
+  sprintf("http://127.0.0.1:%d/callback", as.integer(port))
 }
 
 codex_default_model <- function() {
@@ -64,7 +91,7 @@ codex_default_model <- function() {
 codex_user_agent <- function() {
   version <- tryCatch(
     as.character(utils::packageVersion("ellmercodex")),
-    error = function(error) "0.1.62"
+    error = function(error) "0.1.64"
   )
   paste0("ellmercodex/", version)
 }
@@ -84,44 +111,26 @@ codex_auth_field <- function(auth, ...) {
 }
 
 codex_transport_headers <- function() {
-  # These headers describe the observed direct subscription transport. They
-  # are centralized so model discovery and Chat requests cannot drift apart.
+  # The public Responses API needs only the bearer token. These headers are
+  # centralized so model discovery and Chat requests cannot drift apart.
   c(
-    originator = codex_originator(),
-    `OpenAI-Beta` = codex_protocol_version(),
     Accept = "text/event-stream",
     `User-Agent` = codex_user_agent()
   )
 }
 
-codex_request_routing_headers <- function(auth) {
-  account_id <- codex_auth_field(
-    auth,
-    "account_id",
-    "chatgpt_account_id",
-    "chatgptAccountId"
-  )
-  if (is.null(account_id)) {
-    rlang::abort(
-      "The Codex credential is missing the routing fields required by the transport.",
-      class = "codex_authentication_error"
-    )
-  }
-  c(`ChatGPT-Account-Id` = account_id, codex_transport_headers())
-}
-
 codex_request_headers <- function(auth) {
-  access_token <- codex_auth_field(auth, "access_token", "accessToken")
+  access_token <- codex_auth_field(auth, "access_token")
 
   if (is.null(access_token)) {
     rlang::abort(
-      "The Codex credential is missing the routing fields required by the transport.",
+      "The Codex credential is missing the access token required by the transport.",
       class = "codex_authentication_error"
     )
   }
 
   c(
     Authorization = paste("Bearer", access_token),
-    codex_request_routing_headers(auth)
+    codex_transport_headers()
   )
 }

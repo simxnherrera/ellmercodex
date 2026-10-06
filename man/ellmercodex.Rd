@@ -56,11 +56,11 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Simon Herrera \email{simxnherrera@gmail.com}
+\strong{Maintainer}: Simon Herrera \email{simxnherrera@gmail.com} [copyright holder]
 
 Authors:
 \itemize{
-  \item Simon Herrera \email{simxnherrera@gmail.com}
+  \item Simon Herrera \email{simxnherrera@gmail.com} [copyright holder]
 }
 
 }

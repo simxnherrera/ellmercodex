@@ -1,12 +1,50 @@
 fake_codex_auth <- function() {
   structure(
     list(
+      client_id = "oaiapp_fixtureclient",
       access_token = "fixture-access-token",
       refresh_token = "fixture-refresh-token",
-      account_id = "fixture-account-id",
-      expires_at = as.numeric(Sys.time()) + 3600
+      expires_at = as.numeric(Sys.time()) + 3600,
+      scope = "openid profile email offline_access resource.invoke chatgpt.tokens.use.direct"
     ),
     class = c("codex_auth", "list")
+  )
+}
+
+# Register cleanup in the caller's frame (testthat 3.0 has no exported defer).
+fixture_defer <- function(expr, envir = parent.frame()) {
+  thunk <- as.call(list(function() expr))
+  do.call(base::on.exit, list(thunk, TRUE, FALSE), envir = envir)
+}
+
+# Point the package credential directory (and httr2's legacy cache) at a
+# temporary directory so tests never touch the user's files.
+local_codex_home <- function(env = parent.frame()) {
+  home <- tempfile("ellmercodex-home-")
+  old <- Sys.getenv(c("ELLMERCODEX_HOME", "HTTR2_OAUTH_CACHE"), unset = NA_character_)
+  Sys.setenv(ELLMERCODEX_HOME = home, HTTR2_OAUTH_CACHE = file.path(home, "httr2"))
+  withr_restore <- function() {
+    for (name in names(old)) {
+      if (is.na(old[[name]])) Sys.unsetenv(name) else do.call(Sys.setenv, as.list(old[name]))
+    }
+    unlink(home, recursive = TRUE, force = TRUE)
+    getFromNamespace("codex_session_clear", "ellmercodex")()
+  }
+  fixture_defer(withr_restore(), envir = env)
+  home
+}
+
+fixture_token_response <- function(...) {
+  utils::modifyList(
+    list(
+      access_token = "fixture-access-token",
+      refresh_token = "fixture-refresh-token",
+      id_token = "fixture-id-token",
+      token_type = "Bearer",
+      expires_in = 3600,
+      scope = "openid profile email offline_access resource.invoke chatgpt.tokens.use.direct"
+    ),
+    list(...)
   )
 }
 
@@ -72,7 +110,7 @@ await_promise <- function(promise, max_steps = 200L) {
 
 new_async_fixture_chat <- function() {
   auth <- structure(
-    list(access_token = "fixture-access-token", account_id = "fixture-account"),
+    list(access_token = "fixture-access-token", client_id = "oaiapp_fixtureclient"),
     class = c("codex_auth", "list")
   )
   codex_ellmer_chat_openai <- getFromNamespace("codex_ellmer_chat_openai", "ellmercodex")

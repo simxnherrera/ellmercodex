@@ -1,25 +1,10 @@
-# Account-specific model discovery through the observed Codex catalog endpoint.
-
-codex_models_client_version_default <- function() "0.149.0"
-
-codex_models_client_version <- function() {
-  override <- Sys.getenv("ELLMERCODEX_CLIENT_VERSION", unset = "")
-  if (is.character(override) && length(override) == 1L &&
-      !is.na(override) && nzchar(override)) {
-    return(override)
-  }
-
-  # Keep model discovery package-native. This is the last verified native
-  # client compatibility value; updating it is a package maintenance task, not
-  # a runtime lookup of another executable.
-  codex_models_client_version_default()
-}
+# Account-specific model discovery through the documented `/v1/models`
+# endpoint, using the ChatGPT plan access token.
 
 codex_models_unsupported_reason <- function() {
   paste(
-    "The Codex model catalog could not be used. The account-specific",
-    "catalog endpoint is an undocumented compatibility surface and may be",
-    "unavailable or change without notice."
+    "The model catalog could not be used. Model availability depends on",
+    "the signed-in ChatGPT account and workspace."
   )
 }
 
@@ -157,10 +142,18 @@ codex_models_result <- function(records, source = "codex") {
   result
 }
 
+codex_model_listed <- function(model) {
+  # Only models with `visibility: "list"` are meant for user selection.
+  # Entries without the field (for example, the standard `data` envelope) are
+  # kept.
+  visibility <- if (is.list(model)) model$visibility else NULL
+  is.null(visibility) || identical(visibility, "list")
+}
+
 codex_models_parse <- function(value) {
   models <- if (is.list(value)) value$models else NULL
   # Accept the standard OpenAI `/models` envelope as a compatibility fallback;
-  # the Codex endpoint currently uses `models`.
+  # the documented ChatGPT plan catalog uses `models`.
   if (is.null(models) && is.list(value)) models <- value$data
   if (!is.list(models)) {
     rlang::abort(
@@ -169,6 +162,7 @@ codex_models_parse <- function(value) {
       parent = NULL
     )
   }
+  models <- Filter(codex_model_listed, models)
   codex_models_result(lapply(models, codex_model_record))
 }
 
@@ -281,6 +275,7 @@ codex_select_model <- function(auth, model = NULL, effort = NULL) {
 }
 
 codex_models_request_headers <- function(auth) {
+  # Same bearer token and identification as generation requests.
   headers <- codex_request_headers(auth)
   headers[["Accept"]] <- "application/json"
   headers
@@ -288,8 +283,9 @@ codex_models_request_headers <- function(auth) {
 
 #' List models available to the authenticated Codex account.
 #'
-#' This makes one authenticated request to the observed Codex model catalog
-#' endpoint. The returned rows include each model's advertised reasoning effort
+#' This makes one authenticated request to OpenAI's documented model catalog
+#' (`GET https://api.openai.com/v1/models`) with the ChatGPT plan access token,
+#' and keeps the models marked for listing (`visibility: "list"`). The returned rows include each model's advertised reasoning effort
 #' levels, so callers can select an effort without copying a stale catalog into
 #' this package. Availability is account- and workspace-specific. The catalog
 #' may lag behind models accepted by the chat service; explicitly supplied IDs
@@ -297,9 +293,8 @@ codex_models_request_headers <- function(auth) {
 #'
 #' @param auth Optional package credential. If omitted, the current session or
 #'   package-owned credential is loaded and refreshed as needed.
-#' @param client_version Optional client-version query value. If omitted or
-#'   `NULL`, the package's verified compatibility value is used;
-#'   `ELLMERCODEX_CLIENT_VERSION` can override it.
+#' @param client_version Deprecated and ignored. The documented catalog does
+#'   not take a client version. Kept so existing calls keep working.
 #' @return A `codex_models` data frame with one row per catalog model. Its
 #'   columns are:
 #'     \item{`id`}{The model identifier accepted by \link{chat_codex}.}
@@ -325,7 +320,7 @@ codex_models_request_headers <- function(auth) {
 #' @export
 codex_models <- function(
   auth = NULL,
-  client_version = codex_models_client_version()
+  client_version = NULL
 ) {
   if (!is.null(auth) && !inherits(auth, "codex_auth")) {
     rlang::abort(
@@ -342,9 +337,6 @@ codex_models <- function(
       class = "codex_auth_argument_error",
       parent = NULL
     )
-  }
-  if (is.null(client_version)) {
-    client_version <- codex_models_client_version()
   }
 
   explicit_auth <- !is.null(auth)
@@ -364,10 +356,6 @@ codex_models <- function(
       parent = NULL
     )
   }
-  endpoint <- httr2::url_modify(
-    endpoint,
-    query = list(client_version = client_version)
-  )
 
   request <- httr2::request(endpoint) |>
     httr2::req_headers(!!!codex_models_request_headers(auth)) |>

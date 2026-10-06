@@ -12,6 +12,8 @@
 \alias{codex_refresh_error}
 \alias{codex_account_error}
 \alias{codex_credential_store_error}
+\alias{codex_plan_scope_error}
+\alias{codex_revocation_warning}
 \alias{codex_request_error}
 \alias{codex_authentication_error}
 \alias{codex_rate_limit_error}
@@ -23,6 +25,10 @@
 \alias{codex_protocol_changed_error}
 \alias{codex_generation_error}
 \alias{codex_incomplete_error}
+\alias{codex_usage_limit_error}
+\alias{codex_usage_unavailable_error}
+\alias{codex_plan_ineligible_error}
+\alias{codex_unsupported_capability_error}
 \alias{codex_chat_argument_error}
 \alias{codex_chat_error}
 \alias{codex_model_selection_error}
@@ -41,8 +47,12 @@ The principal subclasses are \code{codex_auth_missing},
 \code{codex_auth_argument_error}, \code{codex_oauth_argument_error},
 \code{codex_oauth_callback_error},
 \code{codex_oauth_timeout}, \code{codex_token_exchange_error},
-\code{codex_refresh_error}, \code{codex_account_error}, and
-\code{codex_credential_store_error}.
+\code{codex_refresh_error}, \code{codex_account_error},
+\code{codex_credential_store_error}, and \code{codex_plan_scope_error} (ChatGPT plan
+usage, the \code{chatgpt.tokens.use.direct} scope, was not granted). Refresh
+and token-exchange errors carry the OAuth error code in an \code{oauth_error}
+field when the server returned one. \code{codex_logout()} signals the warning
+\code{codex_revocation_warning} when remote revocation fails.
 
 Transport and stream conditions are \code{codex_request_error},
 \code{codex_authentication_error}, \code{codex_rate_limit_error},
@@ -50,6 +60,18 @@ Transport and stream conditions are \code{codex_request_error},
 \code{codex_server_error}, \code{codex_network_error}, \code{codex_protocol_error},
 \code{codex_protocol_changed_error}, \code{codex_generation_error}, and
 \code{codex_incomplete_error}.
+
+Documented ChatGPT plan usage error codes map to more specific subclasses
+that keep the parents above, and carry the server's \code{code} and \code{param}
+fields: \code{codex_usage_limit_error} (\code{subscription_sharing_usage_limit_exceeded};
+also a \code{codex_rate_limit_error}), \code{codex_usage_unavailable_error}
+(\code{subscription_sharing_usage_unavailable} and
+\code{subscription_sharing_user_unavailable}; also a \code{codex_server_error}),
+\code{codex_plan_ineligible_error} (\code{subscription_sharing_user_not_eligible};
+also a \code{codex_authentication_error}), and
+\code{codex_unsupported_capability_error}
+(\code{subscription_sharing_unsupported_capability}; also a
+\code{codex_malformed_request_error}).
 
 ellmer integration conditions are \code{codex_chat_argument_error},
 \code{codex_chat_error}, \code{codex_model_selection_error}, \code{codex_ellmer_missing}, and

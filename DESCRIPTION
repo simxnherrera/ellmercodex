@@ -4,17 +4,19 @@ Version: 0.1.64
 Authors@R: person("Simon", "Herrera", email = "simxnherrera@gmail.com", role = c("aut", "cre", "cph"))
 URL: https://github.com/simxnherrera/ellmercodex
 BugReports: https://github.com/simxnherrera/ellmercodex/issues
-Description: Connects 'ellmer' text chats to observed subscription-backed
-    'Codex' authentication and streaming response behavior. Provides a stable,
-    explicitly bounded core of the public 'ellmer' (>= 0.5.0) Chat object,
-    including browser sign-in, package-scoped credential storage, redacted
-    diagnostics, multi-turn text, streaming, structured-output, function-tool,
-    asynchronous, cancellation, cloning, metadata, multimodal chat,
-    account-specific model discovery, and reasoning-effort selection.
-    Parallel and batch helper functions are explicitly unsupported because
-    the subscription transport is stream-only. This independent third-party
-    integration uses an undocumented compatibility transport, is not endorsed
-    by OpenAI, and may stop working without notice.
+Description: Connects 'ellmer' chats to a 'ChatGPT' subscription through
+    'OpenAI''s documented "Sign in with ChatGPT" flow for open-source,
+    locally hosted apps
+    <https://developers.openai.com/siwc/token-sharing-open-source>. Provides
+    a stable, explicitly bounded core of the public 'ellmer' (>= 0.5.0) Chat
+    object, including browser sign-in with dynamic client registration,
+    package-scoped credential storage, redacted diagnostics, multi-turn text,
+    streaming, structured-output, function-tool, asynchronous, cancellation,
+    cloning, metadata, multimodal chat, account-specific model discovery, and
+    reasoning-effort selection through the public 'Responses' API. Parallel
+    and batch helper functions are explicitly unsupported because 'ChatGPT'
+    plan usage is stream-only. This independent third-party integration is
+    not endorsed by 'OpenAI'.
 License: MIT + file LICENSE
 Depends:
     R (>= 4.1.0)
@@ -25,6 +27,7 @@ Imports:
     ellmer (>= 0.5.0),
     httr2 (>= 1.3.0),
     httpuv,
+    jose,
     jsonlite,
     openssl,
     promises,

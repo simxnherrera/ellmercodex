@@ -1,0 +1,3 @@
+data: {"type":"response.created","response":{"id":"resp_fixture","status":"in_progress"}}
+
+data: {"type":"response.failed","response":{"id":"resp_fixture","status":"failed","error":{"code":"subscription_sharing_usage_limit_exceeded","message":"fixture usage limit"}}}

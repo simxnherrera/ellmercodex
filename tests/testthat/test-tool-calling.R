@@ -9,7 +9,7 @@ tool_fixture_response <- function(name) {
 
 new_tool_fixture_chat <- function() {
   auth <- structure(
-    list(access_token = "fixture-access-token", account_id = "fixture-account"),
+    list(access_token = "fixture-access-token", client_id = "oaiapp_fixtureclient"),
     class = c("codex_auth", "list")
   )
   codex_patch_chat(codex_ellmer_chat_openai(model = "fixture-model", auth = auth))
@@ -48,13 +48,17 @@ test_that("a registered tool completes an end-to-end loop and preserves tool his
   expect_identical(calls, "Montevideo")
   expect_length(seen, 2L)
   expect_length(seen[[1L]]$body$data$tools, 1L)
-  expect_identical(seen[[1L]]$body$data$tools[[1L]]$name, "get_weather")
+  # ChatGPT plan usage requires function tools to be grouped in a namespace.
+  expect_identical(seen[[1L]]$body$data$tools[[1L]]$type, "namespace")
+  expect_identical(seen[[1L]]$body$data$tools[[1L]]$name, "ellmer")
+  expect_identical(seen[[1L]]$body$data$tools[[1L]]$tools[[1L]]$name, "get_weather")
 
   second_input <- seen[[2L]]$body$data$input
   function_call <- second_input[[2L]]
   function_result <- second_input[[3L]]
   expect_identical(function_call$type, "function_call")
   expect_identical(function_call$call_id, "call_fragmented")
+  expect_identical(function_call$namespace, "ellmer")
   expect_identical(function_result$type, "function_call_output")
   expect_identical(function_result$call_id, "call_fragmented")
   expect_identical(function_result$output, "Sunny in Montevideo")
@@ -72,7 +76,7 @@ test_that("the chat_codex user-facing factory completes a registered tool loop",
   skip_if_not_installed("ellmer")
 
   auth <- structure(
-    list(access_token = "fixture-access-token", account_id = "fixture-account"),
+    list(access_token = "fixture-access-token", client_id = "oaiapp_fixtureclient"),
     class = c("codex_auth", "list")
   )
   local_mocked_bindings(

@@ -8,7 +8,7 @@ interface_fixture_auth <- function(expires_at = as.numeric(Sys.time()) + 3600) {
     list(
       access_token = "fixture-access-token",
       refresh_token = "fixture-refresh-token",
-      account_id = "fixture-account",
+      client_id = "oaiapp_fixtureclient",
       expires_at = expires_at
     ),
     class = c("codex_auth", "list")
