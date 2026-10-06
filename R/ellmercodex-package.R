@@ -1,4 +1,4 @@
-#' ellmercodex: Codex integration for ellmer
+#' ellmercodex: ChatGPT plan provider for ellmer
 #'
 #' `ellmercodex` provides a stable, explicitly bounded core integration between
 #' [ellmer][ellmer::chat_openai] and a ChatGPT subscription. It uses

@@ -52,7 +52,7 @@ listens on \verb{http://127.0.0.1:1455/callback} (set
 Invalid arguments signal \code{codex_auth_argument_error}; callback and token
 failures use \code{codex_oauth_callback_error}, \code{codex_oauth_timeout}, or
 \code{codex_token_exchange_error} as appropriate. If ChatGPT plan usage was not
-granted, \code{codex_plan_scope_error} is signalled.
+granted, \code{codex_plan_scope_error} is signaled.
 }
 
 \examples{

@@ -589,7 +589,7 @@ codex_auth <- function(force_refresh = FALSE) {
 #' Invalid arguments signal `codex_auth_argument_error`; callback and token
 #' failures use `codex_oauth_callback_error`, `codex_oauth_timeout`, or
 #' `codex_token_exchange_error` as appropriate. If ChatGPT plan usage was not
-#' granted, `codex_plan_scope_error` is signalled.
+#' granted, `codex_plan_scope_error` is signaled.
 #' @examplesIf interactive()
 #' auth <- codex_login()
 #' codex_account(auth)

@@ -4,7 +4,7 @@
 \name{ellmercodex}
 \alias{ellmercodex-package}
 \alias{ellmercodex}
-\title{ellmercodex: Codex integration for ellmer}
+\title{ellmercodex: ChatGPT plan provider for ellmer}
 \description{
 \code{ellmercodex} provides a stable, explicitly bounded core integration between
 \link[ellmer:chat_openai]{ellmer} and a ChatGPT subscription. It uses

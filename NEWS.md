@@ -21,7 +21,7 @@
   `ELLMERCODEX_CALLBACK_PORT` to use another port.
 * Credentials moved from httr2's OAuth cache to a package-owned
   `credentials.json` (mode `0600`, atomic writes) in
-  `tools::R_user_dir("ellmercodex", "config")`, overridable with
+  `tools::R_user_dir("ellmercodex", "config")`, or in the directory named by
   `ELLMERCODEX_HOME`. `HTTR2_OAUTH_CACHE` no longer applies. Refreshes are
   serialized across R processes because refresh tokens rotate.
 * `codex_logout()` gains `revoke = TRUE` and now revokes the refresh token

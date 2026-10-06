@@ -350,7 +350,7 @@ codex_legacy_cache_clear <- function() {
 #' @param revoke Whether to revoke the refresh token at OpenAI's documented
 #'   revocation endpoint before deleting it locally. Revocation is best effort:
 #'   local credentials are removed even when the network request fails, in
-#'   which case a `codex_revocation_warning` warning is signalled.
+#'   which case a `codex_revocation_warning` warning is signaled.
 #' @return `TRUE`, invisibly. The process-local credential is cleared even if
 #'   no persistent credential exists.
 #' @note To use a different ChatGPT account or workspace, call

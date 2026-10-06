@@ -10,7 +10,7 @@ codex_logout(revoke = TRUE)
 \item{revoke}{Whether to revoke the refresh token at OpenAI's documented
 revocation endpoint before deleting it locally. Revocation is best effort:
 local credentials are removed even when the network request fails, in
-which case a \code{codex_revocation_warning} warning is signalled.}
+which case a \code{codex_revocation_warning} warning is signaled.}
 }
 \value{
 \code{TRUE}, invisibly. The process-local credential is cleared even if
