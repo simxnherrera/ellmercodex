@@ -1,3 +1,5 @@
+skip_if_ellmer_contract_changed()
+
 test_that("async chat repairs Codex streamed text and terminal history", {
   skip_if_not_installed("ellmer")
 

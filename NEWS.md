@@ -1,5 +1,11 @@
 # ellmercodex 0.1.64
 
+* Codex generation requests no longer inherit ellmer's automatic retries, as
+  documented in the technical design: a retried request could duplicate a
+  generation the service already accepted.
+* Codex requests and turn costs are now built without five unexported ellmer
+  helpers, reducing the private ellmer surface ahead of a CRAN submission.
+
 * `chat_codex()` now accepts explicitly selected models omitted from the
   account catalog. The service validates those model IDs and reasoning efforts.
 

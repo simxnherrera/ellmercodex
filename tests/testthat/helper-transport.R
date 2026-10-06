@@ -79,3 +79,25 @@ new_async_fixture_chat <- function() {
   codex_patch_chat <- getFromNamespace("codex_patch_chat", "ellmercodex")
   codex_patch_chat(codex_ellmer_chat_openai(model = "fixture-model", auth = auth))
 }
+
+# On CRAN only, skip chat tests when the installed ellmer no longer matches the
+# private Chat contracts that ellmercodex patches. Local and CI runs (NOT_CRAN
+# set) still fail loudly so contract drift is caught before release.
+skip_if_ellmer_contract_changed <- function() {
+  testthat::skip_if_not_installed("ellmer")
+  if (identical(Sys.getenv("NOT_CRAN"), "true")) return(invisible(TRUE))
+  compatible <- tryCatch(
+    {
+      codex_patch_chat(codex_ellmer_chat_openai(
+        model = "fixture-model",
+        auth = fake_codex_auth()
+      ))
+      TRUE
+    },
+    codex_ellmer_compatibility_error = function(error) FALSE
+  )
+  if (!compatible) {
+    testthat::skip("Installed ellmer changed private Chat contracts used by ellmercodex.")
+  }
+  invisible(TRUE)
+}

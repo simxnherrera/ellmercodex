@@ -1,3 +1,5 @@
+skip_if_ellmer_contract_changed()
+
 test_that("image and PDF inputs keep their OpenAI Responses representation", {
   skip_if_not_installed("ellmer")
 

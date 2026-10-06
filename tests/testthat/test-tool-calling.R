@@ -1,3 +1,5 @@
+skip_if_ellmer_contract_changed()
+
 codex_ellmer_chat_openai <- getFromNamespace("codex_ellmer_chat_openai", "ellmercodex")
 codex_patch_chat <- getFromNamespace("codex_patch_chat", "ellmercodex")
 

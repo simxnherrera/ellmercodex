@@ -16,7 +16,7 @@ incorporar modelos de lenguaje a tus flujos de análisis en R.
 El paquete es independiente de OpenAI y no requiere una clave de API ni el
 CLI de Codex. La autenticación y el transporte son superficies de
 compatibilidad que pueden cambiar; consulta la
-[documentación técnica](docs/technical-design.md) para conocer los límites de
+[documentación técnica](https://github.com/simxnherrera/ellmercodex/blob/main/docs/technical-design.md) para conocer los límites de
 soporte, la implementación y los riesgos actuales.
 
 Los ejemplos de resultados estructurados y herramientas están inspirados en
@@ -24,7 +24,13 @@ el [artículo sobre `ellmercodex` en el blog](https://simxnherrera.github.io/blo
 
 ### Instalación
 
-Instala la versión etiquetada más reciente desde GitHub usando
+Instala la versión publicada en CRAN:
+
+```r
+install.packages("ellmercodex")
+```
+
+O instala la versión etiquetada más reciente desde GitHub usando
 [`pak`](https://pak.r-lib.org/):
 
 ```r
@@ -284,17 +290,17 @@ El conteo de tokens del proveedor, la gestión de archivos y las funciones
 
 Para más detalles:
 
-- La [viñeta de introducción](vignettes/getting-started.Rmd) recorre la
+- La [viñeta de introducción](https://github.com/simxnherrera/ellmercodex/blob/main/vignettes/getting-started.Rmd) recorre la
   autenticación, los chats, las herramientas, los resultados estructurados y
   las condiciones.
-- El [diseño técnico](docs/technical-design.md) documenta la arquitectura, el
+- El [diseño técnico](https://github.com/simxnherrera/ellmercodex/blob/main/docs/technical-design.md) documenta la arquitectura, el
   ciclo de vida de las credenciales, el límite de transporte, la taxonomía de
   errores y los riesgos de publicación.
-- El [inventario de compatibilidad con `ellmer`](docs/ellmer-chat-interface.md)
+- El [inventario de compatibilidad con `ellmer`](https://github.com/simxnherrera/ellmercodex/blob/main/docs/ellmer-chat-interface.md)
   registra los métodos `Chat` soportados, sus firmas, los valores devueltos y
   las transiciones de estado.
 - Para conservar credenciales en una aplicación alojada, consulta la
-  [guía de despliegue en una VM Linux de un solo proceso](docs/hosted-oauth.md).
+  [guía de despliegue en una VM Linux de un solo proceso](https://github.com/simxnherrera/ellmercodex/blob/main/docs/hosted-oauth.md).
 - En una sesión de R, usa `?chat_codex`, `?codex_login`, `?codex_models` y
   `?ellmercodex-conditions` para consultar la referencia de funciones.
 
@@ -311,12 +317,18 @@ is to sign in, create a chat, and then use the regular `ellmer` Chat methods.
 
 The package is independent of OpenAI and does not require an API key or the
 Codex CLI. Subscription authentication and transport are compatibility surfaces
-that may change; see the [technical documentation](docs/technical-design.md)
+that may change; see the [technical documentation](https://github.com/simxnherrera/ellmercodex/blob/main/docs/technical-design.md)
 for the implementation, support boundaries, and current risks.
 
 ### Install
 
-Install the current tagged release from GitHub with
+Install the released version from CRAN:
+
+```r
+install.packages("ellmercodex")
+```
+
+Or install the current tagged release from GitHub with
 [`pak`](https://pak.r-lib.org/):
 
 ```r
@@ -498,14 +510,14 @@ codex_logout()
 The README is intentionally focused on installation and user-facing workflows.
 For more detail:
 
-- The [getting-started vignette](vignettes/getting-started.Rmd) walks through
+- The [getting-started vignette](https://github.com/simxnherrera/ellmercodex/blob/main/vignettes/getting-started.Rmd) walks through
   authentication, chats, tools, structured output, and conditions.
-- The [technical design](docs/technical-design.md) documents the architecture,
+- The [technical design](https://github.com/simxnherrera/ellmercodex/blob/main/docs/technical-design.md) documents the architecture,
   credential lifecycle, transport boundary, error taxonomy, and release risks.
-- The [ellmer compatibility inventory](docs/ellmer-chat-interface.md) records
+- The [ellmer compatibility inventory](https://github.com/simxnherrera/ellmercodex/blob/main/docs/ellmer-chat-interface.md) records
   the supported Chat methods, signatures, return shapes, and state transitions.
 - For persistent credentials in a hosted app, see the
-  [single-process Linux VM guide](docs/hosted-oauth.md).
+  [single-process Linux VM guide](https://github.com/simxnherrera/ellmercodex/blob/main/docs/hosted-oauth.md).
 - In an R session, use `?chat_codex`, `?codex_login`, `?codex_models`, and
   `?ellmercodex-conditions` for the function reference.
 

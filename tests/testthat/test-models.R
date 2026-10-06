@@ -105,6 +105,7 @@ testthat::test_that("empty and malformed model catalogs fail safely", {
 })
 
 testthat::test_that("chat default selection uses the account catalog", {
+  skip_if_ellmer_contract_changed()
   old_model <- Sys.getenv("ELLMERCODEX_MODEL", unset = NA_character_)
   on.exit({
     if (is.na(old_model)) Sys.unsetenv("ELLMERCODEX_MODEL") else {
@@ -139,6 +140,7 @@ testthat::test_that("chat default selection uses the account catalog", {
 })
 
 testthat::test_that("reasoning effort is validated against the selected model", {
+  skip_if_ellmer_contract_changed()
   testthat::local_mocked_bindings(
     codex_auth = function() fake_codex_auth(),
     .package = "ellmercodex"
@@ -206,6 +208,7 @@ testthat::test_that("reasoning effort is validated against the selected model", 
 testthat::test_that(
   "unlisted explicit models defer effort validation to the service",
   {
+    skip_if_ellmer_contract_changed()
     testthat::local_mocked_bindings(
       codex_auth = function() fake_codex_auth(),
       .package = "ellmercodex"
@@ -244,6 +247,7 @@ testthat::test_that(
 )
 
 testthat::test_that("default selection fails actionably when discovery is empty or unavailable", {
+  skip_if_ellmer_contract_changed()
   testthat::local_mocked_bindings(
     codex_auth = function() fake_codex_auth(),
     .package = "ellmercodex"

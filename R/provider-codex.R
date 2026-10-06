@@ -52,10 +52,10 @@ codex_ellmer_compatibility <- function() {
 
   required_internals <- c(
     "Chat", "ProviderOpenAI", "TurnAccumulator", "chat_perform",
-    "base_request", "chat_path", "modify_list", "chat_body", "chat_request",
+    "chat_body", "chat_request",
     "stream_parse", "stream_content", "stream_merge_chunks", "value_turn",
     "value_tokens", "value_finish_reason", "has_batch_support",
-    "dollars", "get_token_cost", "ContentJson", "ContentToolRequestSearch",
+    "ContentJson", "ContentToolRequestSearch",
     "invoke_tools", "invoke_tools_async", "turn_has_tool_request",
     "tool_results_as_turn", "echo_non_text_contents", "emitter", "content_text",
     "cat_line", "otel_chat_input", "local_chat_otel_span",
@@ -101,8 +101,7 @@ codex_ellmer_compatibility <- function() {
                      "tool_context"),
     invoke_tools_async = c("turn", "echo", "on_tool_request",
                            "on_tool_result", "yield_request", "otel_span",
-                           "tool_context"),
-    get_token_cost = c("provider_name", "model_name", "tokens", "variant")
+                           "tool_context")
   )
   for (name in names(required_formals)) {
     actual <- names(formals(get(name, envir = asNamespace("ellmer"))))

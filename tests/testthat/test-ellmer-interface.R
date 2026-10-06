@@ -1,3 +1,5 @@
+skip_if_ellmer_contract_changed()
+
 codex_chat_openai <- getFromNamespace("codex_ellmer_chat_openai", "ellmercodex")
 codex_patch_chat <- getFromNamespace("codex_patch_chat", "ellmercodex")
 
@@ -44,7 +46,7 @@ test_that("Chat state, metadata, model configuration, and history remain ellmer 
   assistant <- ellmer::AssistantTurn(
     contents = list(ellmer::ContentText("fixture")),
     tokens = c(10, 4, 2),
-    cost = getFromNamespace("dollars", "ellmer")(NA_real_),
+    cost = codex_dollars(NA_real_),
     duration = 1.25,
     finish_reason = "success"
   )
@@ -635,4 +637,25 @@ test_that("private Chat contract changes raise a typed compatibility error", {
   )
   expect_s3_class(condition, "codex_ellmer_compatibility_error")
   expect_match(conditionMessage(condition), "chat_impl")
+})
+
+test_that("generation requests never retry and keep ellmer's error body", {
+  chat <- interface_fixture_chat()
+  request <- codex_provider_request(
+    chat$get_provider(),
+    chat$get_model_object(),
+    stream = TRUE,
+    turns = list(ellmer::UserTurn(list(ellmer::ContentText("fixture"))))
+  )
+  expect_null(request$policies$retry_max_tries)
+  expect_identical(request$policies$error_body, codex_provider_error_body)
+  expect_true(endsWith(request$url, "/responses"))
+  expect_true(isTRUE(request$body$data$stream))
+
+  response <- httr2::response(
+    status_code = 400L,
+    headers = list(`Content-Type` = "application/json"),
+    body = charToRaw('{"error":{"message":"fixture failure"}}')
+  )
+  expect_identical(codex_provider_error_body(response), "fixture failure")
 })

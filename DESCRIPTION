@@ -1,14 +1,12 @@
 Package: ellmercodex
-Title: Codex Integration for 'ellmer'
+Title: 'Codex' Integration for 'ellmer'
 Version: 0.1.64
-Authors@R: person("Simon", "Herrera", email = "simxnherrera@gmail.com", role = c("aut", "cre"))
-Author: Simon Herrera [aut, cre]
-Maintainer: Simon Herrera <simxnherrera@gmail.com>
+Authors@R: person("Simon", "Herrera", email = "simxnherrera@gmail.com", role = c("aut", "cre", "cph"))
 URL: https://github.com/simxnherrera/ellmercodex
 BugReports: https://github.com/simxnherrera/ellmercodex/issues
 Description: Connects 'ellmer' text chats to observed subscription-backed
     'Codex' authentication and streaming response behavior. Provides a stable,
-    explicitly bounded core of the public 'ellmer' Chat object from 0.5.0,
+    explicitly bounded core of the public 'ellmer' (>= 0.5.0) Chat object,
     including browser sign-in, package-scoped credential storage, redacted
     diagnostics, multi-turn text, streaming, structured-output, function-tool,
     asynchronous, cancellation, cloning, metadata, multimodal chat,

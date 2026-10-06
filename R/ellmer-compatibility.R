@@ -175,18 +175,46 @@ codex_provider_request <- function(provider, model, stream = TRUE, turns = list(
   codex_provider_access_token(provider@auth_ref)
   provider@extra_headers <- codex_provider_headers(provider)
 
-  base_request <- utils::getFromNamespace("base_request", "ellmer")
-  chat_path <- utils::getFromNamespace("chat_path", "ellmer")
-  modify_list <- utils::getFromNamespace("modify_list", "ellmer")
-  req <- base_request(provider)
-  req <- httr2::req_url_path_append(req, chat_path(provider))
+  req <- codex_provider_base_request(provider)
+  req <- httr2::req_url_path_append(req, "/responses")
   body <- codex_provider_body(provider, model, stream = TRUE, turns = turns, tools = tools, type = type)
-  body <- modify_list(body, model@extra_args)
+  if (length(model@extra_args)) body <- utils::modifyList(body, model@extra_args)
   # api_args is allowed to contain arbitrary Responses arguments, but cannot
   # disable streaming on this transport.
   body$stream <- TRUE
   req <- httr2::req_body_json(req, body)
   httr2::req_headers(req, !!!provider@extra_headers)
+}
+
+# Mirrors ellmer's OpenAI-compatible base request (timeout, redacted bearer
+# credentials, and error-body extraction) without its internal helpers. Unlike
+# ellmer, it does not retry: the service may already have accepted a
+# generation, so a retry could duplicate it.
+codex_provider_base_request <- function(provider) {
+  req <- httr2::request(provider@base_url)
+  req <- httr2::req_headers_redacted(
+    req,
+    Authorization = paste0("Bearer ", provider@credentials())
+  )
+  req <- httr2::req_timeout(req, getOption("ellmer_timeout_s", 5 * 60))
+  req <- httr2::req_user_agent(req, codex_user_agent())
+  httr2::req_error(req, body = codex_provider_error_body)
+}
+
+codex_provider_error_body <- function(resp) {
+  type <- httr2::resp_content_type(resp)
+  if (identical(type, "application/json")) {
+    error <- httr2::resp_body_json(resp)$error
+    if (rlang::is_string(error)) {
+      error
+    } else if (is.list(error)) {
+      error$message
+    } else {
+      jsonlite::prettify(httr2::resp_body_string(resp))
+    }
+  } else if (identical(type, "text/plain")) {
+    httr2::resp_body_string(resp)
+  }
 }
 
 codex_provider_stream_parse <- function(provider, event) {
@@ -952,17 +980,17 @@ codex_complete_turn <- function(accumulator, private, result, type = NULL) {
 }
 
 codex_provider_value_cost <- function(provider, model, tokens, result) {
+  # Subscription usage has no per-token price, and ellmer's price table has no
+  # Codex provider entry, so cost is only known when the service reports it.
   reported <- result$usage$cost %||% result$cost
   reported <- suppressWarnings(as.numeric(reported))
-  if (length(reported) == 1L && is.finite(reported)) {
-    return(utils::getFromNamespace("dollars", "ellmer")(reported))
-  }
-  get_token_cost <- utils::getFromNamespace("get_token_cost", "ellmer")
-  variant <- result$service_tier %||% "default"
-  tryCatch(
-    get_token_cost(provider@name, model@name, tokens, variant = variant),
-    error = function(error) utils::getFromNamespace("dollars", "ellmer")(NA_real_)
-  )
+  if (length(reported) != 1L || !is.finite(reported)) reported <- NA_real_
+  codex_dollars(reported)
+}
+
+# ellmer's AssistantTurn@cost is a numeric with class "ellmer_dollars".
+codex_dollars <- function(x) {
+  structure(x, class = c("ellmer_dollars", "numeric"))
 }
 
 codex_provider_finish_reason <- function(provider, result) {
