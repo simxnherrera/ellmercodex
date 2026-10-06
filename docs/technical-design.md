@@ -311,8 +311,12 @@ these helpers.
 1. ChatGPT plan usage is an OpenAI preview for open-source and locally hosted
    apps. Its parameter and tool limits, error codes, and eligibility may
    change; the body adapter and error map isolate those rules.
-2. The function-tool namespace and the `developer` role are implemented from
-   the preview limitations page and must be confirmed with a live tool call.
+2. The function-tool namespace and the `developer` role follow the preview
+   limitations page. A live check on 2026-10-06
+   (`inst/manual-tests/siwc-live.R`) confirmed dynamic registration without
+   prior approval, reauthorization with the same issued client ID, model
+   listing, chat with a system prompt, streaming, a namespaced tool call,
+   structured output, and refresh-token rotation.
 3. A single, narrowly tested, contract-checked ellmer provider/Chat submission
    seam, with the full public Chat lifecycle left to ellmer.
 4. Credential file, lock, and refresh-token rotation tests run offline with
