@@ -36,12 +36,16 @@ and value.}
 \item{params}{Optional ellmer model parameters, usually created with
 \code{ellmer::params()}. A supplied \code{reasoning_effort} must agree with
 \code{effort}, when both are provided.
-Other ellmer-supported model parameters are passed through unchanged.}
+Other ellmer-supported model parameters are passed through unchanged,
+except those ChatGPT plan usage rejects (for example \code{temperature},
+\code{top_p}, and \code{max_tokens}), which fail before a request is sent.}
 
 \item{api_args}{Optional named list of additional Responses arguments passed
 through ellmer on every request. This is an advanced escape hatch for
-arguments accepted by the observed transport; unsupported arguments may
-be rejected by the remote service.}
+Responses arguments accepted with ChatGPT plan usage. Arguments the
+documentation prohibits (such as \code{metadata}, \code{truncation}, or
+\code{previous_response_id}) fail before a request is sent; other unsupported
+arguments may be rejected by the remote service.}
 }
 \value{
 An object inheriting from ellmer's \code{Chat} class.
@@ -50,7 +54,7 @@ callbacks, registered tools, asynchronous methods, and R6 cloning behavior.
 }
 \description{
 \code{chat_codex()} returns a normal ellmer \code{Chat} object configured for the
-observed Codex subscription transport. It does not start browser
+public Responses API with ChatGPT plan usage. It does not start browser
 authentication. Call \code{\link[=codex_login]{codex_login()}} explicitly first when no stored
 credential is available; an existing credential is loaded and refreshed as
 needed.
@@ -61,8 +65,8 @@ interactive, single-conversation operations, including ordinary and
 structured chat, synchronous and asynchronous streaming, tool declarations
 and multi-round execution, callbacks, cancellation, cloning, history, echo,
 model/provider configuration, rich content, and response metadata.
-Provider token counting and file management are unavailable with the Codex
-subscription transport and fail before making a request. The
+Provider token counting and file management are unavailable with ChatGPT
+plan usage and fail before making a request. The
 compatibility layer uses one contract-checked provider/turn-submission seam
 while leaving public Chat methods and ellmer lifecycle semantics intact.
 The separate ellmer parallel/batch helpers are outside this stable core

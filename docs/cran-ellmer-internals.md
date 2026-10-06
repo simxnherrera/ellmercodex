@@ -113,6 +113,32 @@ política y desaparece junto con el grupo B.
 - Pendiente: abrir el issue upstream y poner su URL en `cran-comments.md`
   (`<ISSUE_URL>`).
 
+## Migración a "Sign in with ChatGPT" (rama `siwc-auth`)
+
+La autenticación y el transporte ahora siguen el flujo documentado por OpenAI
+para apps de código abierto
+(<https://developers.openai.com/siwc/token-sharing-open-source>):
+registro dinámico con `client_id=dynamic_agent_client`, `client_id` emitido
+por usuario y espacio de trabajo, `ext_agent_host_id`, y
+`POST https://api.openai.com/v1/responses`. Esto elimina el bloqueo de
+términos de uso (reutilizar el `client_id` del CLI de Codex y llamar a
+`chatgpt.com/backend-api/codex`), pero **no cambia el inventario de internals
+de ellmer**:
+
+- El requisito de `stream = TRUE` sigue existiendo, ahora documentado por
+  OpenAI ("Must set `store: false` and `stream: true`" en las limitaciones de
+  la vista previa). El grupo B sigue siendo necesario y el argumento del issue
+  se refuerza: el endpoint stream-only es la API pública de Responses con un
+  token de plan de ChatGPT.
+- `codex_responses_body_adapt()` posprocesa la salida de `chat_body` de
+  `ProviderOpenAI` (mensajes `system` a `developer`, herramientas en un
+  `namespace`, campos prohibidos). No usa símbolos nuevos de ellmer.
+- `codex_stream_next()` envuelve la función generadora que devuelve
+  `chat_perform()` (ya listado) para mapear errores HTTP de httr2.
+- `base_url` pasa a ser `https://api.openai.com/v1`, el mismo que usa
+  `ProviderOpenAI`; el issue puede mencionarlo como un caso de subclase de
+  `ProviderOpenAI` con credenciales dinámicas y cuerpo restringido.
+
 ## Plan propuesto
 
 1. **Upstream (bloqueante):** abrir el issue de abajo en `tidyverse/ellmer`.
@@ -139,8 +165,9 @@ política y desaparece junto con el grupo B.
 > `getFromNamespace()`. That is hard to get past CRAN review.
 >
 > I maintain [ellmercodex](https://github.com/simxnherrera/ellmercodex), a
-> provider for a Responses-API endpoint that **only** supports
-> `stream = TRUE`. In `Chat$submit_turns()`, non-streaming calls go through
+> provider that uses a ChatGPT plan through OpenAI's documented "Sign in
+> with ChatGPT" flow. With that token, the public Responses API **only**
+> supports `stream = TRUE` (and `store = FALSE`). In `Chat$submit_turns()`, non-streaming calls go through
 > `chat_perform(mode = "value")` -> `req_perform()` -> `resp_body_json()`,
 > and the provider can't intercept that because `chat_perform()` isn't a
 > generic. Today I work around it by replacing `Chat`'s private

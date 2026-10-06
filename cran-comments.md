@@ -15,6 +15,16 @@
 
 ## External service behavior
 
+The package uses OpenAI's documented "Sign in with ChatGPT" flow for
+open-source, locally hosted apps
+(<https://developers.openai.com/siwc/token-sharing-open-source>): OAuth with
+dynamic client registration and PKCE, followed by the public Responses API at
+`https://api.openai.com/v1`. It does not reuse another application's OAuth
+client or call undocumented endpoints. Credentials are written only after the
+user calls `codex_login()`, to `tools::R_user_dir("ellmercodex", "config")`
+(or `ELLMERCODEX_HOME`), with owner-only permissions; `codex_logout()` revokes
+and removes them. Tests point that directory at `tempdir()`.
+
 The package connects to an external service only after an explicit user call.
 Package loading, examples, vignettes, and automated tests are offline: they do
 not start OAuth, open a browser, inspect a credential store, or make a network
@@ -29,7 +39,8 @@ subclassing `Provider` and implementing its S7 generics, but those generics are
 not exported. This package therefore registers its provider methods on
 'ellmer' generics obtained with `utils::getFromNamespace()`.
 
-The Codex endpoint only supports streaming responses, while 'ellmer' sends
+With a ChatGPT plan token, OpenAI's Responses API only accepts streaming
+requests (documented as a preview limitation), while 'ellmer' sends
 non-streaming chat requests through an internal, non-generic code path. To
 support it, the package replaces the private turn-submission methods of each
 'ellmer' `Chat` object it creates; it never modifies 'ellmer''s namespace or

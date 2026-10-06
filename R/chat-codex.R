@@ -70,7 +70,7 @@ codex_patch_chat <- function(chat, default_echo = "none") {
 #' Create a Codex chat backed by ellmer
 #'
 #' `chat_codex()` returns a normal ellmer `Chat` object configured for the
-#' observed Codex subscription transport. It does not start browser
+#' public Responses API with ChatGPT plan usage. It does not start browser
 #' authentication. Call [codex_login()] explicitly first when no stored
 #' credential is available; an existing credential is loaded and refreshed as
 #' needed.
@@ -80,8 +80,8 @@ codex_patch_chat <- function(chat, default_echo = "none") {
 #' structured chat, synchronous and asynchronous streaming, tool declarations
 #' and multi-round execution, callbacks, cancellation, cloning, history, echo,
 #' model/provider configuration, rich content, and response metadata.
-#' Provider token counting and file management are unavailable with the Codex
-#' subscription transport and fail before making a request. The
+#' Provider token counting and file management are unavailable with ChatGPT
+#' plan usage and fail before making a request. The
 #' compatibility layer uses one contract-checked provider/turn-submission seam
 #' while leaving public Chat methods and ellmer lifecycle semantics intact.
 #' The separate ellmer parallel/batch helpers are outside this stable core
@@ -107,11 +107,15 @@ codex_patch_chat <- function(chat, default_echo = "none") {
 #' @param params Optional ellmer model parameters, usually created with
 #'   `ellmer::params()`. A supplied `reasoning_effort` must agree with
 #'   `effort`, when both are provided.
-#'   Other ellmer-supported model parameters are passed through unchanged.
+#'   Other ellmer-supported model parameters are passed through unchanged,
+#'   except those ChatGPT plan usage rejects (for example `temperature`,
+#'   `top_p`, and `max_tokens`), which fail before a request is sent.
 #' @param api_args Optional named list of additional Responses arguments passed
 #'   through ellmer on every request. This is an advanced escape hatch for
-#'   arguments accepted by the observed transport; unsupported arguments may
-#'   be rejected by the remote service.
+#'   Responses arguments accepted with ChatGPT plan usage. Arguments the
+#'   documentation prohibits (such as `metadata`, `truncation`, or
+#'   `previous_response_id`) fail before a request is sent; other unsupported
+#'   arguments may be rejected by the remote service.
 #' @param echo One of `"none"`, `"output"`, or `"all"`; controls whether `$chat()`
 #'   prints the completed text. The compatibility wrapper accepts `TRUE`,
 #'   `FALSE`, and `"text"` as aliases for `"output"`, `"none"`, and

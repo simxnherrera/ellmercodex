@@ -1,5 +1,56 @@
 # ellmercodex 0.1.64
 
+## Breaking changes: documented "Sign in with ChatGPT" flow
+
+* Authentication now follows OpenAI's documented "Sign in with ChatGPT" flow
+  for open-source, locally hosted apps
+  (<https://developers.openai.com/siwc/token-sharing-open-source>). The
+  package no longer reuses the Codex CLI OAuth client or calls the
+  undocumented `chatgpt.com/backend-api/codex` endpoints. **Existing
+  credentials cannot be migrated: run `codex_login()` again.**
+* `codex_login()` registers dynamically with `client_id=dynamic_agent_client`,
+  stores the client ID that OpenAI issues for the chosen account and
+  workspace, and reauthorizes that registration on later sign-ins. It sends a
+  stable `ext_agent_host_id`, created once per host, and uses PKCE and a nonce.
+  The ID token is verified against OpenAI's published keys, and sign-in fails
+  with the new `codex_plan_scope_error` when ChatGPT plan usage
+  (`chatgpt.tokens.use.direct`) is not granted. The package now imports
+  `jose` for ID token verification.
+* The OAuth callback moved from `http://localhost:1455/auth/callback` to
+  `http://127.0.0.1:1455/callback`, as the documentation requires. Set
+  `ELLMERCODEX_CALLBACK_PORT` to use another port.
+* Credentials moved from httr2's OAuth cache to a package-owned
+  `credentials.json` (mode `0600`, atomic writes) in
+  `tools::R_user_dir("ellmercodex", "config")`, overridable with
+  `ELLMERCODEX_HOME`. `HTTR2_OAUTH_CACHE` no longer applies. Refreshes are
+  serialized across R processes because refresh tokens rotate.
+* `codex_logout()` gains `revoke = TRUE` and now revokes the refresh token
+  with OpenAI before deleting the local credential. It also removes the old
+  httr2 cache entry. To switch account or workspace, log out and sign in
+  again.
+* Chats and `codex_models()` use the public `https://api.openai.com/v1`
+  Responses and Models endpoints with only the bearer token; the
+  `ChatGPT-Account-Id`, `OpenAI-Beta`, and `originator` headers are gone.
+  `codex_models()` keeps models with `visibility: "list"`, and its
+  `client_version` argument is deprecated and ignored
+  (`ELLMERCODEX_CLIENT_VERSION` is no longer read).
+* Requests follow the ChatGPT plan usage preview limits: system prompts are
+  sent as `developer` messages, function tools are grouped in an `ellmer`
+  namespace, and `temperature`, `top_p`, `max_tokens`, `metadata`,
+  `previous_response_id`, and the other excluded Responses arguments now fail
+  with `codex_chat_argument_error` before a request is sent.
+* A `response.incomplete` event now fails a Chat turn with
+  `codex_incomplete_error` instead of returning a truncated turn.
+* Documented plan error codes map to new subclasses that keep the existing
+  parents: `codex_usage_limit_error` (a `codex_rate_limit_error`),
+  `codex_usage_unavailable_error` (a `codex_server_error`),
+  `codex_plan_ineligible_error` (a `codex_authentication_error`), and
+  `codex_unsupported_capability_error` (a `codex_malformed_request_error`).
+  Synchronous chats now raise these package conditions, rather than httr2
+  errors, for HTTP failures before the stream opens.
+
+## Other changes
+
 * Codex generation requests no longer inherit ellmer's automatic retries, as
   documented in the technical design: a retried request could duplicate a
   generation the service already accepted.

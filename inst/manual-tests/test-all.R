@@ -882,7 +882,7 @@ main <- function() {
     list(
       access_token = "offline-fixture-access-token",
       refresh_token = "offline-fixture-refresh-token",
-      account_id = "offline-fixture-account",
+      client_id = "oaiapp_offlinefixture",
       expires_at = as.numeric(Sys.time()) + 3600
     ),
     class = c("codex_auth", "list")

@@ -11,3 +11,4 @@
 ^docs$
 ^inst/COORDINATION\.md$
 ^poc$
+^\.git$

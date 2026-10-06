@@ -7,13 +7,13 @@
 \title{ellmercodex: Codex integration for ellmer}
 \description{
 \code{ellmercodex} provides a stable, explicitly bounded core integration between
-\link[ellmer:chat_openai]{ellmer} and subscription-backed Codex authentication.
-The stable compatibility target is the public ellmer \code{Chat} (0.5.0 or later)
-object for interactive, single-conversation operations. The direct OAuth
-endpoints and Responses endpoint used by this package are undocumented
-compatibility observations, may change without notice, and are not an
-OpenAI-supported public API. This package is independent and is not
-affiliated with or endorsed by OpenAI.
+\link[ellmer:chat_openai]{ellmer} and a ChatGPT subscription. It uses
+OpenAI's documented "Sign in with ChatGPT" flow for open-source, locally
+hosted apps (\url{https://developers.openai.com/siwc/token-sharing-open-source})
+and the public Responses API. The stable compatibility target is the public
+ellmer \code{Chat} (0.5.0 or later) object for interactive, single-conversation
+operations. This package is independent and is not affiliated with or
+endorsed by OpenAI.
 }
 \details{
 Authentication is never started as a package-loading side effect. Call
@@ -37,14 +37,17 @@ chat, tool loops, callbacks, cancellation, cloning, echo, and response
 metadata. Provider token counting and file management are unavailable.
 The separately exported ellmer parallel/batch helpers are outside
 the stable core contract and are explicitly blocked for the Codex stream-only
-endpoint rather than silently degraded.
+endpoint rather than silently degraded. ChatGPT plan usage also rejects some
+Responses arguments, such as \code{temperature} and \code{max_output_tokens}; these
+fail before a request is sent.
 }
 \section{External service and compatibility}{
 
-The authentication and Responses transport are observed compatibility
-surfaces rather than documented third-party APIs. They require an active
-account and may change or become unavailable without notice. The package
-does not claim affiliation with or endorsement by OpenAI.
+ChatGPT plan usage through "Sign in with ChatGPT" is a preview feature for
+open-source and locally hosted apps; paid or remotely hosted apps need
+OpenAI's approval. It requires an eligible ChatGPT plan and workspace, and
+its limits and supported features may change. The package does not claim
+affiliation with or endorsement by OpenAI.
 }
 
 \seealso{

@@ -1,5 +1,26 @@
 # Maintainer verification checks
 
+## "Sign in with ChatGPT" live check
+
+`siwc-live.R` checks the documented sign-in flow end to end: browser login and
+registration, `codex_models()`, a chat with a system prompt, streaming, a tool
+call, structured output, a forced token refresh with rotation, and the local
+rejection of a prohibited parameter. Optionally it also checks
+reauthorization and logout with revocation. Run it in an interactive R
+session; it opens the browser once and never prints tokens or IDs:
+
+```r
+Sys.setenv(ELLMERCODEX_RUN_LIVE_TESTS = "true")
+devtools::load_all()
+source("inst/manual-tests/siwc-live.R")
+```
+
+It uses `~/.ellmercodex-siwc-test` as the credential directory unless
+`ELLMERCODEX_SIWC_HOME` is set. Set `ELLMERCODEX_SIWC_REAUTH=true` and
+`ELLMERCODEX_SIWC_LOGOUT=true` for the optional steps.
+
+## Complete runner
+
 `test-all.R` is the complete verification runner. By default it runs the
 fixture-backed test suite without network access and writes logs, JUnit/CSV
 summaries, session information, and serialized turn artifacts to a timestamped

@@ -14,8 +14,10 @@ Codex como proveedor de `ellmer` sin necesidad de una API. Así puedes
 incorporar modelos de lenguaje a tus flujos de análisis en R.
 
 El paquete es independiente de OpenAI y no requiere una clave de API ni el
-CLI de Codex. La autenticación y el transporte son superficies de
-compatibilidad que pueden cambiar; consulta la
+CLI de Codex. Usa el flujo documentado por OpenAI
+["Sign in with ChatGPT"](https://developers.openai.com/siwc/token-sharing-open-source)
+para apps de código abierto que se ejecutan localmente, y la API pública de
+Responses. Consulta la
 [documentación técnica](https://github.com/simxnherrera/ellmercodex/blob/main/docs/technical-design.md) para conocer los límites de
 soporte, la implementación y los riesgos actuales.
 
@@ -255,6 +257,12 @@ chat$chat(
 
 ### Autenticación
 
+`codex_login()` abre el navegador para que elijas tu cuenta y espacio de
+trabajo de ChatGPT y autorices el uso de tu plan. La primera vez se crea un
+registro vinculado a esa cuenta; los inicios de sesión siguientes lo
+reutilizan. La credencial se guarda en `tools::R_user_dir("ellmercodex",
+"config")` (o en `ELLMERCODEX_HOME`) con permisos solo para tu usuario.
+
 Consulta el estado de inicio de sesión con un resumen de cuenta redactado:
 
 ```r
@@ -267,7 +275,9 @@ Para una sesión que solo dure lo que dure el proceso, usa:
   auth <- codex_login(persist = FALSE)
 ```
 
-Cierra la sesión y elimina la credencial administrada por este paquete con:
+Cierra la sesión, revoca el token y elimina la credencial administrada por
+este paquete con `codex_logout()`. Para cambiar de cuenta o de espacio de
+trabajo, cierra sesión y vuelve a llamar a `codex_login()`:
 
 ```r
 codex_logout()
@@ -275,13 +285,14 @@ codex_logout()
 
 ### Una pequeña advertencia
 
-La integración de Codex se basa en mecanismos de autenticación y comunicación
-observados en otros clientes compatibles. Una modificación de OpenAI podría
-romper parcial o completamente el paquete y requerir una actualización.
+El uso del plan de ChatGPT mediante "Sign in with ChatGPT" es una función en
+vista previa de OpenAI: requiere un plan y un espacio de trabajo elegibles, y
+sus límites y funciones admitidas pueden cambiar. Mientras dure la vista
+previa no se admiten `temperature`, `top_p`, `max_tokens` ni otros argumentos
+que OpenAI excluye; el paquete los rechaza antes de enviar la solicitud.
 
-`ellmercodex` es una integración independiente, no está afiliada a OpenAI ni
-cuenta con su respaldo, y depende de comportamientos que no forman parte de
-una API pública documentada. El foco actual está puesto en el objeto `Chat` de
+`ellmercodex` es una integración independiente y no está afiliada a OpenAI ni
+cuenta con su respaldo. El foco actual está puesto en el objeto `Chat` de
 `ellmer` 0.5.0 o posterior y en operaciones interactivas sobre una conversación.
 El conteo de tokens del proveedor, la gestión de archivos y las funciones
 `parallel_chat()` y `batch_chat()` no están soportados.
@@ -316,9 +327,14 @@ proveedor, la gestión de archivos y las funciones independientes
 is to sign in, create a chat, and then use the regular `ellmer` Chat methods.
 
 The package is independent of OpenAI and does not require an API key or the
-Codex CLI. Subscription authentication and transport are compatibility surfaces
-that may change; see the [technical documentation](https://github.com/simxnherrera/ellmercodex/blob/main/docs/technical-design.md)
-for the implementation, support boundaries, and current risks.
+Codex CLI. It uses OpenAI's documented
+["Sign in with ChatGPT"](https://developers.openai.com/siwc/token-sharing-open-source)
+flow for open-source, locally hosted apps and the public Responses API. See the
+[technical documentation](https://github.com/simxnherrera/ellmercodex/blob/main/docs/technical-design.md)
+for the implementation, support boundaries, and current risks. ChatGPT plan
+usage is an OpenAI preview: it needs an eligible plan and workspace, and it
+does not accept `temperature`, `top_p`, `max_tokens`, or other excluded
+arguments.
 
 ### Install
 
@@ -487,6 +503,12 @@ chat$chat(
 
 ### Authentication
 
+`codex_login()` opens the browser so you can choose your ChatGPT account and
+workspace and allow ChatGPT plan usage. The first sign-in creates a
+registration bound to that account; later sign-ins reuse it. The credential is
+stored in `tools::R_user_dir("ellmercodex", "config")` (or `ELLMERCODEX_HOME`)
+with owner-only permissions.
+
 Inspect sign-in state with a redacted account summary:
 
 ```r
@@ -499,7 +521,9 @@ For a process-only session, use:
 auth <- codex_login(persist = FALSE)
 ```
 
-Sign out and remove the credential owned by this package with:
+Sign out, revoke the token, and remove the credential owned by this package
+with `codex_logout()`. To switch accounts or workspaces, sign out and call
+`codex_login()` again:
 
 ```r
 codex_logout()
