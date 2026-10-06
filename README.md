@@ -9,9 +9,10 @@
 <!-- badges: end -->
 
 `ellmercodex` te permite usar una cuenta de ChatGPT desde R a través de una
-interfaz de chat de [`ellmer`](https://ellmer.tidyverse.org/), para acceder a
-Codex como proveedor de `ellmer` sin necesidad de una API. Así puedes
-incorporar modelos de lenguaje a tus flujos de análisis en R.
+interfaz de chat de [`ellmer`](https://ellmer.tidyverse.org/): los modelos
+incluidos en tu plan de ChatGPT funcionan como un proveedor más de `ellmer`,
+sin clave de API. Así puedes incorporar modelos de lenguaje a tus flujos de
+análisis en R.
 
 El paquete es independiente de OpenAI y no requiere una clave de API ni el
 CLI de Codex. Usa el flujo documentado por OpenAI
@@ -26,25 +27,17 @@ el [artículo sobre `ellmercodex` en el blog](https://simxnherrera.github.io/blo
 
 ### Instalación
 
-Instala la versión publicada en CRAN:
-
-```r
-install.packages("ellmercodex")
-```
-
-O instala la versión etiquetada más reciente desde GitHub usando
+El paquete todavía no está en CRAN. Instálalo desde GitHub usando
 [`pak`](https://pak.r-lib.org/):
 
 ```r
 install.packages("pak")
-pak::pak("simxnherrera/ellmercodex@v0.2.0")
-```
-
-Para instalar la versión de desarrollo:
-
-```r
 pak::pak("simxnherrera/ellmercodex")
 ```
+
+Si vienes de una versión 0.1.x, vuelve a iniciar sesión con `codex_login()`
+después de actualizar: la forma de autenticación cambió y las credenciales
+anteriores no se conservan.
 
 ### Inicio rápido
 
@@ -56,7 +49,7 @@ library(ellmercodex)
 codex_available()
 auth <- codex_login()
 
-chat <- chat_codex(model = "gpt-5.6-luna", effort = "low")
+chat <- chat_codex(model = "gpt-6-luna", effort = "low")
 chat$chat("Hola desde R")
 #> ¡Hola! ¿En qué puedo ayudarte con R?
 ```
@@ -126,7 +119,7 @@ estructura que R pueda incorporar a un `data.frame`, validar o analizar.
 
 ### Un agente dentro de R
 
-También puedes registrar funciones como herramientas que Codex puede decidir
+También puedes registrar funciones como herramientas que el modelo puede decidir
 utilizar durante una conversación. Supongamos que tenemos intervenciones
 parlamentarias ya clasificadas:
 
@@ -144,7 +137,7 @@ intervenciones <- data.frame(
 ```
 
 Podemos crear una función de R que resuma las orientaciones observadas para
-un partido y exponerla a Codex como una herramienta de `ellmer`:
+un partido y exponerla al modelo como una herramienta de `ellmer`:
 
 ```r
 resumir_partido <- function(partido_buscado) {
@@ -178,13 +171,13 @@ chat$chat(
 #> mayor presencia de respuestas punitivas.
 ```
 
-Codex puede decidir llamar a `resumir_partido()` para cada partido, recibir
+El modelo puede decidir llamar a `resumir_partido()` para cada partido, recibir
 los resultados producidos por R y utilizarlos para elaborar su respuesta. La
 herramienta podría consultar una base de datos, buscar en un corpus, realizar
 un cálculo, recuperar información de una API o ejecutar cualquier otra
 operación que decidas implementar.
 
-R sigue siendo quien ejecuta las funciones: Codex solo puede utilizar las
+R sigue siendo quien ejecuta las funciones: el modelo solo puede utilizar las
 herramientas que registres explícitamente y decide cuándo usarlas y con qué
 argumentos.
 
@@ -199,23 +192,18 @@ modelos[c("id", "display_name", "default_reasoning_effort",
           "supported_reasoning_efforts")]
 ```
 
-El catálogo refleja los modelos que anuncia el endpoint de tu cuenta y puede
-quedar rezagado respecto del servicio de chat. Puedes pasar explícitamente un
-ID aceptado aunque no aparezca en `codex_models()`; el servicio validará el
-modelo y el esfuerzo. Si están habilitados para tu cuenta, puedes pasar
-`gpt-6-astra`, `gpt-6-sol` o `gpt-6-luna` aunque el catálogo no los liste:
-
-```r
-chat <- chat_codex(model = "gpt-6-luna", effort = "medium")
-```
+El catálogo no siempre incluye todos los modelos que acepta el servicio.
+Puedes pasar explícitamente un ID aunque no aparezca en `codex_models()`, y
+el servicio validará el modelo y el esfuerzo. Por ejemplo, `gpt-6-luna`
+funciona aunque el catálogo no lo liste.
 
 Puedes seleccionar un modelo y el esfuerzo de razonamiento explícitamente:
 
 ```r
-chat <- chat_codex(model = "gpt-5.6-luna", effort = "max")
+chat <- chat_codex(model = "gpt-6-luna", effort = "max")
 
 chat <- chat_codex(
-  model = "gpt-5.6-luna",
+  model = "gpt-6-luna",
   params = ellmer::params(reasoning_effort = "max")
 )
 ```
@@ -223,7 +211,7 @@ chat <- chat_codex(
 Usa `ELLMERCODEX_MODEL` si quieres establecer un modelo sin pasarlo cada vez:
 
 ```r
-Sys.setenv(ELLMERCODEX_MODEL = "gpt-5.6-luna")
+Sys.setenv(ELLMERCODEX_MODEL = "gpt-6-luna")
 chat <- chat_codex()
 ```
 
@@ -322,8 +310,9 @@ proveedor, la gestión de archivos y las funciones independientes
 
 ## English version
 
-`ellmercodex` lets you use a Codex subscription from R through an
-[`ellmer`](https://ellmer.tidyverse.org/) chat interface. The normal workflow
+`ellmercodex` lets you use your ChatGPT plan from R through an
+[`ellmer`](https://ellmer.tidyverse.org/) chat interface: the models in your
+plan work as one more `ellmer` provider, with no API key. The normal workflow
 is to sign in, create a chat, and then use the regular `ellmer` Chat methods.
 
 The package is independent of OpenAI and does not require an API key or the
@@ -338,25 +327,16 @@ arguments.
 
 ### Install
 
-Install the released version from CRAN:
-
-```r
-install.packages("ellmercodex")
-```
-
-Or install the current tagged release from GitHub with
+The package is not on CRAN yet. Install it from GitHub with
 [`pak`](https://pak.r-lib.org/):
 
 ```r
 install.packages("pak")
-pak::pak("simxnherrera/ellmercodex@v0.2.0")
-```
-
-To install the development version:
-
-```r
 pak::pak("simxnherrera/ellmercodex")
 ```
+
+If you are upgrading from 0.1.x, sign in again with `codex_login()`: the
+authentication flow changed and earlier credentials are not kept.
 
 ### Quick start
 
@@ -370,7 +350,7 @@ auth <- codex_login()
 
 chat <- chat_codex(
   system_prompt = "Be concise and helpful.",
-  model = "gpt-5.6-luna"
+  model = "gpt-6-luna"
 )
 
 chat$chat("Explain why reproducible examples matter in R packages.")
@@ -399,30 +379,24 @@ models[c("id", "display_name", "default_reasoning_effort",
          "supported_reasoning_efforts")]
 ```
 
-The catalog reflects the models advertised by your account's discovery
-endpoint and can lag behind the chat service. You can explicitly pass a model
-ID accepted by the service even when it is absent from `codex_models()`; the
-service validates the model and reasoning effort. If your account has access,
-you can pass `gpt-6-astra`, `gpt-6-sol`, or `gpt-6-luna` when the catalog omits
-them:
-
-```r
-chat <- chat_codex(model = "gpt-6-luna", effort = "medium")
-```
+The catalog does not always include every model the service accepts. You can
+pass a model ID explicitly even when it is absent from `codex_models()`, and
+the service validates the model and reasoning effort. For example,
+`gpt-6-luna` works although the catalog does not list it.
 
 Select a model explicitly when needed:
 
 ```r
-chat <- chat_codex(model = "gpt-5.6-luna")
+chat <- chat_codex(model = "gpt-6-luna")
 ```
 
 Reasoning effort can be supplied directly or through ellmer-style parameters:
 
 ```r
-chat <- chat_codex(model = "gpt-5.6-luna", effort = "max")
+chat <- chat_codex(model = "gpt-6-luna", effort = "max")
 
 chat <- chat_codex(
-  model = "gpt-5.6-luna",
+  model = "gpt-6-luna",
   params = ellmer::params(reasoning_effort = "max")
 )
 ```
@@ -431,7 +405,7 @@ Use `ELLMERCODEX_MODEL` when you want an explicit model without passing
 `model` each time:
 
 ```r
-Sys.setenv(ELLMERCODEX_MODEL = "gpt-5.6-luna")
+Sys.setenv(ELLMERCODEX_MODEL = "gpt-6-luna")
 chat <- chat_codex()
 ```
 
@@ -447,7 +421,7 @@ weather_tool <- ellmer::tool(
   arguments = list(city = ellmer::type_string())
 )
 
-chat <- chat_codex(model = "gpt-5.6-luna")
+chat <- chat_codex(model = "gpt-6-luna")
 chat$register_tool(weather_tool)
 chat$chat("What is the weather in Montevideo?")
 ```
@@ -460,7 +434,7 @@ Tool requests and results remain in the conversation history as the usual
 Use ellmer's type system with `$chat_structured()`:
 
 ```r
-chat <- chat_codex(model = "gpt-5.6-luna")
+chat <- chat_codex(model = "gpt-6-luna")
 chat$chat_structured(
   "My name is Susan and I'm 13 years old.",
   type = ellmer::type_object(
