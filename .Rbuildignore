@@ -15,3 +15,4 @@
 ^\.claude$
 ^_pkgdown\.yml$
 ^_site$
+^pkgdown$
