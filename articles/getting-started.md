@@ -1,5 +1,8 @@
 # Getting started with ellmercodex
 
+> *Versión en español:*
+> [`vignette("getting-started-es", package = "ellmercodex")`](https://simxnherrera.github.io/ellmercodex/articles/getting-started-es.md).
+
 `ellmercodex` connects `ellmer` chats to a ChatGPT subscription through
 OpenAI’s documented “Sign in with ChatGPT” flow for open-source, locally
 hosted apps

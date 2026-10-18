@@ -1,12 +1,10 @@
 # Package index
 
-## Overview
-
-- [`ellmercodex-package`](https://simxnherrera.github.io/ellmercodex/reference/ellmercodex.md)
-  [`ellmercodex`](https://simxnherrera.github.io/ellmercodex/reference/ellmercodex.md)
-  : ellmercodex: ChatGPT plan provider for ellmer
-
 ## Chat
+
+Create an `ellmer` `Chat` backed by your ChatGPT plan, then use its
+usual methods to send messages, stream responses, call tools, and
+extract structured data.
 
 - [`chat_codex()`](https://simxnherrera.github.io/ellmercodex/reference/chat_codex.md)
   : Create a Codex chat backed by ellmer
@@ -14,6 +12,9 @@
   : List models available to the authenticated Codex account.
 
 ## Authentication
+
+Sign in with ChatGPT in the browser, inspect the stored credential, and
+sign out.
 
 - [`codex_login()`](https://simxnherrera.github.io/ellmercodex/reference/codex_login.md)
   : Sign in with ChatGPT in the browser.
@@ -60,3 +61,9 @@
   [`codex_ellmer_missing`](https://simxnherrera.github.io/ellmercodex/reference/ellmercodex-conditions.md)
   [`codex_ellmer_compatibility_error`](https://simxnherrera.github.io/ellmercodex/reference/ellmercodex-conditions.md)
   : ellmercodex condition classes
+
+## Package
+
+- [`ellmercodex-package`](https://simxnherrera.github.io/ellmercodex/reference/ellmercodex.md)
+  [`ellmercodex`](https://simxnherrera.github.io/ellmercodex/reference/ellmercodex.md)
+  : ellmercodex: ChatGPT plan provider for ellmer

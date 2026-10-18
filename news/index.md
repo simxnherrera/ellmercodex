@@ -5,6 +5,9 @@
 - The README is now in English only. The Spanish introduction moved to a
   new vignette,
   [`vignette("ellmercodex-es")`](https://simxnherrera.github.io/ellmercodex/articles/ellmercodex-es.md).
+- New Spanish translation of the getting-started vignette,
+  [`vignette("getting-started-es")`](https://simxnherrera.github.io/ellmercodex/articles/getting-started-es.md),
+  and a pkgdown site at <https://simxnherrera.github.io/ellmercodex/>.
 - The tool example returns JSON, as `ellmer` 0.5.0 expects from tools.
 
 ## ellmercodex 0.2.0

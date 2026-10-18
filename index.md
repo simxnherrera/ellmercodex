@@ -1,7 +1,9 @@
 # ellmercodex
 
-> **Documentación en español:** consulta la [introducción en
-> español](https://simxnherrera.github.io/ellmercodex/articles/ellmercodex-es.html)
+> **Documentación en español:**
+> [Introducción](https://simxnherrera.github.io/ellmercodex/articles/ellmercodex-es.html)
+> y [Primeros
+> pasos](https://simxnherrera.github.io/ellmercodex/articles/getting-started-es.html),
 > o, después de instalar el paquete,
 > [`vignette("ellmercodex-es", package = "ellmercodex")`](https://simxnherrera.github.io/ellmercodex/articles/ellmercodex-es.md).
 
@@ -292,7 +294,8 @@ or endorsed by OpenAI.
 - The [getting-started
   vignette](https://cran.r-project.org/web/packages/ellmercodex/vignettes/getting-started.html)
   walks through authentication, chats, tools, structured output, and
-  error handling.
+  error handling. It is also available [in
+  Spanish](https://simxnherrera.github.io/ellmercodex/articles/getting-started-es.html).
 - The [technical
   design](https://github.com/simxnherrera/ellmercodex/blob/main/docs/technical-design.md)
   documents the architecture, credential lifecycle, transport boundary,

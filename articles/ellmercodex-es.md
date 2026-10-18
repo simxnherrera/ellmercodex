@@ -1,5 +1,8 @@
 # Introducción a ellmercodex (en español)
 
+> *English version:*
+> [README](https://simxnherrera.github.io/ellmercodex/).
+
 `ellmercodex` te permite usar una cuenta de ChatGPT desde R a través de
 una interfaz de chat de [`ellmer`](https://ellmer.tidyverse.org/): los
 modelos incluidos en tu plan de ChatGPT funcionan como un proveedor más
@@ -284,12 +287,27 @@ OpenAI ni cuenta con su respaldo.
 
 ## Más información
 
-- La viñeta en inglés,
-  [`vignette("getting-started", package = "ellmercodex")`](https://simxnherrera.github.io/ellmercodex/articles/getting-started.md),
-  profundiza en la autenticación, las herramientas, los resultados
+- La viñeta [Primeros
+  pasos](https://simxnherrera.github.io/ellmercodex/articles/getting-started-es.md)
+  recorre la autenticación, los chats, las herramientas, los resultados
   estructurados y el manejo de errores.
+- El [diseño
+  técnico](https://github.com/simxnherrera/ellmercodex/blob/main/docs/technical-design.md)
+  (en inglés) documenta la arquitectura, el ciclo de vida de las
+  credenciales, el límite de transporte, la taxonomía de errores y los
+  riesgos de publicación.
+- El [inventario de compatibilidad con
+  `ellmer`](https://github.com/simxnherrera/ellmercodex/blob/main/docs/ellmer-chat-interface.md)
+  (en inglés) registra los métodos de `Chat` soportados, sus firmas, los
+  valores que devuelven y las transiciones de estado.
+- **Experimental:** para conservar credenciales en tu propia app en tu
+  propia VM, consulta la [guía para una VM Linux de un solo
+  proceso](https://github.com/simxnherrera/ellmercodex/blob/main/docs/hosted-oauth.md)
+  (en inglés). Las apps que atienden a otras personas necesitan primero
+  la aprobación de OpenAI.
 - En R, usa
   [`?chat_codex`](https://simxnherrera.github.io/ellmercodex/reference/chat_codex.md),
   [`?codex_login`](https://simxnherrera.github.io/ellmercodex/reference/codex_login.md),
   [`?codex_models`](https://simxnherrera.github.io/ellmercodex/reference/codex_models.md)
-  y `?ellmercodex-conditions` para consultar la referencia de funciones.
+  y `?ellmercodex-conditions` para consultar la referencia de funciones
+  (en inglés).

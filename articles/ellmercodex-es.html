@@ -13,7 +13,9 @@
 <link rel="manifest" href="../site.webmanifest">
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/Source_Sans_Pro-0.4.10/font.css" rel="stylesheet">
+<link href="../deps/Source_Code_Pro-0.4.10/font.css" rel="stylesheet">
+<link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Introducción a ellmercodex (en español)">
 </head>
@@ -21,7 +23,7 @@
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
-    <nav class="navbar navbar-expand-lg fixed-top bg-light" data-bs-theme="light" aria-label="Site navigation"><div class="container">
+    <nav class="navbar navbar-expand-lg fixed-top bg-none" data-bs-theme="light" aria-label="Site navigation"><div class="container">
 
     <a class="navbar-brand me-2" href="../index.html">ellmercodex</a>
 
@@ -35,11 +37,17 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
-<li class="active nav-item dropdown">
+<li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/getting-started.html">Getting started with ellmercodex</a></li>
-    <li><a class="dropdown-item" href="../articles/ellmercodex-es.html">Introducción a ellmercodex (en español)</a></li>
+<li><a class="dropdown-item" href="../articles/getting-started.html">Getting started</a></li>
+  </ul>
+</li>
+<li class="active nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-espa-ol" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Español</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-espa-ol">
+<li><a class="dropdown-item" href="../articles/ellmercodex-es.html">Introducción</a></li>
+    <li><a class="dropdown-item" href="../articles/getting-started-es.html">Primeros pasos</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -70,6 +78,9 @@
 
     
     
+<blockquote>
+<p><em>English version:</em> <a href="https://simxnherrera.github.io/ellmercodex/">README</a>.</p>
+</blockquote>
 <p><code>ellmercodex</code> te permite usar una cuenta de ChatGPT desde
 R a través de una interfaz de chat de <a href="https://ellmer.tidyverse.org/" class="external-link"><code>ellmer</code></a>: los
 modelos incluidos en tu plan de ChatGPT funcionan como un proveedor más
@@ -309,13 +320,26 @@ afiliada a OpenAI ni cuenta con su respaldo.</p>
 <h2 id="más-información">Más información<a class="anchor" aria-label="anchor" href="#m%C3%A1s-informaci%C3%B3n"></a>
 </h2>
 <ul>
-<li>La viñeta en inglés,
-<code><a href="../articles/getting-started.html">vignette("getting-started", package = "ellmercodex")</a></code>,
-profundiza en la autenticación, las herramientas, los resultados
+<li>La viñeta <a href="getting-started-es.html">Primeros pasos</a>
+recorre la autenticación, los chats, las herramientas, los resultados
 estructurados y el manejo de errores.</li>
+<li>El <a href="https://github.com/simxnherrera/ellmercodex/blob/main/docs/technical-design.md" class="external-link">diseño
+técnico</a> (en inglés) documenta la arquitectura, el ciclo de vida de
+las credenciales, el límite de transporte, la taxonomía de errores y los
+riesgos de publicación.</li>
+<li>El <a href="https://github.com/simxnherrera/ellmercodex/blob/main/docs/ellmer-chat-interface.md" class="external-link">inventario
+de compatibilidad con <code>ellmer</code></a> (en inglés) registra los
+métodos de <code>Chat</code> soportados, sus firmas, los valores que
+devuelven y las transiciones de estado.</li>
+<li>
+<strong>Experimental:</strong> para conservar credenciales en tu
+propia app en tu propia VM, consulta la <a href="https://github.com/simxnherrera/ellmercodex/blob/main/docs/hosted-oauth.md" class="external-link">guía
+para una VM Linux de un solo proceso</a> (en inglés). Las apps que
+atienden a otras personas necesitan primero la aprobación de
+OpenAI.</li>
 <li>En R, usa <code><a href="../reference/chat_codex.html">?chat_codex</a></code>, <code><a href="../reference/codex_login.html">?codex_login</a></code>,
 <code><a href="../reference/codex_models.html">?codex_models</a></code> y <code>?ellmercodex-conditions</code> para
-consultar la referencia de funciones.</li>
+consultar la referencia de funciones (en inglés).</li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
