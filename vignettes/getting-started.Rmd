@@ -11,6 +11,8 @@ vignette: >
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
+> *Versión en español:* `vignette("getting-started-es", package = "ellmercodex")`.
+
 `ellmercodex` connects `ellmer` chats to a ChatGPT subscription through
 OpenAI's documented "Sign in with ChatGPT" flow for open-source, locally
 hosted apps (<https://developers.openai.com/siwc/token-sharing-open-source>)

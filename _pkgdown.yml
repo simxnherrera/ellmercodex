@@ -4,16 +4,54 @@ destination: _site
 
 template:
   bootstrap: 5
+  bslib:
+    primary: "#447099"
+    base_font: {google: {family: "Source Sans Pro", wght: [400, 600], ital: [0, 1]}}
+    code_font: {google: "Source Code Pro"}
+    font_scale: 1.2
+    fg: "#172431"
+    bg: "#fcfcfc"
+    border-radius: 0
+    btn-border-radius: 3px
+    grid-gutter-width: 3rem
+    pkgdown-nav-height: 78px
+
+code:
+  width: 71
+
+navbar:
+  type: light
+  bg: none
+  structure:
+    left: [reference, articles, espanol, news]
+    right: [search, github, lightswitch]
+  components:
+    articles:
+      text: Articles
+      menu:
+      - text: Getting started
+        href: articles/getting-started.html
+    espanol:
+      text: Español
+      menu:
+      - text: Introducción
+        href: articles/ellmercodex-es.html
+      - text: Primeros pasos
+        href: articles/getting-started-es.html
 
 reference:
-- title: Overview
-  contents:
-  - ellmercodex
 - title: Chat
+  desc: >
+    Create an `ellmer` `Chat` backed by your ChatGPT plan, then use its usual
+    methods to send messages, stream responses, call tools, and extract
+    structured data.
   contents:
   - chat_codex
   - codex_models
 - title: Authentication
+  desc: >
+    Sign in with ChatGPT in the browser, inspect the stored credential, and
+    sign out.
   contents:
   - codex_login
   - codex_logout
@@ -22,10 +60,15 @@ reference:
   contents:
   - codex_available
   - ellmercodex-conditions
+- title: Package
+  contents:
+  - ellmercodex
 
 articles:
-- title: Get started
-  navbar: ~
+- title: English
   contents:
   - getting-started
+- title: Español
+  contents:
   - ellmercodex-es
+  - getting-started-es
