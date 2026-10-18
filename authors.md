@@ -1,0 +1,22 @@
+# Authors and Citation
+
+## Authors
+
+- **Simon Herrera**. Author, maintainer, copyright holder.
+
+## Citation
+
+Source:
+[`DESCRIPTION`](https://github.com/simxnherrera/ellmercodex/blob/main/DESCRIPTION)
+
+Herrera S (2026). *ellmercodex: 'ChatGPT' Plan Provider for 'ellmer'*. R
+package version 0.2.0.9000,
+<https://simxnherrera.github.io/ellmercodex/>.
+
+    @Manual{,
+      title = {ellmercodex: 'ChatGPT' Plan Provider for 'ellmer'},
+      author = {Simon Herrera},
+      year = {2026},
+      note = {R package version 0.2.0.9000},
+      url = {https://simxnherrera.github.io/ellmercodex/},
+    }

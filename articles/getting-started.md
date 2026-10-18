@@ -1,0 +1,251 @@
+# Getting started with ellmercodex
+
+`ellmercodex` connects `ellmer` chats to a ChatGPT subscription through
+OpenAI’s documented “Sign in with ChatGPT” flow for open-source, locally
+hosted apps
+(<https://developers.openai.com/siwc/token-sharing-open-source>) and the
+public Responses API. Its stable core is the public `ellmer` `Chat`
+object (0.5.0 or later) for interactive, single-conversation work.
+ChatGPT plan usage is an OpenAI preview feature; the package is not
+endorsed or supported by OpenAI.
+
+Package loading, examples, vignettes, and automated tests do not
+authenticate, open a browser, inspect stored credentials, or make
+network requests.
+
+## Check the local integration
+
+``` r
+
+library(ellmercodex)
+
+codex_available()
+#> [1] TRUE
+```
+
+[`codex_available()`](https://simxnherrera.github.io/ellmercodex/reference/codex_available.md)
+checks installed dependencies, static configuration, and the supported
+`ellmer` compatibility seam. Its default does not inspect a credential
+store or contact the network, and `TRUE` does not guarantee that a
+remote request will succeed. After authentication,
+[`codex_models()`](https://simxnherrera.github.io/ellmercodex/reference/codex_models.md)
+queries `https://api.openai.com/v1/models` with the ChatGPT plan token
+and returns the models listed for the account (`visibility: "list"`).
+Explicitly selected model IDs absent from it are still passed to the
+service, which validates access and reasoning effort:
+
+``` r
+
+models <- codex_models()
+models[c("id", "display_name", "default_reasoning_effort",
+         "supported_reasoning_efforts")]
+```
+
+## Authenticate explicitly
+
+Authentication happens only after a direct call to
+[`codex_login()`](https://simxnherrera.github.io/ellmercodex/reference/codex_login.md).
+The function opens a browser where you choose a ChatGPT account and
+workspace and allow ChatGPT plan usage. It receives the callback on
+`http://127.0.0.1:1455/callback` (set `ELLMERCODEX_CALLBACK_PORT` to
+change the port), checks the OAuth state, exchanges the PKCE-protected
+code with the client ID that OpenAI issued for this registration,
+verifies the ID token, and checks that the `chatgpt.tokens.use.direct`
+scope was granted. It does not use the macOS Keychain or another OS
+keyring.
+
+``` r
+
+auth <- codex_login()
+codex_account(auth)
+```
+
+[`codex_account()`](https://simxnherrera.github.io/ellmercodex/reference/codex_account.md)
+omits tokens and redacts the account identifier. The package does not
+read the Codex CLI credential file or another application’s stored
+session.
+
+Set `persist = FALSE` to keep the credential only in the current R
+process:
+
+``` r
+
+auth <- codex_login(persist = FALSE)
+chat <- chat_codex(model = Sys.getenv("ELLMERCODEX_MODEL"))
+```
+
+The process-local session is cleared by
+[`codex_logout()`](https://simxnherrera.github.io/ellmercodex/reference/codex_logout.md)
+and its tokens are never written to disk or an OS keyring.
+
+Persistent credentials are stored in `credentials.json` below
+`tools::R_user_dir("ellmercodex", "config")`, written atomically with
+owner-only permissions. Set `ELLMERCODEX_HOME` before the first
+credential access to use a different private directory:
+
+``` r
+
+Sys.setenv(ELLMERCODEX_HOME = "/path/to/a/private/directory")
+```
+
+The same directory holds `host-id`, a stable and opaque host identifier
+that OpenAI requires before the first sign-in. Access tokens last an
+hour and are refreshed automatically; refreshes are serialized across R
+processes because refresh tokens rotate. The first sign-in creates a
+registration bound to the chosen account and workspace, and later
+sign-ins reuse it. To use another account or workspace, call
+[`codex_logout()`](https://simxnherrera.github.io/ellmercodex/reference/codex_logout.md)
+first. For your own app on your own Linux VM, the experimental
+[single-process deployment
+guide](https://github.com/simxnherrera/ellmercodex/blob/main/docs/hosted-oauth.md)
+describes a setup; apps that serve other people need OpenAI’s approval
+first.
+
+## Create a text chat
+
+By default,
+[`chat_codex()`](https://simxnherrera.github.io/ellmercodex/reference/chat_codex.md)
+selects a usable model from the authenticated account catalog. Select a
+model explicitly when you need a stable choice, and choose reasoning
+effort from the catalog when it lists the model:
+
+``` r
+
+chat <- chat_codex(
+  system_prompt = "Be concise.",
+  model = models$id[[1]],
+  effort = models$supported_reasoning_efforts[[1]][[1]]
+)
+
+chat$chat("Remember that the codeword is amber. Reply: acknowledged")
+chat$chat("What was the codeword?")
+```
+
+For example, if the account catalog omits the GPT-6 family but the chat
+service accepts it, select a model explicitly:
+
+``` r
+
+chat <- chat_codex(model = "gpt-6-luna", effort = "medium")
+```
+
+The returned object is an `ellmer` `Chat` (0.5.0 or later). Interactive
+Chat methods remain available: ordinary and structured chat,
+text/content streaming, reasoning effort, model parameters, registered
+function tools, async methods, callbacks, cancellation, cloning, rich
+image/PDF content, history, echo, and response metadata. The
+compatibility implementation checks required ellmer contracts at
+runtime. Provider token counting and file management are unsupported and
+fail before a request. The separate `parallel_chat*()` and
+`batch_chat*()` helpers are outside the stable core contract because
+ChatGPT plan usage is stream-only. ChatGPT plan usage also rejects some
+Responses arguments, including `temperature`, `top_p`, `max_tokens`
+(`max_output_tokens`), `metadata`, and `previous_response_id`; the
+package fails before sending a request that uses them. Function tools
+are sent in an `ellmer` tool namespace, as the preview requires.
+
+The constructor and the returned Chat object are documented separately.
+[`?chat_codex`](https://simxnherrera.github.io/ellmercodex/reference/chat_codex.md)
+describes constructor arguments, credential side effects, conditions,
+and model selection; the `ellmer` Chat help describes the methods used
+for history, streaming, structured output, tools, callbacks, async work,
+and cloning. The package does not claim compatibility with ellmer’s
+separate `parallel_chat*()` or `batch_chat*()` helpers because the
+subscription transport is stream-only.
+
+## Tool calling
+
+Tools use the normal `ellmer` API. Codex can request one or more calls,
+the package executes the registered functions locally, and the results
+are sent back through the Responses protocol until Codex returns a final
+answer:
+
+``` r
+
+weather_tool <- ellmer::tool(
+  function(city) paste("Sunny in", city),
+  name = "get_weather",
+  description = "Get the current weather for a city.",
+  arguments = list(city = ellmer::type_string())
+)
+
+chat <- chat_codex(model = Sys.getenv("ELLMERCODEX_MODEL"))
+chat$register_tool(weather_tool)
+chat$chat("What is the weather in Montevideo?")
+```
+
+Tool calls can be streamed as content, including their request and
+result objects:
+
+``` r
+
+coro::collect(chat$stream("Check the weather again.", stream = "content"))
+```
+
+Tool-containing turns stay in the history as
+[`ellmer::ContentToolRequest`](https://ellmer.tidyverse.org/reference/Content.html)
+and
+[`ellmer::ContentToolResult`](https://ellmer.tidyverse.org/reference/Content.html)
+objects. `$chat_structured()` follows ellmer’s semantics and disables
+registered tools for that request; use `$chat()` first when structured
+extraction needs tool-assisted context.
+
+Structured output uses the normal ellmer type system:
+
+``` r
+
+chat$chat_structured(
+  "My name is Susan and I'm 13 years old.",
+  type = ellmer::type_object(
+    name = ellmer::type_string(),
+    age = ellmer::type_integer()
+  )
+)
+```
+
+## Handle failures
+
+The package uses structured condition classes so applications do not
+need to parse messages. For example:
+
+``` r
+
+tryCatch(
+  chat$chat("Hello"),
+  codex_auth_error = function(error) {
+    message("Authentication failed; run codex_login() again.")
+  },
+  codex_chat_error = function(error) {
+    message("The experimental Codex request failed: ", conditionMessage(error))
+  },
+  codex_protocol_changed_error = function(error) {
+    message("The experimental upstream protocol may have changed.")
+  }
+)
+```
+
+Messages are sanitized before they are signaled. Raw response bodies,
+bearer tokens, authorization codes, OAuth state, account identifiers,
+and credential-store contents are not intentionally included.
+
+For application code, handle the most specific condition first and then
+fall back to the parent classes. `codex_auth_error` covers missing,
+malformed, and expired credentials; `codex_request_error` covers
+transport failures; and `codex_protocol_changed_error` indicates that
+the upstream response shape may have changed. ChatGPT plan limits have
+their own subclasses: `codex_usage_limit_error` (a
+`codex_rate_limit_error`) means the plan’s usage limit was reached, and
+`codex_usage_unavailable_error` means plan usage is temporarily
+unavailable. The full list is available in `?ellmercodex-conditions`.
+
+## Sign out
+
+``` r
+
+codex_logout()
+```
+
+Logout revokes the refresh token with OpenAI (pass `revoke = FALSE` to
+skip this), then removes the package’s own credential file and
+process-local credential. It keeps the host identifier, and it does not
+remove credentials belonging to Codex CLI or other clients.
