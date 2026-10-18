@@ -1,0 +1,108 @@
+---
+title: "Inicio de sesión y credenciales"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Inicio de sesión y credenciales}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+> *English version:* `vignette("authentication", package = "ellmercodex")`.
+
+```{r}
+library(ellmercodex)
+```
+
+`ellmercodex` nunca inicia sesión por su cuenta. Cargar el paquete, ejecutar
+sus ejemplos, construir sus viñetas y correr sus pruebas no abre el navegador,
+no lee credenciales guardadas ni hace solicitudes de red. La autenticación
+ocurre solo cuando llamas a `codex_login()`.
+
+## Cómo funciona el inicio de sesión
+
+```{r}
+auth <- codex_login()
+codex_account(auth)
+```
+
+`codex_login()` abre un navegador donde eliges una cuenta y un espacio de
+trabajo de ChatGPT y autorizas el uso del plan. Por detrás:
+
+* recibe la respuesta en `http://127.0.0.1:1455/callback` (define
+  `ELLMERCODEX_CALLBACK_PORT` para usar otro puerto);
+* comprueba el estado de OAuth e intercambia el código protegido con PKCE
+  usando el client ID que OpenAI emitió para este registro;
+* verifica el ID token y comprueba que se haya otorgado el scope
+  `chatgpt.tokens.use.direct`.
+
+El primer inicio de sesión crea un registro vinculado a la cuenta y el
+espacio de trabajo elegidos; los siguientes lo reutilizan.
+
+`codex_account()` muestra un resumen del estado de la sesión. Nunca imprime
+tokens y oculta el identificador de la cuenta.
+
+## Dónde se guardan las credenciales
+
+Las credenciales se guardan en `credentials.json` dentro de
+`tools::R_user_dir("ellmercodex", "config")`. El archivo se escribe de forma
+atómica, con permisos solo para tu usuario. `ellmercodex` no usa el Llavero
+de macOS ni otro almacén de claves del sistema operativo, y nunca lee el
+archivo de credenciales del CLI de Codex ni la sesión de otra aplicación.
+
+Para usar otro directorio privado, define `ELLMERCODEX_HOME` antes del primer
+acceso a la credencial:
+
+```{r}
+Sys.setenv(ELLMERCODEX_HOME = "/ruta/a/un/directorio/privado")
+```
+
+El mismo directorio guarda `host-id`, un identificador de equipo estable y
+opaco que OpenAI exige antes del primer inicio de sesión.
+
+Los access tokens duran una hora y se renuevan automáticamente. Los refresh
+tokens rotan, así que las renovaciones se serializan entre los procesos de R
+que comparten el directorio.
+
+## Iniciar sesión solo para esta sesión
+
+Usa `persist = FALSE` para mantener la credencial solo en el proceso de R
+actual:
+
+```{r}
+auth <- codex_login(persist = FALSE)
+chat <- chat_codex()
+```
+
+Los tokens nunca se escriben en disco, y `codex_logout()` los borra.
+
+## Cerrar sesión o cambiar de cuenta
+
+```{r}
+codex_logout()
+```
+
+`codex_logout()` revoca el refresh token con OpenAI (pasa `revoke = FALSE`
+para omitirlo) y después elimina el archivo de credenciales del paquete y
+cualquier credencial que exista solo en el proceso. Conserva el identificador
+del equipo y no toca credenciales del CLI de Codex ni de otros clientes.
+
+Para usar otra cuenta u otro espacio de trabajo, cierra sesión y vuelve a
+llamar a `codex_login()`.
+
+## Si vienes de la versión 0.1.x
+
+La versión 0.2.0 pasó al flujo documentado por OpenAI "Sign in with ChatGPT".
+Las credenciales de 0.1.x no se conservan, así que vuelve a iniciar sesión con
+`codex_login()` después de actualizar.
+
+## Apps alojadas (experimental)
+
+OpenAI limita el uso del plan de ChatGPT a apps de código abierto que se
+ejecutan localmente. Para tu propia app en tu propia VM Linux, la
+[guía experimental de despliegue en un solo proceso](https://github.com/simxnherrera/ellmercodex/blob/main/docs/hosted-oauth.md)
+(en inglés) describe una configuración posible. Las apps que atienden a otras
+personas necesitan primero la aprobación de OpenAI.
