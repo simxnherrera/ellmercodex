@@ -1,5 +1,3 @@
-# ellmercodex (development version)
-
 # ellmercodex 0.2.0
 
 ## Breaking changes: documented "Sign in with ChatGPT" flow
