@@ -23,21 +23,22 @@ navbar:
   type: light
   bg: none
   structure:
-    left: [reference, articles, espanol, news]
+    left: [intro, reference, articles, espanol, news]
     right: [search, github, lightswitch]
   components:
-    articles:
-      text: Articles
-      menu:
-      - text: Getting started
-        href: articles/getting-started.html
     espanol:
       text: Español
       menu:
-      - text: Introducción
-        href: articles/ellmercodex-es.html
       - text: Primeros pasos
-        href: articles/getting-started-es.html
+        href: articles/ellmercodex-es.html
+      - text: Inicio de sesión y credenciales
+        href: articles/authentication-es.html
+      - text: Modelos y esfuerzo de razonamiento
+        href: articles/models-es.html
+      - text: Análisis de texto
+        href: articles/text-analysis-es.html
+      - text: Errores y límites
+        href: articles/errors-and-limits-es.html
 
 reference:
 - title: Chat
@@ -65,10 +66,18 @@ reference:
   - ellmercodex
 
 articles:
-- title: English
+- title: Articles
+  navbar: ~
   contents:
-  - getting-started
-- title: Español
+  - authentication
+  - models
+  - text-analysis
+  - errors-and-limits
+- title: En español
+  desc: Los mismos artículos, en español.
   contents:
   - ellmercodex-es
-  - getting-started-es
+  - authentication-es
+  - models-es
+  - text-analysis-es
+  - errors-and-limits-es

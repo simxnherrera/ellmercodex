@@ -1,0 +1,155 @@
+---
+title: "Analyzing text"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Analyzing text}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+> *Versión en español:* `vignette("text-analysis-es", package = "ellmercodex")`.
+
+Language models are useful in research when they return something R can work
+with, not just prose. This article uses speeches from a Uruguayan
+parliamentary debate on cannabis regulation to show two `ellmer` features
+that work with `ellmercodex`: structured data and tool calling. The examples
+are inspired by the
+[blog post about `ellmercodex`](https://simxnherrera.github.io/blog/ellmercodex/).
+
+The output shown comes from a real session with `gpt-6-luna`.
+
+```{r}
+library(ellmercodex)
+
+chat <- chat_codex(model = "gpt-6-luna", effort = "low")
+```
+
+## Classify an excerpt
+
+With `$chat_structured()` you describe the result you want with `ellmer`'s
+type system, and the model has to answer in that shape. Here we ask for a
+stance on drug policy, from a fixed set of codes, plus a short rationale:
+
+```{r}
+# A real excerpt from the debate
+excerpt <- paste(
+  "seguimos pensando que además de la represión y del combate al",
+  "narcotráfico que debe seguir con firmeza y decisión como sociedad",
+  "debemos apostar a dos o tres pilares fundamentales la educación",
+  "la prevención y la rehabilitación"
+)
+
+result <- chat$chat_structured(
+  paste(
+    "Classify the excerpt as PREVENTIVE, PUNITIVE, MIXED, or NO_CLEAR_STANCE.",
+    "Use MIXED when it argues for preventive and punitive responses at the",
+    "same time. Answer in English.",
+    "\n\nExcerpt:",
+    excerpt
+  ),
+  type = ellmer::type_object(
+    stance = ellmer::type_enum(c(
+      "PREVENTIVE",
+      "PUNITIVE",
+      "MIXED",
+      "NO_CLEAR_STANCE"
+    )),
+    rationale = ellmer::type_string()
+  )
+)
+
+result
+#> $stance
+#> [1] "MIXED"
+#>
+#> $rationale
+#> [1] "The excerpt supports firm repression and combating drug trafficking,
+#> alongside education, prevention, and rehabilitation."
+```
+
+The result is an R list, so you can put it in a `data.frame`, validate it, or
+analyze it alongside codes from human coders. `ellmer`'s
+[structured data](https://ellmer.tidyverse.org/articles/structured-data.html)
+article covers the type system in depth, including how to extract several
+rows at once.
+
+## Let the model call your R functions
+
+Suppose you have already classified many speeches:
+
+```{r}
+speeches <- data.frame(
+  party = c("FA", "FA", "PN", "PN", "PN"),
+  stance = c("PREVENTIVE", "MIXED", "PUNITIVE", "PUNITIVE", "MIXED")
+)
+```
+
+Instead of pasting the data into the prompt, you can give the model a tool: an
+R function it may call when it needs information. This one counts the stances
+for one party and returns JSON, which is what `ellmer` expects from tools:
+
+```{r}
+summarize_party <- function(party_name) {
+  speeches |>
+    dplyr::filter(party == party_name) |>
+    dplyr::count(stance) |>
+    jsonlite::toJSON()
+}
+
+summary_tool <- ellmer::tool(
+  summarize_party,
+  name = "summarize_party",
+  description = "Count the policy stances in a party's speeches.",
+  arguments = list(party_name = ellmer::type_string())
+)
+
+chat$register_tool(summary_tool)
+
+chat$chat("Compare the policy stances of FA and PN. Use the available tool.")
+#> FA has one **MIXED** stance and one **PREVENTIVE** stance. PN has one
+#> **MIXED** stance and two **PUNITIVE** stances. Both have a mixed stance,
+#> while FA's other stance is preventive and PN's are punitive.
+```
+
+The model decided to call `summarize_party()` for each party, received the
+results computed by R, and used them in its answer. A tool could just as well
+query a database, search a corpus, or call an API.
+
+R always runs the functions: the model can only use the tools you register,
+and it decides when to call them and with which arguments. `ellmer`'s
+[tool calling](https://ellmer.tidyverse.org/articles/tool-calling.html)
+article explains how to design good tools.
+
+## Combine the two
+
+`$chat_structured()` does not use registered tools, as in `ellmer`. When you
+need both, gather the context with `$chat()` first, then extract the result
+with `$chat_structured()` in the same conversation:
+
+```{r}
+chat$chat("Use the tool to get the stance counts for FA and PN.")
+
+counts <- chat$chat_structured(
+  "Return the counts you just retrieved.",
+  type = ellmer::type_array(
+    ellmer::type_object(
+      party = ellmer::type_string(),
+      stance = ellmer::type_string(),
+      n = ellmer::type_integer()
+    )
+  )
+)
+
+counts
+#> # A tibble: 4 x 3
+#>   party stance         n
+#>   <chr> <chr>      <int>
+#> 1 FA    MIXED          1
+#> 2 FA    PREVENTIVE     1
+#> 3 PN    MIXED          1
+#> 4 PN    PUNITIVE       2
+```

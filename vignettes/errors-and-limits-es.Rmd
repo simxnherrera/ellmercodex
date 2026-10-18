@@ -1,0 +1,97 @@
+---
+title: "Errores y límites"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Errores y límites}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+> *English version:* `vignette("errors-and-limits", package = "ellmercodex")`.
+
+```{r}
+library(ellmercodex)
+```
+
+El uso del plan de ChatGPT no es lo mismo que la API de OpenAI: es una vista
+previa con sus propios límites, y algunas funciones de la API no están
+disponibles. Este artículo enumera lo que no está soportado y muestra cómo
+manejar errores en código que corre sin supervisión, como scripts
+programados o apps de Shiny.
+
+## Qué no está soportado
+
+`ellmercodex` soporta el uso interactivo de una conversación a la vez
+mediante el objeto `Chat` de `ellmer` (`ellmer` 0.5.0 o posterior). Esto no
+está soportado:
+
+* **`parallel_chat()` y `batch_chat()`.** El uso del plan de ChatGPT solo
+  funciona con streaming, así que las funciones de `ellmer` para trabajo en
+  paralelo y por lotes quedan fuera del alcance soportado.
+* **Argumentos excluidos.** La vista previa rechaza `temperature`, `top_p`,
+  `max_tokens` (`max_output_tokens`), `metadata` y `previous_response_id`,
+  entre otros. `ellmercodex` falla antes de enviar una solicitud que los use.
+* **Conteo de tokens del proveedor y gestión de archivos.** Fallan antes de
+  enviar cualquier solicitud.
+
+Los límites del plan y las funciones soportadas pueden cambiar mientras dure
+la vista previa.
+
+## Maneja los errores
+
+`ellmercodex` emite condiciones estructuradas, así que tu código puede
+reaccionar según el tipo de error sin analizar los mensajes:
+
+```{r}
+tryCatch(
+  chat$chat("Hola"),
+  codex_auth_error = function(error) {
+    message("Falló la autenticación; vuelve a ejecutar codex_login().")
+  },
+  codex_usage_limit_error = function(error) {
+    message("Se alcanzó el límite de uso del plan de ChatGPT; prueba más tarde.")
+  },
+  codex_network_error = function(error) {
+    message("Error de red; revisa tu conexión y vuelve a intentar.")
+  },
+  codex_protocol_changed_error = function(error) {
+    message("Puede que el protocolo haya cambiado; actualiza ellmercodex.")
+  },
+  error = function(error) {
+    message("La solicitud falló: ", conditionMessage(error))
+  }
+)
+```
+
+Maneja primero la condición más específica. Las clases principales son:
+
+* `codex_auth_error`: la clase padre de todos los errores de inicio de sesión
+  y credenciales, como credenciales ausentes, mal formadas o vencidas.
+* Errores al comunicarse con el servicio: `codex_network_error`,
+  `codex_authentication_error`, `codex_rate_limit_error`,
+  `codex_server_error`, `codex_model_unavailable_error`,
+  `codex_malformed_request_error`, `codex_protocol_error` y
+  `codex_protocol_changed_error`, que indica que la forma de la respuesta
+  del servicio puede haber cambiado.
+* Errores del plan de ChatGPT, que también llevan una de las clases
+  anteriores: `codex_usage_limit_error` (se alcanzó el límite de uso del
+  plan; también es una `codex_rate_limit_error`),
+  `codex_usage_unavailable_error` (el uso del plan no está disponible
+  temporalmente; también es una `codex_server_error`) y
+  `codex_plan_ineligible_error` (la cuenta o el espacio de trabajo no es
+  elegible; también es una `codex_authentication_error`).
+* `codex_chat_error` y `codex_chat_argument_error`: problemas del lado de
+  `ellmer`, como un argumento no soportado.
+
+La lista completa está en `?ellmercodex-conditions` (en inglés).
+
+## Qué contienen los mensajes de error
+
+Los mensajes se depuran antes de emitirse. No incluyen a propósito cuerpos de
+respuesta sin procesar, bearer tokens, códigos de autorización, el estado de
+OAuth, identificadores de cuenta ni el contenido del almacén de credenciales,
+así que puedes registrarlos sin riesgo.

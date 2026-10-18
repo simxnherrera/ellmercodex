@@ -1,0 +1,84 @@
+---
+title: "Modelos y esfuerzo de razonamiento"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Modelos y esfuerzo de razonamiento}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+> *English version:* `vignette("models", package = "ellmercodex")`.
+
+```{r}
+library(ellmercodex)
+```
+
+Los modelos que puedes usar dependen de tu plan de ChatGPT, tu cuenta y tu
+espacio de trabajo. Este artículo muestra cómo ver qué hay disponible, elegir
+un modelo y fijar cuánto razona el modelo antes de responder.
+
+## Lista los modelos de tu cuenta
+
+Después de iniciar sesión, `codex_models()` devuelve los modelos listados
+para tu cuenta:
+
+```{r}
+modelos <- codex_models()
+modelos[c("id", "display_name", "default_reasoning_effort",
+          "supported_reasoning_efforts")]
+```
+
+Consulta `https://api.openai.com/v1/models` con el token de tu plan de
+ChatGPT y conserva los modelos marcados con `visibility: "list"`.
+
+El catálogo no siempre incluye todos los modelos que acepta el servicio.
+Puedes pasar un ID de modelo aunque no aparezca en `codex_models()`; el
+servicio valida entonces el modelo y el esfuerzo de razonamiento. Por
+ejemplo, `gpt-6-luna` funciona aunque el catálogo no lo liste.
+
+## Elige un modelo
+
+Sin `model`, `chat_codex()` elige un modelo utilizable del catálogo. Es
+cómodo en uso interactivo, pero la elección puede cambiar con el tiempo. Pasa
+el modelo explícitamente cuando necesites resultados estables:
+
+```{r}
+chat <- chat_codex(model = "gpt-6-luna")
+```
+
+Para usar el mismo modelo en todas partes sin pasarlo cada vez, define
+`ELLMERCODEX_MODEL`, por ejemplo en tu `.Renviron`:
+
+```{r}
+Sys.setenv(ELLMERCODEX_MODEL = "gpt-6-luna")
+chat <- chat_codex()
+```
+
+## Fija el esfuerzo de razonamiento
+
+Los modelos de razonamiento pueden dedicar más o menos esfuerzo antes de
+responder. Más esfuerzo suele dar mejores respuestas a preguntas difíciles,
+pero es más lento y consume más de tu plan. Fíjalo con `effort`:
+
+```{r}
+chat <- chat_codex(model = "gpt-6-luna", effort = "low")
+```
+
+o con los parámetros de `ellmer`, algo útil si tu código ya usa
+`ellmer::params()` con otros proveedores:
+
+```{r}
+chat <- chat_codex(
+  model = "gpt-6-luna",
+  params = ellmer::params(reasoning_effort = "max")
+)
+```
+
+Los niveles que admite cada modelo están en la columna
+`supported_reasoning_efforts` de `codex_models()`. Para los modelos que no
+están en el catálogo, el servicio valida el esfuerzo cuando envías una
+solicitud.
