@@ -1,5 +1,9 @@
 # ellmercodex (development version)
 
+* The README is now in English only. The Spanish introduction moved to a new
+  vignette, `vignette("ellmercodex-es")`.
+* The tool example returns JSON, as `ellmer` 0.5.0 expects from tools.
+
 # ellmercodex 0.2.0
 
 ## Breaking changes: documented "Sign in with ChatGPT" flow
