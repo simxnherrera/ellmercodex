@@ -9,330 +9,24 @@
 
 <!-- badges: end -->
 
-`ellmercodex` te permite usar una cuenta de ChatGPT desde R a través de una
-interfaz de chat de [`ellmer`](https://ellmer.tidyverse.org/): los modelos
-incluidos en tu plan de ChatGPT funcionan como un proveedor más de `ellmer`,
-sin clave de API. Así puedes incorporar modelos de lenguaje a tus flujos de
-análisis en R.
-
-El paquete es independiente de OpenAI y no requiere una clave de API ni el
-CLI de Codex. Usa el flujo documentado por OpenAI
-["Sign in with ChatGPT"](https://developers.openai.com/siwc/token-sharing-open-source)
-para apps de código abierto que se ejecutan localmente, y la API pública de
-Responses. Consulta la
-[documentación técnica](https://github.com/simxnherrera/ellmercodex/blob/main/docs/technical-design.md) para conocer los límites de
-soporte, la implementación y los riesgos actuales.
-
-Los ejemplos de resultados estructurados y herramientas están inspirados en
-el [artículo sobre `ellmercodex` en el blog](https://simxnherrera.github.io/blog/ellmercodex/).
-
-### Instalación
-
-Instala la versión publicada desde CRAN:
-
-```r
-install.packages("ellmercodex")
-```
-
-O la versión de desarrollo desde GitHub usando
-[`pak`](https://pak.r-lib.org/):
-
-```r
-install.packages("pak")
-pak::pak("simxnherrera/ellmercodex")
-```
-
-Si vienes de una versión 0.1.x, vuelve a iniciar sesión con `codex_login()`
-después de actualizar: la forma de autenticación cambió y las credenciales
-anteriores no se conservan.
-
-### Inicio rápido
-
-Comprueba la integración local, inicia sesión y crea una conversación:
-
-```r
-library(ellmercodex)
-
-codex_available()
-auth <- codex_login()
-
-chat <- chat_codex(model = "gpt-6-luna", effort = "low")
-chat$chat("Hola desde R")
-#> ¡Hola! ¿En qué puedo ayudarte con R?
-```
-
-`codex_login()` abre una ventana del navegador para autenticarte con tu
-cuenta de ChatGPT. Como `chat_codex()` devuelve un objeto `Chat` de `ellmer`,
-puedes usar buena parte de su interfaz habitual. Cada llamada a `$chat()`
-mantiene el historial de la conversación; usa `$stream()` si quieres recibir
-la respuesta en streaming:
-
-```r
-chat$stream("Dame tres ideas para nombrar un paquete de R.")
-```
-
-Si ya iniciaste sesión y la credencial está disponible, puedes llamar a
-`chat_codex()` directamente. Con `model = NULL`, el paquete selecciona un
-modelo utilizable del catálogo de tu cuenta autenticada.
-
-### No es solo un chatbot
-
-Como trabajamos con un objeto `Chat` de `ellmer`, podemos pedir resultados
-estructurados en lugar de texto libre. Por ejemplo, podemos clasificar un
-fragmento de un debate parlamentario sobre la regulación del cannabis:
-
-```r
-# Fragmento real de un debate parlamentario sobre regulación del cannabis
-fragmento <- paste(
-  "seguimos pensando que además de la represión y del combate al",
-  "narcotráfico que debe seguir con firmeza y decisión como sociedad",
-  "debemos apostar a dos o tres pilares fundamentales la educación",
-  "la prevención y la rehabilitación"
-)
-
-resultado <- chat$chat_structured(
-  paste(
-    "Clasifica el fragmento como PREVENTIVA, PUNITIVA, MIXTA o",
-    "SIN_ORIENTACIÓN_ATRIBUIBLE.",
-    "Usa MIXTA cuando se defiendan simultáneamente respuestas",
-    "preventivas y punitivas.",
-    "\n\nFragmento:",
-    fragmento
-  ),
-  type = ellmer::type_object(
-    codigo = ellmer::type_enum(c(
-      "PREVENTIVA",
-      "PUNITIVA",
-      "MIXTA",
-      "SIN_ORIENTACIÓN_ATRIBUIBLE"
-    )),
-    justificacion = ellmer::type_string()
-  )
-)
-
-resultado
-#> $codigo
-#> [1] "MIXTA"
-#>
-#> $justificacion
-#> [1] "El fragmento defiende explícitamente la represión y el combate al
-#> narcotráfico, que son respuestas punitivas, y simultáneamente propone la
-#> educación, la prevención y la rehabilitación, de carácter preventivo o
-#> rehabilitador."
-```
-
-Para tareas de análisis de texto, esto permite solicitar directamente una
-estructura que R pueda incorporar a un `data.frame`, validar o analizar.
-
-### Un agente dentro de R
-
-También puedes registrar funciones como herramientas que el modelo puede decidir
-utilizar durante una conversación. Supongamos que tenemos intervenciones
-parlamentarias ya clasificadas:
-
-```r
-intervenciones <- data.frame(
-  partido = c("FA", "FA", "PN", "PN", "PN"),
-  orientacion = c(
-    "PREVENTIVA",
-    "MIXTA",
-    "PUNITIVA",
-    "PUNITIVA",
-    "MIXTA"
-  )
-)
-```
-
-Podemos crear una función de R que resuma las orientaciones observadas para
-un partido y exponerla al modelo como una herramienta de `ellmer`:
-
-```r
-resumir_partido <- function(partido_buscado) {
-  intervenciones |>
-    dplyr::filter(partido == partido_buscado) |>
-    dplyr::count(orientacion)
-}
-
-resumen_tool <- ellmer::tool(
-  resumir_partido,
-  name = "resumir_partido",
-  description = "Cuenta las orientaciones discursivas de un partido.",
-  arguments = list(
-    partido_buscado = ellmer::type_string()
-  )
-)
-
-chat$register_tool(resumen_tool)
-
-chat$chat(
-  paste(
-    "Compara las orientaciones discursivas de FA y PN.",
-    "Usa la herramienta disponible."
-  )
-)
-#> - **FA:** 1 fragmento **MIXTO** y 1 **PREVENTIVO**.
-#> - **PN:** 1 fragmento **MIXTO** y 2 **PUNITIVOS**.
-#>
-#> En comparación, ambos presentan orientación mixta, pero el **FA** también
-#> muestra una orientación preventiva, mientras que el **PN** registra una
-#> mayor presencia de respuestas punitivas.
-```
-
-El modelo puede decidir llamar a `resumir_partido()` para cada partido, recibir
-los resultados producidos por R y utilizarlos para elaborar su respuesta. La
-herramienta podría consultar una base de datos, buscar en un corpus, realizar
-un cálculo, recuperar información de una API o ejecutar cualquier otra
-operación que decidas implementar.
-
-R sigue siendo quien ejecuta las funciones: el modelo solo puede utilizar las
-herramientas que registres explícitamente y decide cuándo usarlas y con qué
-argumentos.
-
-### Elegir un modelo
-
-La disponibilidad de modelos depende de tu cuenta y espacio de trabajo.
-Consulta el catálogo después de iniciar sesión:
-
-```r
-modelos <- codex_models()
-modelos[c("id", "display_name", "default_reasoning_effort",
-          "supported_reasoning_efforts")]
-```
-
-El catálogo no siempre incluye todos los modelos que acepta el servicio.
-Puedes pasar explícitamente un ID aunque no aparezca en `codex_models()`, y
-el servicio validará el modelo y el esfuerzo. Por ejemplo, `gpt-6-luna`
-funciona aunque el catálogo no lo liste.
-
-Puedes seleccionar un modelo y el esfuerzo de razonamiento explícitamente:
-
-```r
-chat <- chat_codex(model = "gpt-6-luna", effort = "max")
-
-chat <- chat_codex(
-  model = "gpt-6-luna",
-  params = ellmer::params(reasoning_effort = "max")
-)
-```
-
-Usa `ELLMERCODEX_MODEL` si quieres establecer un modelo sin pasarlo cada vez:
-
-```r
-Sys.setenv(ELLMERCODEX_MODEL = "gpt-6-luna")
-chat <- chat_codex()
-```
-
-### Chat asíncrono y cancelación
-
-El objeto `Chat` también admite los métodos asíncronos de `ellmer`:
-
-```r
-chat$chat_async("Resume la conversación.")
-
-controller <- ellmer::stream_controller()
-stream <- chat$stream_async(
-  "Escribe un cuento breve.",
-  stream = "content",
-  controller = controller
-)
-# Pasa `stream` a un consumidor asíncrono, como un componente de chat de Shiny.
-# Llama a `controller$cancel()` desde la interfaz para detener la generación.
-```
-
-También puedes enviar imágenes y PDF usando los constructores habituales de
-`ellmer`:
-
-```r
-chat$chat(
-  ellmer::content_image_url("https://example.com/diagram.png"),
-  ellmer::ContentPDF("application/pdf", "<base64-data>", "report.pdf"),
-  "Explica estos archivos."
-)
-```
-
-### Autenticación
-
-`codex_login()` abre el navegador para que elijas tu cuenta y espacio de
-trabajo de ChatGPT y autorices el uso de tu plan. La primera vez se crea un
-registro vinculado a esa cuenta; los inicios de sesión siguientes lo
-reutilizan. La credencial se guarda en `tools::R_user_dir("ellmercodex",
-"config")` (o en `ELLMERCODEX_HOME`) con permisos solo para tu usuario.
-
-Consulta el estado de inicio de sesión con un resumen de cuenta redactado:
-
-```r
-codex_account()
-```
-
-Para una sesión que solo dure lo que dure el proceso, usa:
-
-```r
-  auth <- codex_login(persist = FALSE)
-```
-
-Cierra la sesión, revoca el token y elimina la credencial administrada por
-este paquete con `codex_logout()`. Para cambiar de cuenta o de espacio de
-trabajo, cierra sesión y vuelve a llamar a `codex_login()`:
-
-```r
-codex_logout()
-```
-
-### Una pequeña advertencia
-
-El uso del plan de ChatGPT mediante "Sign in with ChatGPT" es una función en
-vista previa de OpenAI: requiere un plan y un espacio de trabajo elegibles, y
-sus límites y funciones admitidas pueden cambiar. Mientras dure la vista
-previa no se admiten `temperature`, `top_p`, `max_tokens` ni otros argumentos
-que OpenAI excluye; el paquete los rechaza antes de enviar la solicitud.
-
-`ellmercodex` es una integración independiente y no está afiliada a OpenAI ni
-cuenta con su respaldo. El foco actual está puesto en el objeto `Chat` de
-`ellmer` 0.5.0 o posterior y en operaciones interactivas sobre una conversación.
-El conteo de tokens del proveedor, la gestión de archivos y las funciones
-`parallel_chat()` y `batch_chat()` no están soportados.
-
-### Documentación y soporte
-
-Para más detalles:
-
-- La [viñeta de introducción](https://github.com/simxnherrera/ellmercodex/blob/main/vignettes/getting-started.Rmd) recorre la
-  autenticación, los chats, las herramientas, los resultados estructurados y
-  las condiciones.
-- El [diseño técnico](https://github.com/simxnherrera/ellmercodex/blob/main/docs/technical-design.md) documenta la arquitectura, el
-  ciclo de vida de las credenciales, el límite de transporte, la taxonomía de
-  errores y los riesgos de publicación.
-- El [inventario de compatibilidad con `ellmer`](https://github.com/simxnherrera/ellmercodex/blob/main/docs/ellmer-chat-interface.md)
-  registra los métodos `Chat` soportados, sus firmas, los valores devueltos y
-  las transiciones de estado.
-- Para conservar credenciales en una aplicación alojada, consulta la
-  [guía de despliegue en una VM Linux de un solo proceso](https://github.com/simxnherrera/ellmercodex/blob/main/docs/hosted-oauth.md).
-- En una sesión de R, usa `?chat_codex`, `?codex_login`, `?codex_models` y
-  `?ellmercodex-conditions` para consultar la referencia de funciones.
-
-El alcance estable es el uso interactivo de una sola conversación mediante el
-objeto `Chat` público de `ellmer` 0.5.0 o posterior. El conteo de tokens del
-proveedor, la gestión de archivos y las funciones independientes
-`parallel_chat*()` y `batch_chat*()` no están soportadas por este paquete.
-
-## English version
+> **Documentación en español:** consulta la
+> [introducción en español](https://github.com/simxnherrera/ellmercodex/blob/main/vignettes/ellmercodex-es.Rmd)
+> o, después de instalar el paquete, `vignette("ellmercodex-es", package = "ellmercodex")`.
 
 `ellmercodex` lets you use your ChatGPT plan from R through an
 [`ellmer`](https://ellmer.tidyverse.org/) chat interface: the models in your
-plan work as one more `ellmer` provider, with no API key. The normal workflow
-is to sign in, create a chat, and then use the regular `ellmer` Chat methods.
+plan work as one more `ellmer` provider, with no API key. That makes it easy
+to bring language models into your R analysis workflows.
 
 The package is independent of OpenAI and does not require an API key or the
 Codex CLI. It uses OpenAI's documented
 ["Sign in with ChatGPT"](https://developers.openai.com/siwc/token-sharing-open-source)
-flow for open-source, locally hosted apps and the public Responses API. See the
-[technical documentation](https://github.com/simxnherrera/ellmercodex/blob/main/docs/technical-design.md)
-for the implementation, support boundaries, and current risks. ChatGPT plan
-usage is an OpenAI preview: it needs an eligible plan and workspace, and it
-does not accept `temperature`, `top_p`, `max_tokens`, or other excluded
-arguments.
+flow for open-source, locally hosted apps and the public Responses API.
 
-### Install
+The structured-output and tool examples are inspired by the
+[blog post about `ellmercodex`](https://simxnherrera.github.io/blog/ellmercodex/).
+
+## Installation
 
 Install the released version from CRAN:
 
@@ -340,8 +34,7 @@ Install the released version from CRAN:
 install.packages("ellmercodex")
 ```
 
-Or the development version from GitHub with
-[`pak`](https://pak.r-lib.org/):
+Or the development version from GitHub with [`pak`](https://pak.r-lib.org/):
 
 ```r
 install.packages("pak")
@@ -351,7 +44,7 @@ pak::pak("simxnherrera/ellmercodex")
 If you are upgrading from 0.1.x, sign in again with `codex_login()`: the
 authentication flow changed and earlier credentials are not kept.
 
-### Quick start
+## Quick start
 
 Check the local integration, sign in, and create a chat:
 
@@ -361,27 +54,118 @@ library(ellmercodex)
 codex_available()
 auth <- codex_login()
 
-chat <- chat_codex(
-  system_prompt = "Be concise and helpful.",
-  model = "gpt-6-luna"
-)
-
-chat$chat("Explain why reproducible examples matter in R packages.")
-chat$chat("Now summarize that in one sentence.")
+chat <- chat_codex(model = "gpt-6-luna", effort = "low")
+chat$chat("Hello from R")
+#> Hello! What are you working on in R?
 ```
 
-The returned object is an `ellmer` `Chat`, so each `$chat()` call keeps the
-conversation history. Use `$stream()` when you want streamed output:
+`codex_login()` opens a browser window where you sign in with your ChatGPT
+account. Because `chat_codex()` returns an `ellmer` `Chat` object, most of the
+usual `ellmer` interface works: each `$chat()` call keeps the conversation
+history, and `$stream()` streams the response:
 
 ```r
 chat$stream("Give me three ideas for naming an R package.")
 ```
 
-If you have already signed in and the credential is available, you can call
-`chat_codex()` directly. With `model = NULL`, the package selects a usable
-model from the authenticated account catalog.
+Once you have signed in, later sessions can call `chat_codex()` directly. With
+`model = NULL`, the package picks a usable model from your account's catalog.
 
-### Choose a model
+## More than a chatbot
+
+Because you are working with an `ellmer` `Chat`, you can ask for structured
+results instead of free text. For example, you can classify an excerpt from a
+Uruguayan parliamentary debate on cannabis regulation:
+
+```r
+# A real excerpt from a parliamentary debate on cannabis regulation
+excerpt <- paste(
+  "seguimos pensando que además de la represión y del combate al",
+  "narcotráfico que debe seguir con firmeza y decisión como sociedad",
+  "debemos apostar a dos o tres pilares fundamentales la educación",
+  "la prevención y la rehabilitación"
+)
+
+result <- chat$chat_structured(
+  paste(
+    "Classify the excerpt as PREVENTIVE, PUNITIVE, MIXED, or NO_CLEAR_STANCE.",
+    "Use MIXED when it argues for preventive and punitive responses at the",
+    "same time. Answer in English.",
+    "\n\nExcerpt:",
+    excerpt
+  ),
+  type = ellmer::type_object(
+    stance = ellmer::type_enum(c(
+      "PREVENTIVE",
+      "PUNITIVE",
+      "MIXED",
+      "NO_CLEAR_STANCE"
+    )),
+    rationale = ellmer::type_string()
+  )
+)
+
+result
+#> $stance
+#> [1] "MIXED"
+#>
+#> $rationale
+#> [1] "The excerpt supports firm repression and combating drug trafficking,
+#> alongside education, prevention, and rehabilitation."
+```
+
+For text analysis, this gives you a structure that R can put into a
+`data.frame`, validate, or analyze.
+
+## An agent inside R
+
+You can also register R functions as tools that the model may decide to call
+during a conversation. Suppose you have already classified some speeches:
+
+```r
+speeches <- data.frame(
+  party = c("FA", "FA", "PN", "PN", "PN"),
+  stance = c("PREVENTIVE", "MIXED", "PUNITIVE", "PUNITIVE", "MIXED")
+)
+```
+
+Write an R function that summarizes one party's stances and expose it to the
+model as an `ellmer` tool:
+
+```r
+summarize_party <- function(party_name) {
+  speeches |>
+    dplyr::filter(party == party_name) |>
+    dplyr::count(stance) |>
+    jsonlite::toJSON()
+}
+
+summary_tool <- ellmer::tool(
+  summarize_party,
+  name = "summarize_party",
+  description = "Count the policy stances in a party's speeches.",
+  arguments = list(party_name = ellmer::type_string())
+)
+
+chat$register_tool(summary_tool)
+
+chat$chat("Compare the policy stances of FA and PN. Use the available tool.")
+#> FA has one **MIXED** stance and one **PREVENTIVE** stance. PN has one
+#> **MIXED** stance and two **PUNITIVE** stances. Both have a mixed stance,
+#> while FA's other stance is preventive and PN's are punitive.
+```
+
+The model can call `summarize_party()` for each party, receive the results
+computed by R, and use them in its answer. A tool could just as well query a
+database, search a corpus, run a calculation, or call an API.
+
+R still runs the functions: the model can only use the tools you register
+explicitly, and it decides when to call them and with which arguments.
+Structured requests do not use registered tools, as in `ellmer`; gather
+tool-assisted context with `$chat()` first, then extract the result with
+`$chat_structured()`.
+
+## Choose a model
 
 Model availability depends on your account and workspace. Query the catalog
 after signing in:
@@ -397,13 +181,7 @@ pass a model ID explicitly even when it is absent from `codex_models()`, and
 the service validates the model and reasoning effort. For example,
 `gpt-6-luna` works although the catalog does not list it.
 
-Select a model explicitly when needed:
-
-```r
-chat <- chat_codex(model = "gpt-6-luna")
-```
-
-Reasoning effort can be supplied directly or through ellmer-style parameters:
+Reasoning effort can be supplied directly or through `ellmer` parameters:
 
 ```r
 chat <- chat_codex(model = "gpt-6-luna", effort = "max")
@@ -414,56 +192,16 @@ chat <- chat_codex(
 )
 ```
 
-Use `ELLMERCODEX_MODEL` when you want an explicit model without passing
-`model` each time:
+Set `ELLMERCODEX_MODEL` to use a model without passing `model` each time:
 
 ```r
 Sys.setenv(ELLMERCODEX_MODEL = "gpt-6-luna")
 chat <- chat_codex()
 ```
 
-### Tool calling
+## Async chat, cancellation, and files
 
-Register tools with the normal `ellmer` API:
-
-```r
-weather_tool <- ellmer::tool(
-  function(city) paste("Sunny in", city),
-  name = "get_weather",
-  description = "Get the current weather for a city.",
-  arguments = list(city = ellmer::type_string())
-)
-
-chat <- chat_codex(model = "gpt-6-luna")
-chat$register_tool(weather_tool)
-chat$chat("What is the weather in Montevideo?")
-```
-
-Tool requests and results remain in the conversation history as the usual
-`ellmer` content objects.
-
-### Structured output
-
-Use ellmer's type system with `$chat_structured()`:
-
-```r
-chat <- chat_codex(model = "gpt-6-luna")
-chat$chat_structured(
-  "My name is Susan and I'm 13 years old.",
-  type = ellmer::type_object(
-    name = ellmer::type_string(),
-    age = ellmer::type_integer()
-  )
-)
-```
-
-As in ellmer, structured requests do not use registered tools. Gather any
-tool-assisted context with `$chat()` first, then extract the result with
-`$chat_structured()`.
-
-### Async chat and cancellation
-
-The returned chat also supports ellmer's asynchronous methods:
+The returned chat also supports `ellmer`'s asynchronous methods:
 
 ```r
 chat$chat_async("Summarize the conversation.")
@@ -478,23 +216,23 @@ stream <- chat$stream_async(
 # Call `controller$cancel()` from the UI to stop generation.
 ```
 
-Images and PDFs can be passed with ellmer's normal content constructors:
+Images and PDFs work with `ellmer`'s usual content helpers:
 
 ```r
 chat$chat(
-  ellmer::content_image_url("https://example.com/diagram.png"),
-  ellmer::ContentPDF("application/pdf", "<base64-data>", "report.pdf"),
+  ellmer::content_image_file("plot.png"),
+  ellmer::content_pdf_file("report.pdf"),
   "Explain these files."
 )
 ```
 
-### Authentication
+## Authentication
 
 `codex_login()` opens the browser so you can choose your ChatGPT account and
 workspace and allow ChatGPT plan usage. The first sign-in creates a
 registration bound to that account; later sign-ins reuse it. The credential is
-stored in `tools::R_user_dir("ellmercodex", "config")` (or `ELLMERCODEX_HOME`)
-with owner-only permissions.
+stored in `tools::R_user_dir("ellmercodex", "config")` (or
+`ELLMERCODEX_HOME`) with owner-only permissions.
 
 Inspect sign-in state with a redacted account summary:
 
@@ -502,37 +240,46 @@ Inspect sign-in state with a redacted account summary:
 codex_account()
 ```
 
-For a process-only session, use:
+For a session that lasts only as long as the R process:
 
 ```r
 auth <- codex_login(persist = FALSE)
 ```
 
-Sign out, revoke the token, and remove the credential owned by this package
-with `codex_logout()`. To switch accounts or workspaces, sign out and call
-`codex_login()` again:
+`codex_logout()` signs out, revokes the token, and removes the credential
+stored by this package. To switch accounts or workspaces, sign out and call
+`codex_login()` again.
 
-```r
-codex_logout()
-```
+## Limitations
 
-### Documentation and support
+ChatGPT plan usage through "Sign in with ChatGPT" is an OpenAI preview: it
+needs an eligible plan and workspace, and its limits and features may change.
+During the preview, `temperature`, `top_p`, `max_tokens`, and other arguments
+OpenAI excludes are not accepted; the package rejects them before sending a
+request.
 
-The README is intentionally focused on installation and user-facing workflows.
-For more detail:
+The supported scope is interactive, single-conversation use of the public
+`ellmer` `Chat` object (`ellmer` 0.5.0 or later). Provider token counting,
+file management, and the separate `parallel_chat*()` and `batch_chat*()`
+helpers are not supported.
 
-- The [getting-started vignette](https://github.com/simxnherrera/ellmercodex/blob/main/vignettes/getting-started.Rmd) walks through
-  authentication, chats, tools, structured output, and conditions.
-- The [technical design](https://github.com/simxnherrera/ellmercodex/blob/main/docs/technical-design.md) documents the architecture,
-  credential lifecycle, transport boundary, error taxonomy, and release risks.
-- The [ellmer compatibility inventory](https://github.com/simxnherrera/ellmercodex/blob/main/docs/ellmer-chat-interface.md) records
-  the supported Chat methods, signatures, return shapes, and state transitions.
-- For persistent credentials in a hosted app, see the
+`ellmercodex` is an independent integration and is not affiliated with or
+endorsed by OpenAI.
+
+## Learn more
+
+- The [getting-started vignette](https://cran.r-project.org/web/packages/ellmercodex/vignettes/getting-started.html)
+  walks through authentication, chats, tools, structured output, and error
+  handling.
+- The [technical design](https://github.com/simxnherrera/ellmercodex/blob/main/docs/technical-design.md)
+  documents the architecture, credential lifecycle, transport boundary, error
+  taxonomy, and release risks.
+- The [`ellmer` compatibility inventory](https://github.com/simxnherrera/ellmercodex/blob/main/docs/ellmer-chat-interface.md)
+  records the supported `Chat` methods, signatures, return values, and state
+  transitions.
+- **Experimental:** for persistent credentials in your own app on your own
+  VM, see the
   [single-process Linux VM guide](https://github.com/simxnherrera/ellmercodex/blob/main/docs/hosted-oauth.md).
-- In an R session, use `?chat_codex`, `?codex_login`, `?codex_models`, and
+  Apps that serve other people need OpenAI's approval first.
+- In R, see `?chat_codex`, `?codex_login`, `?codex_models`, and
   `?ellmercodex-conditions` for the function reference.
-
-The stable scope is interactive, single-conversation use of the public
-`ellmer` `Chat` object (0.5.0 or later). Provider token counting and file
-management, as well as the separate `parallel_chat*()` and `batch_chat*()`
-helpers, are unsupported by this package.

@@ -1,5 +1,8 @@
 # Persist ChatGPT credentials on a single-process Linux VM
 
+> **Experimental.** This setup is not part of the package's supported scope
+> and may change without notice.
+
 This guide follows OpenAI's guidance for self-hosted VMs
 (<https://developers.openai.com/siwc/token-sharing-open-source/self-hosted-vms>).
 It covers **your own** R application on **your own** VM, signed in with your
