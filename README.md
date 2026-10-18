@@ -10,7 +10,7 @@
 <!-- badges: end -->
 
 > **Documentación en español:** consulta la
-> [introducción en español](https://github.com/simxnherrera/ellmercodex/blob/main/vignettes/ellmercodex-es.Rmd)
+> [introducción en español](https://simxnherrera.github.io/ellmercodex/articles/ellmercodex-es.html)
 > o, después de instalar el paquete, `vignette("ellmercodex-es", package = "ellmercodex")`.
 
 `ellmercodex` lets you use your ChatGPT plan from R through an

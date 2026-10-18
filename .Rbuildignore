@@ -13,3 +13,5 @@
 ^poc$
 ^\.git$
 ^\.claude$
+^_pkgdown\.yml$
+^_site$
