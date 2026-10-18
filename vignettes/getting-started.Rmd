@@ -89,8 +89,10 @@ OpenAI requires before the first sign-in. Access tokens last an hour and are
 refreshed automatically; refreshes are serialized across R processes because
 refresh tokens rotate. The first sign-in creates a registration bound to the
 chosen account and workspace, and later sign-ins reuse it. To use another
-account or workspace, call `codex_logout()` first. For an app hosted on a
-Linux VM, follow the [single-process deployment guide](https://github.com/simxnherrera/ellmercodex/blob/main/docs/hosted-oauth.md).
+account or workspace, call `codex_logout()` first. For your own app on your
+own Linux VM, the experimental
+[single-process deployment guide](https://github.com/simxnherrera/ellmercodex/blob/main/docs/hosted-oauth.md)
+describes a setup; apps that serve other people need OpenAI's approval first.
 
 ## Create a text chat
 

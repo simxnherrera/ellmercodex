@@ -277,7 +277,9 @@ endorsed by OpenAI.
 - The [`ellmer` compatibility inventory](https://github.com/simxnherrera/ellmercodex/blob/main/docs/ellmer-chat-interface.md)
   records the supported `Chat` methods, signatures, return values, and state
   transitions.
-- For persistent credentials in a hosted app, see the
+- **Experimental:** for persistent credentials in your own app on your own
+  VM, see the
   [single-process Linux VM guide](https://github.com/simxnherrera/ellmercodex/blob/main/docs/hosted-oauth.md).
+  Apps that serve other people need OpenAI's approval first.
 - In R, see `?chat_codex`, `?codex_login`, `?codex_models`, and
   `?ellmercodex-conditions` for the function reference.
