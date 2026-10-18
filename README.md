@@ -3,7 +3,8 @@
 <!-- badges: start -->
 
 [![R-CMD-check](https://github.com/simxnherrera/ellmercodex/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/simxnherrera/ellmercodex/actions/workflows/R-CMD-check.yaml)
-[![Version](https://img.shields.io/github/v/tag/simxnherrera/ellmercodex?label=version)](https://github.com/simxnherrera/ellmercodex/tags)
+[![CRAN status](https://www.r-pkg.org/badges/version/ellmercodex)](https://CRAN.R-project.org/package=ellmercodex)
+[![CRAN downloads](https://cranlogs.r-pkg.org/badges/grand-total/ellmercodex)](https://CRAN.R-project.org/package=ellmercodex)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/simxnherrera/ellmercodex/blob/main/LICENSE.md)
 
 <!-- badges: end -->
@@ -27,7 +28,13 @@ el [artículo sobre `ellmercodex` en el blog](https://simxnherrera.github.io/blo
 
 ### Instalación
 
-El paquete todavía no está en CRAN. Instálalo desde GitHub usando
+Instala la versión publicada desde CRAN:
+
+```r
+install.packages("ellmercodex")
+```
+
+O la versión de desarrollo desde GitHub usando
 [`pak`](https://pak.r-lib.org/):
 
 ```r
@@ -327,7 +334,13 @@ arguments.
 
 ### Install
 
-The package is not on CRAN yet. Install it from GitHub with
+Install the released version from CRAN:
+
+```r
+install.packages("ellmercodex")
+```
+
+Or the development version from GitHub with
 [`pak`](https://pak.r-lib.org/):
 
 ```r
