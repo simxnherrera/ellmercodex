@@ -2,10 +2,17 @@ pandoc: 3.8.3
 pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
+  authentication-es: authentication-es.html
+  authentication: authentication.html
   ellmercodex-es: ellmercodex-es.html
-  getting-started-es: getting-started-es.html
-  getting-started: getting-started.html
-last_built: 2026-10-18T19:12Z
+  ellmercodex: ellmercodex.html
+  errors-and-limits-es: errors-and-limits-es.html
+  errors-and-limits: errors-and-limits.html
+  models-es: models-es.html
+  models: models.html
+  text-analysis-es: text-analysis-es.html
+  text-analysis: text-analysis.html
+last_built: 2026-10-18T22:17Z
 urls:
   reference: https://simxnherrera.github.io/ellmercodex/reference
   article: https://simxnherrera.github.io/ellmercodex/articles

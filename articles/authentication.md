@@ -1,0 +1,112 @@
+# Signing in and credentials
+
+> *Versión en español:*
+> [`vignette("authentication-es", package = "ellmercodex")`](https://simxnherrera.github.io/ellmercodex/articles/authentication-es.md).
+
+``` r
+
+library(ellmercodex)
+```
+
+`ellmercodex` never signs in on its own. Loading the package, running
+its examples, building its vignettes, and running its tests do not open
+a browser, read stored credentials, or make network requests.
+Authentication happens only when you call
+[`codex_login()`](https://simxnherrera.github.io/ellmercodex/reference/codex_login.md).
+
+## How sign-in works
+
+``` r
+
+auth <- codex_login()
+codex_account(auth)
+```
+
+[`codex_login()`](https://simxnherrera.github.io/ellmercodex/reference/codex_login.md)
+opens a browser where you choose a ChatGPT account and workspace and
+allow ChatGPT plan usage. Behind the scenes it:
+
+- receives the callback on `http://127.0.0.1:1455/callback` (set
+  `ELLMERCODEX_CALLBACK_PORT` to use another port);
+- checks the OAuth state and exchanges the PKCE-protected code using the
+  client ID that OpenAI issued for this registration;
+- verifies the ID token and checks that the `chatgpt.tokens.use.direct`
+  scope was granted.
+
+The first sign-in creates a registration bound to the chosen account and
+workspace; later sign-ins reuse it.
+
+[`codex_account()`](https://simxnherrera.github.io/ellmercodex/reference/codex_account.md)
+shows a summary of the sign-in state. It never prints tokens and redacts
+the account identifier.
+
+## Where credentials are stored
+
+Credentials are saved in `credentials.json` inside
+`tools::R_user_dir("ellmercodex", "config")`. The file is written
+atomically, with permissions for your user only. `ellmercodex` does not
+use the macOS Keychain or another operating-system keyring, and it never
+reads the Codex CLI’s credential file or another application’s session.
+
+To use another private directory, set `ELLMERCODEX_HOME` before the
+first credential access:
+
+``` r
+
+Sys.setenv(ELLMERCODEX_HOME = "/path/to/a/private/directory")
+```
+
+The same directory holds `host-id`, a stable, opaque host identifier
+that OpenAI requires before the first sign-in.
+
+Access tokens last an hour and are refreshed automatically. Refresh
+tokens rotate, so refreshes are serialized across R processes that share
+the directory.
+
+## Sign in for one session only
+
+Set `persist = FALSE` to keep the credential only in the current R
+process:
+
+``` r
+
+auth <- codex_login(persist = FALSE)
+chat <- chat_codex()
+```
+
+The tokens are never written to disk, and
+[`codex_logout()`](https://simxnherrera.github.io/ellmercodex/reference/codex_logout.md)
+clears them.
+
+## Sign out or switch accounts
+
+``` r
+
+codex_logout()
+```
+
+[`codex_logout()`](https://simxnherrera.github.io/ellmercodex/reference/codex_logout.md)
+revokes the refresh token with OpenAI (pass `revoke = FALSE` to skip
+this), then removes the package’s credential file and any process-only
+credential. It keeps the host identifier and does not touch credentials
+that belong to the Codex CLI or other clients.
+
+To use another account or workspace, sign out and call
+[`codex_login()`](https://simxnherrera.github.io/ellmercodex/reference/codex_login.md)
+again.
+
+## Upgrading from 0.1.x
+
+Version 0.2.0 moved to OpenAI’s documented “Sign in with ChatGPT” flow.
+Credentials from 0.1.x are not kept, so sign in again with
+[`codex_login()`](https://simxnherrera.github.io/ellmercodex/reference/codex_login.md)
+after upgrading.
+
+## Hosted apps (experimental)
+
+OpenAI limits ChatGPT plan usage to open-source and locally hosted apps.
+For your own app on your own Linux VM, the experimental [single-process
+deployment
+guide](https://github.com/simxnherrera/ellmercodex/blob/main/docs/hosted-oauth.md)
+describes one setup. Apps that serve other people need OpenAI’s approval
+first.

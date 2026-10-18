@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Introducción a ellmercodex (en español) • ellmercodex</title>
+<title>Primeros pasos con ellmercodex • ellmercodex</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -17,7 +17,7 @@
 <link href="../deps/Source_Code_Pro-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Introducción a ellmercodex (en español)">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Primeros pasos con ellmercodex">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -36,18 +36,27 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="../articles/ellmercodex.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/getting-started.html">Getting started</a></li>
+<li><a class="dropdown-item" href="../articles/authentication.html">Signing in and credentials</a></li>
+    <li><a class="dropdown-item" href="../articles/models.html">Models and reasoning effort</a></li>
+    <li><a class="dropdown-item" href="../articles/text-analysis.html">Analyzing text</a></li>
+    <li><a class="dropdown-item" href="../articles/errors-and-limits.html">Errors and limits</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul>
 </li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-espa-ol" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Español</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-espa-ol">
-<li><a class="dropdown-item" href="../articles/ellmercodex-es.html">Introducción</a></li>
-    <li><a class="dropdown-item" href="../articles/getting-started-es.html">Primeros pasos</a></li>
+<li><a class="dropdown-item" href="../articles/ellmercodex-es.html">Primeros pasos</a></li>
+    <li><a class="dropdown-item" href="../articles/authentication-es.html">Inicio de sesión y credenciales</a></li>
+    <li><a class="dropdown-item" href="../articles/models-es.html">Modelos y esfuerzo de razonamiento</a></li>
+    <li><a class="dropdown-item" href="../articles/text-analysis-es.html">Análisis de texto</a></li>
+    <li><a class="dropdown-item" href="../articles/errors-and-limits-es.html">Errores y límites</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -69,7 +78,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>Introducción a ellmercodex (en español)</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Primeros pasos con ellmercodex</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/simxnherrera/ellmercodex/blob/main/vignettes/ellmercodex-es.Rmd" class="external-link"><code>vignettes/ellmercodex-es.Rmd</code></a></small>
@@ -79,267 +88,120 @@
     
     
 <blockquote>
-<p><em>English version:</em> <a href="https://simxnherrera.github.io/ellmercodex/">README</a>.</p>
+<p><em>English version:</em>
+<code><a href="../articles/ellmercodex.html">vignette("ellmercodex", package = "ellmercodex")</a></code>.</p>
 </blockquote>
-<p><code>ellmercodex</code> te permite usar una cuenta de ChatGPT desde
-R a través de una interfaz de chat de <a href="https://ellmer.tidyverse.org/" class="external-link"><code>ellmer</code></a>: los
-modelos incluidos en tu plan de ChatGPT funcionan como un proveedor más
-de <code>ellmer</code>, sin clave de API. Así puedes incorporar modelos
-de lenguaje a tus flujos de análisis en R.</p>
-<p>El paquete es independiente de OpenAI y no requiere una clave de API
-ni el CLI de Codex. Usa el flujo documentado por OpenAI <a href="https://developers.openai.com/siwc/token-sharing-open-source" class="external-link">“Sign
+<p><code>ellmercodex</code> te permite usar tu plan de ChatGPT desde R
+como un proveedor de <a href="https://ellmer.tidyverse.org/" class="external-link"><code>ellmer</code></a>. Inicias
+sesión una vez con tu cuenta de ChatGPT y <code><a href="../reference/chat_codex.html">chat_codex()</a></code> te
+da un objeto <code>Chat</code> de <code>ellmer</code> común y corriente:
+sin clave de API y sin el CLI de Codex.</p>
+<p>Usa el flujo documentado por OpenAI <a href="https://developers.openai.com/siwc/token-sharing-open-source" class="external-link">“Sign
 in with ChatGPT”</a> para apps de código abierto que se ejecutan
-localmente, y la API pública de Responses.</p>
-<p>Los ejemplos de esta viñeta necesitan una sesión iniciada, así que no
-se ejecutan al construirla. Las salidas que se muestran provienen de una
-sesión real.</p>
+localmente, y la API pública de Responses. El uso del plan de ChatGPT es
+una vista previa de OpenAI, y <code>ellmercodex</code> no está afiliado
+a OpenAI ni cuenta con su respaldo.</p>
+<p>Los ejemplos de este artículo necesitan una sesión iniciada, así que
+no se ejecutan al construirlo. Las salidas que se muestran provienen de
+una sesión real.</p>
 <div class="section level2">
-<h2 id="inicio-rápido">Inicio rápido<a class="anchor" aria-label="anchor" href="#inicio-r%C3%A1pido"></a>
+<h2 id="comprueba-tu-instalación">Comprueba tu instalación<a class="anchor" aria-label="anchor" href="#comprueba-tu-instalaci%C3%B3n"></a>
 </h2>
-<p>Comprueba la integración local, inicia sesión y crea una
-conversación:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://simxnherrera.github.io/ellmercodex/">ellmercodex</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/codex_available.html">codex_available</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">auth</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/codex_login.html">codex_login</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chat_codex.html">chat_codex</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span>, effort <span class="op">=</span> <span class="st">"low"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p><code><a href="../reference/codex_available.html">codex_available()</a></code> comprueba que estén instaladas las
+dependencias y la versión de <code>ellmer</code> soportada. No lee tus
+credenciales ni se conecta a la red, así que <code>TRUE</code> no
+garantiza que una solicitud vaya a funcionar.</p>
+</div>
+<div class="section level2">
+<h2 id="inicia-sesión">Inicia sesión<a class="anchor" aria-label="anchor" href="#inicia-sesi%C3%B3n"></a>
+</h2>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/codex_login.html">codex_login</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/codex_login.html">codex_login()</a></code> abre tu navegador, donde eliges una cuenta
+y un espacio de trabajo de ChatGPT y autorizas el uso del plan. La
+credencial se guarda de forma privada y se renueva sola, así que solo
+necesitas hacerlo una vez por equipo.
+<code><a href="../articles/authentication-es.html">vignette("authentication-es")</a></code> explica dónde se guarda y
+cómo cerrar sesión o cambiar de cuenta.</p>
+</div>
+<div class="section level2">
+<h2 id="tu-primer-chat">Tu primer chat<a class="anchor" aria-label="anchor" href="#tu-primer-chat"></a>
+</h2>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chat_codex.html">chat_codex</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span>, effort <span class="op">=</span> <span class="st">"low"</span><span class="op">)</span></span>
 <span><span class="va">chat</span><span class="op">$</span><span class="fu">chat</span><span class="op">(</span><span class="st">"Hola desde R"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ¡Hola! ¿En qué puedo ayudarte con R?</span></span></code></pre></div>
-<p><code><a href="../reference/codex_login.html">codex_login()</a></code> abre una ventana del navegador para
-autenticarte con tu cuenta de ChatGPT. Como <code><a href="../reference/chat_codex.html">chat_codex()</a></code>
-devuelve un objeto <code>Chat</code> de <code>ellmer</code>, puedes usar
-buena parte de su interfaz habitual. Cada llamada a <code>$chat()</code>
-mantiene el historial de la conversación; usa <code>$stream()</code> si
-quieres recibir la respuesta en streaming:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">chat</span><span class="op">$</span><span class="fu">stream</span><span class="op">(</span><span class="st">"Dame tres ideas para nombrar un paquete de R."</span><span class="op">)</span></span></code></pre></div>
-<p>Si ya iniciaste sesión y la credencial está disponible, puedes llamar
-a <code><a href="../reference/chat_codex.html">chat_codex()</a></code> directamente. Con <code>model = NULL</code>,
-el paquete selecciona un modelo utilizable del catálogo de tu cuenta
-autenticada.</p>
-</div>
-<div class="section level2">
-<h2 id="no-es-solo-un-chatbot">No es solo un chatbot<a class="anchor" aria-label="anchor" href="#no-es-solo-un-chatbot"></a>
-</h2>
-<p>Como trabajamos con un objeto <code>Chat</code> de
-<code>ellmer</code>, podemos pedir resultados estructurados en lugar de
-texto libre. Por ejemplo, podemos clasificar un fragmento de un debate
-parlamentario sobre la regulación del cannabis:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Fragmento real de un debate parlamentario sobre regulación del cannabis</span></span>
-<span><span class="va">fragmento</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
-<span>  <span class="st">"seguimos pensando que además de la represión y del combate al"</span>,</span>
-<span>  <span class="st">"narcotráfico que debe seguir con firmeza y decisión como sociedad"</span>,</span>
-<span>  <span class="st">"debemos apostar a dos o tres pilares fundamentales la educación"</span>,</span>
-<span>  <span class="st">"la prevención y la rehabilitación"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">resultado</span> <span class="op">&lt;-</span> <span class="va">chat</span><span class="op">$</span><span class="fu">chat_structured</span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
-<span>    <span class="st">"Clasifica el fragmento como PREVENTIVA, PUNITIVA, MIXTA o"</span>,</span>
-<span>    <span class="st">"SIN_ORIENTACIÓN_ATRIBUIBLE."</span>,</span>
-<span>    <span class="st">"Usa MIXTA cuando se defiendan simultáneamente respuestas"</span>,</span>
-<span>    <span class="st">"preventivas y punitivas."</span>,</span>
-<span>    <span class="st">"\n\nFragmento:"</span>,</span>
-<span>    <span class="va">fragmento</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  type <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_object</a></span><span class="op">(</span></span>
-<span>    codigo <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_enum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>      <span class="st">"PREVENTIVA"</span>,</span>
-<span>      <span class="st">"PUNITIVA"</span>,</span>
-<span>      <span class="st">"MIXTA"</span>,</span>
-<span>      <span class="st">"SIN_ORIENTACIÓN_ATRIBUIBLE"</span></span>
-<span>    <span class="op">)</span><span class="op">)</span>,</span>
-<span>    justificacion <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">resultado</span></span>
-<span><span class="co">#&gt; $codigo</span></span>
-<span><span class="co">#&gt; [1] "MIXTA"</span></span>
-<span><span class="co">#&gt;</span></span>
-<span><span class="co">#&gt; $justificacion</span></span>
-<span><span class="co">#&gt; [1] "El fragmento defiende explícitamente la represión y el combate al</span></span>
-<span><span class="co">#&gt; narcotráfico, que son respuestas punitivas, y simultáneamente propone la</span></span>
-<span><span class="co">#&gt; educación, la prevención y la rehabilitación, de carácter preventivo o</span></span>
-<span><span class="co">#&gt; rehabilitador."</span></span></code></pre></div>
-<p>Para tareas de análisis de texto, esto permite solicitar directamente
-una estructura que R pueda incorporar a un <code>data.frame</code>,
-validar o analizar.</p>
-</div>
-<div class="section level2">
-<h2 id="un-agente-dentro-de-r">Un agente dentro de R<a class="anchor" aria-label="anchor" href="#un-agente-dentro-de-r"></a>
-</h2>
-<p>También puedes registrar funciones como herramientas que el modelo
-puede decidir utilizar durante una conversación. Supongamos que tenemos
-intervenciones parlamentarias ya clasificadas:</p>
+<p>Cada llamada a <code>$chat()</code> se suma al historial de la
+conversación, así que las preguntas siguientes tienen el contexto
+anterior. Usa <code>$stream()</code> para ver la respuesta a medida que
+se genera:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">intervenciones</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  partido <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"FA"</span>, <span class="st">"FA"</span>, <span class="st">"PN"</span>, <span class="st">"PN"</span>, <span class="st">"PN"</span><span class="op">)</span>,</span>
-<span>  orientacion <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"PREVENTIVA"</span>, <span class="st">"MIXTA"</span>, <span class="st">"PUNITIVA"</span>, <span class="st">"PUNITIVA"</span>, <span class="st">"MIXTA"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>Podemos crear una función de R que resuma las orientaciones
-observadas para un partido y exponerla al modelo como una herramienta de
-<code>ellmer</code>. La función devuelve JSON, que es lo que
-<code>ellmer</code> espera de una herramienta:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">resumir_partido</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">partido_buscado</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">intervenciones</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu">dplyr</span><span class="fu">::</span><span class="fu">filter</span><span class="op">(</span><span class="va">partido</span> <span class="op">==</span> <span class="va">partido_buscado</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu">dplyr</span><span class="fu">::</span><span class="fu">count</span><span class="op">(</span><span class="va">orientacion</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu">jsonlite</span><span class="fu">::</span><span class="fu"><a href="https://jeroen.r-universe.dev/jsonlite/reference/fromJSON.html" class="external-link">toJSON</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="va">resumen_tool</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/tool.html" class="external-link">tool</a></span><span class="op">(</span></span>
-<span>  <span class="va">resumir_partido</span>,</span>
-<span>  name <span class="op">=</span> <span class="st">"resumir_partido"</span>,</span>
-<span>  description <span class="op">=</span> <span class="st">"Cuenta las orientaciones discursivas de un partido."</span>,</span>
-<span>  arguments <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>partido_buscado <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/type_boolean.html" class="external-link">type_string</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">chat</span><span class="op">$</span><span class="fu">register_tool</span><span class="op">(</span><span class="va">resumen_tool</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">chat</span><span class="op">$</span><span class="fu">chat</span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
-<span>    <span class="st">"Compara las orientaciones discursivas de FA y PN."</span>,</span>
-<span>    <span class="st">"Usa la herramienta disponible."</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt; FA presenta una orientación **mixta** y una **preventiva** (una observación</span></span>
-<span><span class="co">#&gt; de cada tipo). PN presenta una orientación **mixta** y dos **punitivas**.</span></span>
-<span><span class="co">#&gt; En común, ambos tienen una orientación mixta; la diferencia es que FA</span></span>
-<span><span class="co">#&gt; incluye una preventiva, mientras que PN se inclina más hacia lo punitivo.</span></span></code></pre></div>
-<p>El modelo puede decidir llamar a <code>resumir_partido()</code> para
-cada partido, recibir los resultados producidos por R y utilizarlos para
-elaborar su respuesta. La herramienta podría consultar una base de
-datos, buscar en un corpus, realizar un cálculo, recuperar información
-de una API o ejecutar cualquier otra operación que decidas
-implementar.</p>
-<p>R sigue siendo quien ejecuta las funciones: el modelo solo puede
-utilizar las herramientas que registres explícitamente y decide cuándo
-usarlas y con qué argumentos. Como en <code>ellmer</code>,
-<code>$chat_structured()</code> no usa las herramientas registradas:
-reúne primero el contexto con <code>$chat()</code> y después extrae el
-resultado con <code>$chat_structured()</code>.</p>
+<code class="sourceCode R"><span><span class="va">chat</span><span class="op">$</span><span class="fu">stream</span><span class="op">(</span><span class="st">"Dame tres ideas para nombrar un paquete de R."</span><span class="op">)</span></span></code></pre></div>
+<p>Si no indicas <code>model</code>, <code><a href="../reference/chat_codex.html">chat_codex()</a></code> elige un
+modelo utilizable del catálogo de tu cuenta.
+<code><a href="../articles/models-es.html">vignette("models-es")</a></code> explica cómo listar los modelos,
+elegir uno y fijar el esfuerzo de razonamiento.</p>
 </div>
 <div class="section level2">
-<h2 id="elegir-un-modelo">Elegir un modelo<a class="anchor" aria-label="anchor" href="#elegir-un-modelo"></a>
+<h2 id="es-un-chat-de-ellmer">Es un Chat de ellmer<a class="anchor" aria-label="anchor" href="#es-un-chat-de-ellmer"></a>
 </h2>
-<p>La disponibilidad de modelos depende de tu cuenta y espacio de
-trabajo. Consulta el catálogo después de iniciar sesión:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">modelos</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/codex_models.html">codex_models</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">modelos</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"id"</span>, <span class="st">"display_name"</span>, <span class="st">"default_reasoning_effort"</span>,</span>
-<span>          <span class="st">"supported_reasoning_efforts"</span><span class="op">)</span><span class="op">]</span></span></code></pre></div>
-<p>El catálogo no siempre incluye todos los modelos que acepta el
-servicio. Puedes pasar explícitamente un ID aunque no aparezca en
-<code><a href="../reference/codex_models.html">codex_models()</a></code>, y el servicio validará el modelo y el
-esfuerzo. Por ejemplo, <code>gpt-6-luna</code> funciona aunque el
-catálogo no lo liste.</p>
-<p>Puedes elegir el esfuerzo de razonamiento directamente o con los
-parámetros de <code>ellmer</code>:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chat_codex.html">chat_codex</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"gpt-6-luna"</span>, effort <span class="op">=</span> <span class="st">"max"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chat_codex.html">chat_codex</a></span><span class="op">(</span></span>
-<span>  model <span class="op">=</span> <span class="st">"gpt-6-luna"</span>,</span>
-<span>  params <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/params.html" class="external-link">params</a></span><span class="op">(</span>reasoning_effort <span class="op">=</span> <span class="st">"max"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>Usa <code>ELLMERCODEX_MODEL</code> si quieres establecer un modelo
-sin pasarlo cada vez:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html" class="external-link">Sys.setenv</a></span><span class="op">(</span>ELLMERCODEX_MODEL <span class="op">=</span> <span class="st">"gpt-6-luna"</span><span class="op">)</span></span>
-<span><span class="va">chat</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/chat_codex.html">chat_codex</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="chat-asíncrono-cancelación-y-archivos">Chat asíncrono, cancelación y archivos<a class="anchor" aria-label="anchor" href="#chat-as%C3%ADncrono-cancelaci%C3%B3n-y-archivos"></a>
-</h2>
-<p>El objeto <code>Chat</code> también admite los métodos asíncronos de
-<code>ellmer</code>:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">chat</span><span class="op">$</span><span class="fu">chat_async</span><span class="op">(</span><span class="st">"Resume la conversación."</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">controller</span> <span class="op">&lt;-</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/stream_controller.html" class="external-link">stream_controller</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">stream</span> <span class="op">&lt;-</span> <span class="va">chat</span><span class="op">$</span><span class="fu">stream_async</span><span class="op">(</span></span>
-<span>  <span class="st">"Escribe un cuento breve."</span>,</span>
-<span>  stream <span class="op">=</span> <span class="st">"content"</span>,</span>
-<span>  controller <span class="op">=</span> <span class="va">controller</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co"># Pasa `stream` a un consumidor asíncrono, como un componente de chat de Shiny.</span></span>
-<span><span class="co"># Llama a `controller$cancel()` desde la interfaz para detener la generación.</span></span></code></pre></div>
-<p>También puedes enviar imágenes y PDF con las funciones habituales de
-<code>ellmer</code>:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">chat</span><span class="op">$</span><span class="fu">chat</span><span class="op">(</span></span>
-<span>  <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/content_image_url.html" class="external-link">content_image_file</a></span><span class="op">(</span><span class="st">"grafico.png"</span><span class="op">)</span>,</span>
-<span>  <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/content_pdf_file.html" class="external-link">content_pdf_file</a></span><span class="op">(</span><span class="st">"informe.pdf"</span><span class="op">)</span>,</span>
-<span>  <span class="st">"Explica estos archivos."</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="autenticación">Autenticación<a class="anchor" aria-label="anchor" href="#autenticaci%C3%B3n"></a>
-</h2>
-<p><code><a href="../reference/codex_login.html">codex_login()</a></code> abre el navegador para que elijas tu
-cuenta y espacio de trabajo de ChatGPT y autorices el uso de tu plan. La
-primera vez se crea un registro vinculado a esa cuenta; los inicios de
-sesión siguientes lo reutilizan. La credencial se guarda en
-<code>tools::R_user_dir("ellmercodex", "config")</code> (o en
-<code>ELLMERCODEX_HOME</code>) con permisos solo para tu usuario.</p>
-<p>Consulta el estado de inicio de sesión con un resumen de cuenta
-redactado:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/codex_account.html">codex_account</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>Para una sesión que solo dure lo que dure el proceso de R, usa:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">auth</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/codex_login.html">codex_login</a></span><span class="op">(</span>persist <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="../reference/codex_logout.html">codex_logout()</a></code> cierra la sesión, revoca el token y
-elimina la credencial administrada por este paquete. Para cambiar de
-cuenta o de espacio de trabajo, cierra sesión y vuelve a llamar a
-<code><a href="../reference/codex_login.html">codex_login()</a></code>.</p>
-</div>
-<div class="section level2">
-<h2 id="limitaciones">Limitaciones<a class="anchor" aria-label="anchor" href="#limitaciones"></a>
-</h2>
-<p>El uso del plan de ChatGPT mediante “Sign in with ChatGPT” es una
-función en vista previa de OpenAI: requiere un plan y un espacio de
-trabajo elegibles, y sus límites y funciones admitidas pueden cambiar.
-Mientras dure la vista previa no se admiten <code>temperature</code>,
-<code>top_p</code>, <code>max_tokens</code> ni otros argumentos que
-OpenAI excluye; el paquete los rechaza antes de enviar la solicitud.</p>
-<p>El alcance soportado es el uso interactivo de una sola conversación
-mediante el objeto <code>Chat</code> público de <code>ellmer</code>
-0.5.0 o posterior. El conteo de tokens del proveedor, la gestión de
-archivos y las funciones <code>parallel_chat*()</code> y
-<code>batch_chat*()</code> no están soportados.</p>
-<p><code>ellmercodex</code> es una integración independiente y no está
-afiliada a OpenAI ni cuenta con su respaldo.</p>
+<p><code><a href="../reference/chat_codex.html">chat_codex()</a></code> devuelve un <code>Chat</code> de
+<code>ellmer</code> normal, así que la documentación de
+<code>ellmer</code> se aplica. Esto funciona igual que con cualquier
+otro proveedor:</p>
+<ul>
+<li>
+<strong>Datos estructurados</strong> con
+<code>$chat_structured()</code>: consulta el artículo de
+<code>ellmer</code> sobre <a href="https://ellmer.tidyverse.org/articles/structured-data.html" class="external-link">datos
+estructurados</a> (en inglés).</li>
+<li>
+<strong>Llamadas a herramientas</strong> con
+<code>$register_tool()</code>: consulta <a href="https://ellmer.tidyverse.org/articles/tool-calling.html" class="external-link">tool/function
+calling</a> (en inglés).</li>
+<li>
+<strong>Streaming y asincronía</strong> con <code>$stream()</code>,
+<code>$chat_async()</code> y <code>$stream_async()</code>, incluida la
+cancelación con <code><a href="https://ellmer.tidyverse.org/reference/stream_controller.html" class="external-link">ellmer::stream_controller()</a></code>: consulta <a href="https://ellmer.tidyverse.org/articles/streaming-async.html" class="external-link">streaming
+and async APIs</a> (en inglés).</li>
+<li>
+<strong>Imágenes y PDF</strong> con
+<code><a href="https://ellmer.tidyverse.org/reference/content_image_url.html" class="external-link">ellmer::content_image_file()</a></code>,
+<code><a href="https://ellmer.tidyverse.org/reference/content_pdf_file.html" class="external-link">ellmer::content_pdf_file()</a></code> y funciones similares.</li>
+<li>
+<strong>Clonado e historial</strong> con <code>$clone()</code>,
+<code>$get_turns()</code> y <code>$set_turns()</code>: consulta <a href="https://ellmer.tidyverse.org/articles/programming.html" class="external-link">programming
+with ellmer</a> (en inglés).</li>
+</ul>
+<p><code><a href="../articles/text-analysis-es.html">vignette("text-analysis-es")</a></code> combina datos estructurados
+y herramientas en una tarea real de análisis de texto.</p>
+<p>Algunas cosas son distintas por cómo funciona el uso del plan de
+ChatGPT: <code>parallel_chat()</code> y <code>batch_chat()</code> no
+están soportadas, y se rechazan argumentos como <code>temperature</code>
+y <code>max_tokens</code>. <code><a href="../articles/errors-and-limits-es.html">vignette("errors-and-limits-es")</a></code>
+los enumera y muestra cómo manejar los errores.</p>
 </div>
 <div class="section level2">
 <h2 id="más-información">Más información<a class="anchor" aria-label="anchor" href="#m%C3%A1s-informaci%C3%B3n"></a>
 </h2>
 <ul>
-<li>La viñeta <a href="getting-started-es.html">Primeros pasos</a>
-recorre la autenticación, los chats, las herramientas, los resultados
-estructurados y el manejo de errores.</li>
-<li>El <a href="https://github.com/simxnherrera/ellmercodex/blob/main/docs/technical-design.md" class="external-link">diseño
-técnico</a> (en inglés) documenta la arquitectura, el ciclo de vida de
-las credenciales, el límite de transporte, la taxonomía de errores y los
-riesgos de publicación.</li>
-<li>El <a href="https://github.com/simxnherrera/ellmercodex/blob/main/docs/ellmer-chat-interface.md" class="external-link">inventario
-de compatibilidad con <code>ellmer</code></a> (en inglés) registra los
-métodos de <code>Chat</code> soportados, sus firmas, los valores que
-devuelven y las transiciones de estado.</li>
 <li>
-<strong>Experimental:</strong> para conservar credenciales en tu
-propia app en tu propia VM, consulta la <a href="https://github.com/simxnherrera/ellmercodex/blob/main/docs/hosted-oauth.md" class="external-link">guía
-para una VM Linux de un solo proceso</a> (en inglés). Las apps que
-atienden a otras personas necesitan primero la aprobación de
-OpenAI.</li>
-<li>En R, usa <code><a href="../reference/chat_codex.html">?chat_codex</a></code>, <code><a href="../reference/codex_login.html">?codex_login</a></code>,
-<code><a href="../reference/codex_models.html">?codex_models</a></code> y <code>?ellmercodex-conditions</code> para
-consultar la referencia de funciones (en inglés).</li>
+<code><a href="../articles/authentication-es.html">vignette("authentication-es")</a></code>: inicio de sesión,
+credenciales guardadas y cierre de sesión.</li>
+<li>
+<code><a href="../articles/models-es.html">vignette("models-es")</a></code>: modelos y esfuerzo de
+razonamiento.</li>
+<li>
+<code><a href="../articles/text-analysis-es.html">vignette("text-analysis-es")</a></code>: datos estructurados y
+herramientas sobre texto real.</li>
+<li>
+<code><a href="../articles/errors-and-limits-es.html">vignette("errors-and-limits-es")</a></code>: clases de condición,
+límites del plan y lo que no está soportado.</li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
