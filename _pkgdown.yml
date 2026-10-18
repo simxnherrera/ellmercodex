@@ -1,0 +1,31 @@
+url: https://simxnherrera.github.io/ellmercodex/
+
+destination: _site
+
+template:
+  bootstrap: 5
+
+reference:
+- title: Overview
+  contents:
+  - ellmercodex
+- title: Chat
+  contents:
+  - chat_codex
+  - codex_models
+- title: Authentication
+  contents:
+  - codex_login
+  - codex_logout
+  - codex_account
+- title: Diagnostics and errors
+  contents:
+  - codex_available
+  - ellmercodex-conditions
+
+articles:
+- title: Get started
+  navbar: ~
+  contents:
+  - getting-started
+  - ellmercodex-es
