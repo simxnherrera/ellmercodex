@@ -125,3 +125,20 @@ los enumera y muestra cómo manejar los errores.
   datos estructurados y herramientas sobre texto real.
 - [`vignette("errors-and-limits-es")`](https://simxnherrera.github.io/ellmercodex/articles/errors-and-limits-es.md):
   clases de condición, límites del plan y lo que no está soportado.
+
+## Cómo citar
+
+Para citar `ellmercodex` en publicaciones, use:
+
+Herrera, S. (2026). *ellmercodex: ‘ChatGPT’ Plan Provider for ‘ellmer’*.
+R package version 0.2.0, <https://simxnherrera.github.io/ellmercodex/>
+
+``` bibtex
+@Manual{ellmercodex,
+  title = {{ellmercodex}: 'ChatGPT' Plan Provider for 'ellmer'},
+  author = {Simon Herrera},
+  year = {2026},
+  note = {R package version 0.2.0},
+  url = {https://simxnherrera.github.io/ellmercodex/},
+}
+```
