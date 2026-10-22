@@ -6,12 +6,13 @@ bibentry(
   author = person("Simon", "Herrera"),
   year = "2026",
   note = sprintf("R package version %s", meta$Version),
-  url = "https://simxnherrera.github.io/ellmercodex/",
+  doi = "10.32614/CRAN.package.ellmercodex",
+  url = "https://CRAN.R-project.org/package=ellmercodex",
   textVersion = sprintf(
     paste0(
       "Herrera, S. (2026). ellmercodex: 'ChatGPT' Plan Provider for ",
       "'ellmer'. R package version %s, ",
-      "https://simxnherrera.github.io/ellmercodex/"
+      "https://doi.org/10.32614/CRAN.package.ellmercodex"
     ),
     meta$Version
   )
