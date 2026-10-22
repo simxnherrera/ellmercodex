@@ -1,0 +1,18 @@
+bibentry(
+  bibtype = "Manual",
+  key = "ellmercodex",
+  header = "To cite ellmercodex in publications use:",
+  title = "{ellmercodex}: 'ChatGPT' Plan Provider for 'ellmer'",
+  author = person("Simon", "Herrera"),
+  year = "2026",
+  note = sprintf("R package version %s", meta$Version),
+  url = "https://simxnherrera.github.io/ellmercodex/",
+  textVersion = sprintf(
+    paste0(
+      "Herrera, S. (2026). ellmercodex: 'ChatGPT' Plan Provider for ",
+      "'ellmer'. R package version %s, ",
+      "https://simxnherrera.github.io/ellmercodex/"
+    ),
+    meta$Version
+  )
+)

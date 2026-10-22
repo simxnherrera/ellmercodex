@@ -96,3 +96,20 @@ such as `temperature` or `max_tokens`.
 The [technical design](https://github.com/simxnherrera/ellmercodex/blob/main/docs/technical-design.md)
 and the [`ellmer` compatibility inventory](https://github.com/simxnherrera/ellmercodex/blob/main/docs/ellmer-chat-interface.md)
 document the implementation in depth.
+
+## Citation
+
+To cite `ellmercodex` in publications, please use:
+
+Herrera, S. (2026). *ellmercodex: 'ChatGPT' Plan Provider for 'ellmer'*.
+R package version 0.2.0, <https://simxnherrera.github.io/ellmercodex/>
+
+```bibtex
+@Manual{ellmercodex,
+  title = {{ellmercodex}: 'ChatGPT' Plan Provider for 'ellmer'},
+  author = {Simon Herrera},
+  year = {2026},
+  note = {R package version 0.2.0},
+  url = {https://simxnherrera.github.io/ellmercodex/},
+}
+```
