@@ -111,7 +111,8 @@ document the implementation in depth.
 To cite `ellmercodex` in publications, please use:
 
 Herrera, S. (2026). *ellmercodex: ‘ChatGPT’ Plan Provider for ‘ellmer’*.
-R package version 0.2.0, <https://simxnherrera.github.io/ellmercodex/>
+R package version 0.2.0,
+<https://doi.org/10.32614/CRAN.package.ellmercodex>
 
 ``` bibtex
 @Manual{ellmercodex,
@@ -119,6 +120,7 @@ R package version 0.2.0, <https://simxnherrera.github.io/ellmercodex/>
   author = {Simon Herrera},
   year = {2026},
   note = {R package version 0.2.0},
-  url = {https://simxnherrera.github.io/ellmercodex/},
+  doi = {10.32614/CRAN.package.ellmercodex},
+  url = {https://CRAN.R-project.org/package=ellmercodex},
 }
 ```
