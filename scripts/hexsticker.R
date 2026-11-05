@@ -18,7 +18,9 @@ hexSticker::sticker(
   u_color = "#D9FFF5",
   u_size = 16,
   u_angle = -30,
-  white_around_sticker = TRUE,
+  # Keep the background transparent. `TRUE` paints white triangles in the
+  # corners, which show up on dark backgrounds (README, pkgdown, social cards).
+  white_around_sticker = FALSE,
   filename = "man/figures/logo.png",
   dpi = 1200
 )
