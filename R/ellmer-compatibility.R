@@ -1628,6 +1628,7 @@ codex_submit_turns_sync <- function(
       if (!isTRUE(completed)) accumulator$finalize_turn()
     }, add = TRUE)
 
+    request_start <- Sys.time()
     request <- utils::getFromNamespace("chat_perform", "ellmer")(
       provider = provider,
       model = private$model,
@@ -1677,7 +1678,9 @@ codex_submit_turns_sync <- function(
       utils::getFromNamespace("record_chat_otel_span_status", "ellmer")(
         chat_span,
         provider,
-        result
+        private$model,
+        result,
+        request_start
       )
       turn <- codex_complete_turn(accumulator, private, result, type = type)
       completed <- TRUE
@@ -1751,6 +1754,7 @@ codex_submit_turns_async <- function(
       if (!isTRUE(completed)) accumulator$finalize_turn()
     }, add = TRUE)
 
+    request_start <- Sys.time()
     request <- utils::getFromNamespace("chat_perform", "ellmer")(
       provider = provider,
       model = private$model,
@@ -1798,7 +1802,9 @@ codex_submit_turns_async <- function(
       utils::getFromNamespace("record_chat_otel_span_status", "ellmer")(
         chat_span,
         provider,
-        result
+        private$model,
+        result,
+        request_start
       )
       turn <- codex_complete_turn(accumulator, private, result, type = type)
       completed <- TRUE
