@@ -1071,7 +1071,7 @@ codex_record_chat_otel_span_status <- function(span, provider, model, result, st
   if ("start" %in% names(formals(record))) {
     record(span, provider, model, result, start)
   } else {
-    # ellmer 0.5.0 signature.
+    # TODO: remove once the minimum ellmer version is above 0.5.0.
     record(span, provider, result)
   }
 }
