@@ -1,4 +1,4 @@
-# ellmer 0.5.0 and later compatibility layer.
+# ellmer 0.5.1 and later compatibility layer.
 #
 # The public Chat object remains the package's external seam. This file owns
 # the one private ellmer seam that is unavoidable for a stream-only Codex
@@ -1061,19 +1061,29 @@ codex_result_has_unknown_tokens <- function(result) {
   anyNA(unlist(tokens, use.names = FALSE))
 }
 
-codex_record_chat_otel_span_status <- function(span, provider, model, result, start) {
-  # ellmer >= 0.5.1 compares token counts with `> 0L`, which fails on the NA
-  # values used for omitted Codex usage fields.
+# ellmer records a completed request in two steps, mirroring Chat$chat():
+# `record_chat_otel_span_response()` records the response attributes and token
+# metrics before the response is parsed, then `record_chat_otel_duration()` and
+# `record_chat_otel_span_status()` record the duration and the final span status
+# once parsing has succeeded.
+codex_record_chat_otel_span_response <- function(span, provider, model, result) {
+  # ellmer compares token counts with `> 0L`, which fails on the NA values
+  # used for omitted Codex usage fields.
   if (codex_result_has_unknown_tokens(result)) {
     return()
   }
-  record <- utils::getFromNamespace("record_chat_otel_span_status", "ellmer")
-  if ("start" %in% names(formals(record))) {
-    record(span, provider, model, result, start)
-  } else {
-    # TODO: remove once the minimum ellmer version is above 0.5.0.
-    record(span, provider, result)
-  }
+  utils::getFromNamespace("record_chat_otel_span_response", "ellmer")(
+    span, provider, model, result
+  )
+}
+
+codex_record_chat_otel_span_completed <- function(span, provider, model, result,
+                                                  turn, start) {
+  utils::getFromNamespace("record_chat_otel_duration", "ellmer")(
+    provider, model, start, result = result
+  )
+  utils::getFromNamespace("record_chat_otel_span_output", "ellmer")(span, turn)
+  utils::getFromNamespace("record_chat_otel_span_status", "ellmer")(span)
 }
 
 codex_complete_turn <- function(accumulator, private, result, type = NULL) {
@@ -1690,18 +1700,21 @@ codex_submit_turns_sync <- function(
     }
 
     if (!isTRUE(controller$cancelled)) {
-      codex_record_chat_otel_span_status(
+      codex_record_chat_otel_span_response(
+        chat_span,
+        provider,
+        private$model,
+        result
+      )
+      turn <- codex_complete_turn(accumulator, private, result, type = type)
+      completed <- TRUE
+      codex_record_chat_otel_span_completed(
         chat_span,
         provider,
         private$model,
         result,
+        turn,
         request_start
-      )
-      turn <- codex_complete_turn(accumulator, private, result, type = type)
-      completed <- TRUE
-      utils::getFromNamespace("record_chat_otel_span_output", "ellmer")(
-        chat_span,
-        turn
       )
       if (!is.null(turn) && !inherits(turn, "ellmer::AssistantPartialTurn")) {
         terminal_contents <- codex_terminal_stream_contents(
@@ -1814,18 +1827,21 @@ codex_submit_turns_async <- function(
     }
 
     if (!isTRUE(controller$cancelled)) {
-      codex_record_chat_otel_span_status(
+      codex_record_chat_otel_span_response(
+        chat_span,
+        provider,
+        private$model,
+        result
+      )
+      turn <- codex_complete_turn(accumulator, private, result, type = type)
+      completed <- TRUE
+      codex_record_chat_otel_span_completed(
         chat_span,
         provider,
         private$model,
         result,
+        turn,
         request_start
-      )
-      turn <- codex_complete_turn(accumulator, private, result, type = type)
-      completed <- TRUE
-      utils::getFromNamespace("record_chat_otel_span_output", "ellmer")(
-        chat_span,
-        turn
       )
       if (!is.null(turn) && !inherits(turn, "ellmer::AssistantPartialTurn")) {
         terminal_contents <- codex_terminal_stream_contents(

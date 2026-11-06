@@ -1,10 +1,10 @@
-# ellmer 0.5.0 is the minimum supported interface.
+# ellmer 0.5.1 is the minimum supported interface.
 # The public Chat object remains the external seam; the provider
 # and private turn-submission implementation live in ellmer-compatibility.R.
 
 #' Check the exported ellmer compatibility seam
 #'
-#' The package requires ellmer 0.5.0 or later and checks the private contracts
+#' The package requires ellmer 0.5.1 or later and checks the private contracts
 #' needed by the Codex streaming transport before constructing a chat.
 #'
 #' @return The installed ellmer version, invisibly.
@@ -19,10 +19,10 @@ codex_ellmer_compatibility <- function() {
   }
 
   version <- utils::packageVersion("ellmer")
-  if (version < package_version("0.5.0")) {
+  if (version < package_version("0.5.1")) {
     rlang::abort(
       paste0(
-        "`chat_codex()` requires ellmer >= 0.5.0; installed version is ",
+        "`chat_codex()` requires ellmer >= 0.5.1; installed version is ",
         version, "."
       ),
       class = "codex_ellmer_compatibility_error",
@@ -59,6 +59,7 @@ codex_ellmer_compatibility <- function() {
     "invoke_tools", "invoke_tools_async", "turn_has_tool_request",
     "tool_results_as_turn", "echo_non_text_contents", "emitter", "content_text",
     "cat_line", "otel_chat_input", "local_chat_otel_span",
+    "record_chat_otel_span_response", "record_chat_otel_duration",
     "record_chat_otel_span_status", "record_chat_otel_span_output",
     "local_agent_otel_span", "warn_tool_errors", "turn_get_tool_errors",
     "is_tool_request", "is_tool_result", "new_tool_context",
