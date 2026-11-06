@@ -1675,13 +1675,17 @@ codex_submit_turns_sync <- function(
     }
 
     if (!isTRUE(controller$cancelled)) {
-      utils::getFromNamespace("record_chat_otel_span_status", "ellmer")(
-        chat_span,
-        provider,
-        private$model,
-        result,
-        request_start
-      )
+      # ellmer's span recorder compares token counts with `> 0L`, which fails
+      # on the NA values used for omitted Codex usage fields.
+      if (!codex_result_has_unknown_tokens(result)) {
+        utils::getFromNamespace("record_chat_otel_span_status", "ellmer")(
+          chat_span,
+          provider,
+          private$model,
+          result,
+          request_start
+        )
+      }
       turn <- codex_complete_turn(accumulator, private, result, type = type)
       completed <- TRUE
       utils::getFromNamespace("record_chat_otel_span_output", "ellmer")(
@@ -1799,13 +1803,17 @@ codex_submit_turns_async <- function(
     }
 
     if (!isTRUE(controller$cancelled)) {
-      utils::getFromNamespace("record_chat_otel_span_status", "ellmer")(
-        chat_span,
-        provider,
-        private$model,
-        result,
-        request_start
-      )
+      # ellmer's span recorder compares token counts with `> 0L`, which fails
+      # on the NA values used for omitted Codex usage fields.
+      if (!codex_result_has_unknown_tokens(result)) {
+        utils::getFromNamespace("record_chat_otel_span_status", "ellmer")(
+          chat_span,
+          provider,
+          private$model,
+          result,
+          request_start
+        )
+      }
       turn <- codex_complete_turn(accumulator, private, result, type = type)
       completed <- TRUE
       utils::getFromNamespace("record_chat_otel_span_output", "ellmer")(
