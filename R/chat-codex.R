@@ -75,7 +75,7 @@ codex_patch_chat <- function(chat, default_echo = "none") {
 #' credential is available; an existing credential is loaded and refreshed as
 #' needed.
 #'
-#' The returned chat is the public `ellmer` `Chat` object (0.5.0 or later) for
+#' The returned chat is the public `ellmer` `Chat` object (0.5.1 or later) for
 #' interactive, single-conversation operations, including ordinary and
 #' structured chat, synchronous and asynchronous streaming, tool declarations
 #' and multi-round execution, callbacks, cancellation, cloning, history, echo,
