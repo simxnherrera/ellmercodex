@@ -8,7 +8,7 @@ codex_echo <- getFromNamespace("codex_echo", "ellmercodex")
 test_that("the installed ellmer release exposes the supported seam", {
   version <- codex_ellmer_compatibility()
 
-  expect_gte(version, package_version("0.5.0"))
+  expect_gte(version, package_version("0.5.1"))
   exports <- getNamespaceExports("ellmer")
   expect_true(all(c("chat_openai", "AssistantTurn", "ContentText") %in% exports))
 })

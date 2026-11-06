@@ -1,4 +1,4 @@
-# ellmer 0.5.0 and later compatibility layer.
+# ellmer 0.5.1 and later compatibility layer.
 #
 # The public Chat object remains the package's external seam. This file owns
 # the one private ellmer seam that is unavoidable for a stream-only Codex
@@ -1061,6 +1061,31 @@ codex_result_has_unknown_tokens <- function(result) {
   anyNA(unlist(tokens, use.names = FALSE))
 }
 
+# ellmer records a completed request in two steps, mirroring Chat$chat():
+# `record_chat_otel_span_response()` records the response attributes and token
+# metrics before the response is parsed, then `record_chat_otel_duration()` and
+# `record_chat_otel_span_status()` record the duration and the final span status
+# once parsing has succeeded.
+codex_record_chat_otel_span_response <- function(span, provider, model, result) {
+  # ellmer compares token counts with `> 0L`, which fails on the NA values
+  # used for omitted Codex usage fields.
+  if (codex_result_has_unknown_tokens(result)) {
+    return()
+  }
+  utils::getFromNamespace("record_chat_otel_span_response", "ellmer")(
+    span, provider, model, result
+  )
+}
+
+codex_record_chat_otel_span_completed <- function(span, provider, model, result,
+                                                  turn, start) {
+  utils::getFromNamespace("record_chat_otel_duration", "ellmer")(
+    provider, model, start, result = result
+  )
+  utils::getFromNamespace("record_chat_otel_span_output", "ellmer")(span, turn)
+  utils::getFromNamespace("record_chat_otel_span_status", "ellmer")(span)
+}
+
 codex_complete_turn <- function(accumulator, private, result, type = NULL) {
   if (!codex_result_has_unknown_tokens(result)) {
     return(accumulator$complete_turn(result, type = type))
@@ -1628,6 +1653,7 @@ codex_submit_turns_sync <- function(
       if (!isTRUE(completed)) accumulator$finalize_turn()
     }, add = TRUE)
 
+    request_start <- Sys.time()
     request <- utils::getFromNamespace("chat_perform", "ellmer")(
       provider = provider,
       model = private$model,
@@ -1674,16 +1700,21 @@ codex_submit_turns_sync <- function(
     }
 
     if (!isTRUE(controller$cancelled)) {
-      utils::getFromNamespace("record_chat_otel_span_status", "ellmer")(
+      codex_record_chat_otel_span_response(
         chat_span,
         provider,
+        private$model,
         result
       )
       turn <- codex_complete_turn(accumulator, private, result, type = type)
       completed <- TRUE
-      utils::getFromNamespace("record_chat_otel_span_output", "ellmer")(
+      codex_record_chat_otel_span_completed(
         chat_span,
-        turn
+        provider,
+        private$model,
+        result,
+        turn,
+        request_start
       )
       if (!is.null(turn) && !inherits(turn, "ellmer::AssistantPartialTurn")) {
         terminal_contents <- codex_terminal_stream_contents(
@@ -1751,6 +1782,7 @@ codex_submit_turns_async <- function(
       if (!isTRUE(completed)) accumulator$finalize_turn()
     }, add = TRUE)
 
+    request_start <- Sys.time()
     request <- utils::getFromNamespace("chat_perform", "ellmer")(
       provider = provider,
       model = private$model,
@@ -1795,16 +1827,21 @@ codex_submit_turns_async <- function(
     }
 
     if (!isTRUE(controller$cancelled)) {
-      utils::getFromNamespace("record_chat_otel_span_status", "ellmer")(
+      codex_record_chat_otel_span_response(
         chat_span,
         provider,
+        private$model,
         result
       )
       turn <- codex_complete_turn(accumulator, private, result, type = type)
       completed <- TRUE
-      utils::getFromNamespace("record_chat_otel_span_output", "ellmer")(
+      codex_record_chat_otel_span_completed(
         chat_span,
-        turn
+        provider,
+        private$model,
+        result,
+        turn,
+        request_start
       )
       if (!is.null(turn) && !inherits(turn, "ellmer::AssistantPartialTurn")) {
         terminal_contents <- codex_terminal_stream_contents(

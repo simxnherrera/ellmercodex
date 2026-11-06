@@ -60,7 +60,7 @@ credential is available; an existing credential is loaded and refreshed as
 needed.
 }
 \details{
-The returned chat is the public \code{ellmer} \code{Chat} object (0.5.0 or later) for
+The returned chat is the public \code{ellmer} \code{Chat} object (0.5.1 or later) for
 interactive, single-conversation operations, including ordinary and
 structured chat, synchronous and asynchronous streaming, tool declarations
 and multi-round execution, callbacks, cancellation, cloning, history, echo,

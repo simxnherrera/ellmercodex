@@ -26,7 +26,7 @@ test_that("the complete installed ellmer Chat public interface is present", {
   required <- c("chat", "chat_async", "chat_structured", "chat_structured_async",
                 "stream", "stream_async", "get_model_object", "get_rounds",
                 "last_round", "on_request_start", "on_request_end", "clone")
-  expect_gte(utils::packageVersion("ellmer"), package_version("0.5.0"))
+  expect_gte(utils::packageVersion("ellmer"), package_version("0.5.1"))
   expect_true(all(vapply(required, function(name) is.function(chat[[name]]), logical(1))))
   expect_true(inherits(chat$get_model_object(), "ellmer::Model"))
   expect_true(inherits(chat$get_provider(), "ellmercodex::CodexProvider"))
@@ -406,6 +406,18 @@ test_that("usage fields omitted by Codex remain unknown", {
   )
   expect_identical(as.character(answer), "Hello async")
   expect_true(all(is.na(as.numeric(chat$last_turn()@tokens))))
+})
+
+test_that("usage reported by Codex is recorded on the turn", {
+  skip_if_not_installed("ellmer")
+
+  chat <- interface_fixture_chat()
+  answer <- httr2::with_mocked_responses(
+    function(req) fixture_stream_response("stream-usage.sse"),
+    chat$chat("Say hello.")
+  )
+  expect_identical(as.character(answer), "Hello usage")
+  expect_identical(as.numeric(chat$last_turn()@tokens), c(3, 4, 2))
 })
 
 test_that("expired injected credentials refresh once without cache re-entry", {

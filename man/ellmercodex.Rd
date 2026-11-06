@@ -11,7 +11,7 @@
 OpenAI's documented "Sign in with ChatGPT" flow for open-source, locally
 hosted apps (\url{https://developers.openai.com/siwc/token-sharing-open-source})
 and the public Responses API. The stable compatibility target is the public
-ellmer \code{Chat} (0.5.0 or later) object for interactive, single-conversation
+ellmer \code{Chat} (0.5.1 or later) object for interactive, single-conversation
 operations. This package is independent and is not affiliated with or
 endorsed by OpenAI.
 }
@@ -53,6 +53,7 @@ affiliation with or endorsement by OpenAI.
 \seealso{
 Useful links:
 \itemize{
+  \item \url{https://simxnherrera.github.io/ellmercodex/}
   \item \url{https://github.com/simxnherrera/ellmercodex}
   \item Report bugs at \url{https://github.com/simxnherrera/ellmercodex/issues}
 }
