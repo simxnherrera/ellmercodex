@@ -1,5 +1,9 @@
-# ellmercodex (development version)
+# ellmercodex 0.2.1
 
+* Works with `ellmer` 0.5.1 and later, which changed how chats record
+  OpenTelemetry spans. `ellmercodex` now requires `ellmer` (>= 0.5.1) and
+  records spans, token metrics, and request duration the same way `ellmer`
+  does (@thisisnic, #15, #16).
 * The README is now in English only. The Spanish introduction moved to a new
   vignette, `vignette("ellmercodex-es")`.
 * The documentation is reorganized like `ellmer`'s: a "Get started" vignette

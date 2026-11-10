@@ -10,7 +10,7 @@ codex_ellmer_compatibility()
 The installed ellmer version, invisibly.
 }
 \description{
-The package requires ellmer 0.5.0 or later and checks the private contracts
+The package requires ellmer 0.5.1 or later and checks the private contracts
 needed by the Codex streaming transport before constructing a chat.
 }
 \keyword{internal}
