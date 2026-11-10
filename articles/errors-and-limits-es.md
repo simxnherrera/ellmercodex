@@ -17,7 +17,7 @@ scripts programados o apps de Shiny.
 ## Qué no está soportado
 
 `ellmercodex` soporta el uso interactivo de una conversación a la vez
-mediante el objeto `Chat` de `ellmer` (`ellmer` 0.5.0 o posterior). Esto
+mediante el objeto `Chat` de `ellmer` (`ellmer` 0.5.1 o posterior). Esto
 no está soportado:
 
 - **`parallel_chat()` y `batch_chat()`.** El uso del plan de ChatGPT

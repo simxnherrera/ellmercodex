@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ellmercodex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -50,8 +50,9 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="development version" id="ellmercodex-development-version">ellmercodex (development version)<a class="anchor" aria-label="anchor" href="#ellmercodex-development-version"></a></h2>
-<ul><li>The README is now in English only. The Spanish introduction moved to a new vignette, <code><a href="../articles/ellmercodex-es.html">vignette("ellmercodex-es")</a></code>.</li>
+<h2 class="pkg-version" data-toc-text="0.2.1" id="ellmercodex-021">ellmercodex 0.2.1<a class="anchor" aria-label="anchor" href="#ellmercodex-021"></a></h2>
+<ul><li>Works with <code>ellmer</code> 0.5.1 and later, which changed how chats record OpenTelemetry spans. <code>ellmercodex</code> now requires <code>ellmer</code> (&gt;= 0.5.1) and records spans, token metrics, and request duration the same way <code>ellmer</code> does (<a href="https://github.com/thisisnic" class="external-link">@thisisnic</a>, <a href="https://github.com/simxnherrera/ellmercodex/issues/15" class="external-link">#15</a>, <a href="https://github.com/simxnherrera/ellmercodex/issues/16" class="external-link">#16</a>).</li>
+<li>The README is now in English only. The Spanish introduction moved to a new vignette, <code><a href="../articles/ellmercodex-es.html">vignette("ellmercodex-es")</a></code>.</li>
 <li>The documentation is reorganized like <code>ellmer</code>’s: a “Get started” vignette (<code><a href="../articles/ellmercodex.html">vignette("ellmercodex")</a></code>) plus focused articles on signing in, models, text analysis, and errors and limits, each with a Spanish version. A pkgdown site is at <a href="https://simxnherrera.github.io/ellmercodex/" class="uri">https://simxnherrera.github.io/ellmercodex/</a>.</li>
 <li>The error-handling example now uses condition classes that match the package’s actual class structure.</li>
 <li>The tool example returns JSON, as <code>ellmer</code> 0.5.0 expects from tools.</li>

@@ -16,7 +16,7 @@ code that runs unattended, such as scheduled scripts or Shiny apps.
 ## What is not supported
 
 `ellmercodex` supports interactive use of one conversation at a time
-through `ellmer`’s `Chat` object (`ellmer` 0.5.0 or later). These are
+through `ellmer`’s `Chat` object (`ellmer` 0.5.1 or later). These are
 not supported:
 
 - **`parallel_chat()` and `batch_chat()`.** ChatGPT plan usage only

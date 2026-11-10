@@ -1,6 +1,6 @@
 # Check the exported ellmer compatibility seam
 
-The package requires ellmer 0.5.0 or later and checks the private
+The package requires ellmer 0.5.1 or later and checks the private
 contracts needed by the Codex streaming transport before constructing a
 chat.
 

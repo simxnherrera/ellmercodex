@@ -7,7 +7,7 @@ ChatGPT subscription. It uses OpenAI's documented "Sign in with ChatGPT"
 flow for open-source, locally hosted apps
 (<https://developers.openai.com/siwc/token-sharing-open-source>) and the
 public Responses API. The stable compatibility target is the public
-ellmer `Chat` (0.5.0 or later) object for interactive,
+ellmer `Chat` (0.5.1 or later) object for interactive,
 single-conversation operations. This package is independent and is not
 affiliated with or endorsed by OpenAI.
 
@@ -66,6 +66,8 @@ does not claim affiliation with or endorsement by OpenAI.
 ## See also
 
 Useful links:
+
+- <https://simxnherrera.github.io/ellmercodex/>
 
 - <https://github.com/simxnherrera/ellmercodex>
 
