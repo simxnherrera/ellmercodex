@@ -1,6 +1,13 @@
 # Changelog
 
+## ellmercodex (development version)
+
+- [`chat_codex()`](https://simxnherrera.github.io/ellmercodex/reference/chat_codex.md)
+  now works with S7 1.0.0.
+
 ## ellmercodex 0.2.1
+
+CRAN release: 2026-11-10
 
 - Works with `ellmer` 0.5.1 and later, which changed how chats record
   OpenTelemetry spans. `ellmercodex` now requires `ellmer` (\>= 0.5.1)
