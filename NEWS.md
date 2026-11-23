@@ -1,4 +1,4 @@
-# ellmercodex (development version)
+# ellmercodex 0.2.2
 
 * `chat_codex()` now works with S7 1.0.0.
 

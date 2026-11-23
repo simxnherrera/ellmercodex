@@ -1,22 +1,19 @@
 ## Submission
 
-This update fixes the ERROR now shown on the CRAN check page for the
-r-devel flavors. `ellmer` 0.5.1 changed an internal OpenTelemetry helper that
-this package calls, which broke chat streaming in the tests. The package now
-uses the new helpers and requires `ellmer` (>= 0.5.1). The fix was written by
-an `ellmer` maintainer.
-
-The package's `ellmer` contract check now also verifies these helpers, so a
-future change to them is caught before a chat is created and, on CRAN, makes
-the affected tests skip instead of fail.
+This patch restores compatibility with S7 1.0.0. S7's generated subclass
+constructor now requires that a parent class from another package be
+exported. The Codex provider supplies an explicit constructor that calls
+ellmer's internal OpenAI provider constructor and initializes the existing
+authentication reference. The public API and minimum ellmer version are
+unchanged.
 
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes
+GitHub Actions: all six R CMD check jobs passed for the fix.
 
 ## Test environments
 
-* Local: macOS 27.0.1, arm64, R 4.6.1, with `ellmer` 0.5.2 from CRAN
+* Local: macOS arm64, with S7 1.0.0 and `ellmer` 0.5.1 and 0.5.2
 * GitHub Actions: ubuntu-latest (R devel, release, oldrel-1; `ellmer` 0.5.1
   and latest), windows-latest (R release), macos-latest (R release)
 
