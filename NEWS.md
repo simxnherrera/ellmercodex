@@ -1,3 +1,7 @@
+# ellmercodex (development version)
+
+* `chat_codex()` now works with S7 1.0.0.
+
 # ellmercodex 0.2.1
 
 * Works with `ellmer` 0.5.1 and later, which changed how chats record
