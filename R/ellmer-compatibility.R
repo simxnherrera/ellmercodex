@@ -23,7 +23,11 @@ codex_ellmer_s7_class <- function() {
       package = "ellmercodex",
       properties = list(
         auth_ref = S7::class_environment
-      )
+      ),
+      # S7's generated constructor requires an exported parent in ellmer.
+      constructor = function(..., auth_ref) {
+        S7::new_object(parent(...), auth_ref = auth_ref)
+      }
     )
   }
   .codex_ellmer_compatibility_state$provider_class
