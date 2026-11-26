@@ -1618,6 +1618,30 @@ codex_ellmer_private_chat_impl_async <- function(
   )
 }
 
+# Add one streamed content to the partial assistant turn. ellmer's
+# TurnAccumulator$update_turn() appends every delta as its own ContentText, and
+# each S7 property assignment validates the whole contents list, so a long
+# answer (thousands of deltas) costs quadratic time: R falls behind the
+# server, the socket stalls and the service drops the connection. Consecutive
+# text deltas are merged into the last ContentText instead, which keeps the
+# list short; ellmer's finalize_turn() would merge them the same way.
+codex_accumulator_update <- function(accumulator, content) {
+  is_plain_text <- function(x) identical(class(x)[[1L]], "ellmer::ContentText")
+  idx <- accumulator$turn_idx
+  turns <- accumulator$chat_private$.turns
+  turn <- if (is.numeric(idx) && length(idx) == 1L && idx <= length(turns)) turns[[idx]] else NULL
+  n <- if (is.null(turn)) 0L else length(turn@contents)
+  if (!is_plain_text(content) || n == 0L || !is_plain_text(turn@contents[[n]])) {
+    accumulator$update_turn(content)
+    return(invisible(accumulator))
+  }
+  contents <- turn@contents
+  contents[[n]] <- ellmer::ContentText(paste0(contents[[n]]@text, content@text))
+  turn@contents <- contents
+  accumulator$chat_private$.turns[[idx]] <- turn
+  invisible(accumulator)
+}
+
 codex_submit_turns_sync <- function(
   self,
   private,
@@ -1691,7 +1715,7 @@ codex_submit_turns_sync <- function(
         }
         emitted <- codex_emit_stream_content(content, emit, yield_as_content)
         if (!is.null(emitted)) coro::yield(emitted)
-        accumulator$update_turn(content)
+        codex_accumulator_update(accumulator, content)
         streamed_text <- streamed_text || inherits(content, "ellmer::ContentText")
         any_text <- any_text ||
           !utils::getFromNamespace("is_tool_request", "ellmer")(content)
@@ -1818,7 +1842,7 @@ codex_submit_turns_async <- function(
         }
         emitted <- codex_emit_stream_content(content, emit, yield_as_content)
         if (!is.null(emitted)) coro::yield(emitted)
-        accumulator$update_turn(content)
+        codex_accumulator_update(accumulator, content)
         streamed_text <- streamed_text || inherits(content, "ellmer::ContentText")
         any_text <- any_text ||
           !utils::getFromNamespace("is_tool_request", "ellmer")(content)

@@ -124,3 +124,71 @@ test_that("chat argument and compatibility failures use user-facing conditions",
     class = "codex_chat_argument_error"
   )
 })
+
+test_that("streamed text deltas are merged into one partial content", {
+  skip_if_not_installed("ellmer")
+
+  auth <- structure(
+    list(access_token = "fixture-access-token", client_id = "oaiapp_fixtureclient"),
+    class = c("codex_auth", "list")
+  )
+  chat <- codex_ellmer_chat_openai(model = "fixture-model", auth = auth)
+  accumulator_class <- utils::getFromNamespace("TurnAccumulator", "ellmer")
+  private <- chat$.__enclos_env__$private
+  accumulator <- accumulator_class$new(
+    chat, private, ellmer::stream_controller(),
+    turns = list()
+  )
+  accumulator$begin_turn(ellmer::UserTurn(list(ellmer::ContentText("Hi"))))
+
+  for (piece in c("Hel", "lo", " wor", "ld")) {
+    codex_accumulator_update(accumulator, ellmer::ContentText(piece))
+  }
+  codex_accumulator_update(accumulator, ellmer::ContentThinking("hmm"))
+  codex_accumulator_update(accumulator, ellmer::ContentText("!"))
+
+  contents <- private$.turns[[accumulator$turn_idx]]@contents
+  expect_length(contents, 3L)
+  expect_identical(contents[[1L]]@text, "Hello world")
+  expect_true(inherits(contents[[2L]], "ellmer::ContentThinking"))
+  expect_identical(contents[[3L]]@text, "!")
+})
+
+test_that("a long streamed answer is assembled in full", {
+  skip_if_not_installed("ellmer")
+
+  auth <- structure(
+    list(
+      access_token = "fixture-access-token",
+      refresh_token = "fixture-refresh-token",
+      client_id = "oaiapp_fixtureclient",
+      expires_at = as.numeric(Sys.time()) + 3600
+    ),
+    class = c("codex_auth", "list")
+  )
+  pieces <- sprintf("w%04d ", seq_len(2000))
+  body <- paste0(
+    paste0(
+      'data: {"type":"response.output_text.delta","item_id":"msg_1","delta":"',
+      pieces, '"}\n\n',
+      collapse = ""
+    ),
+    'data: {"type":"response.completed","response":{"id":"resp_fixture",',
+    '"model":"fixture-model","status":"completed","output":[],',
+    '"usage":{"input_tokens":5,"output_tokens":2000}}}\n\ndata: [DONE]\n\n'
+  )
+  response <- function(req) {
+    connection <- rawConnection(charToRaw(body), "rb")
+    getFromNamespace("new_response", "httr2")(
+      method = "POST",
+      url = "http://127.0.0.1:1",
+      status_code = 200L,
+      headers = list(`Content-Type` = "text/event-stream"),
+      body = getFromNamespace("StreamingBody", "httr2")$new(connection)
+    )
+  }
+  chat <- codex_patch_chat(codex_ellmer_chat_openai(model = "fixture-model", auth = auth))
+  answer <- httr2::with_mocked_responses(response, chat$chat("Count."))
+
+  expect_identical(as.character(answer), paste0(pieces, collapse = ""))
+})
