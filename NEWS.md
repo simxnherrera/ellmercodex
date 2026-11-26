@@ -1,3 +1,12 @@
+# ellmercodex (development version)
+
+* Long streamed answers no longer slow down as they grow. Each text delta used
+  to be appended as its own content to the partial turn, which made reading a
+  stream quadratic: an answer with 4,000 deltas took almost 4 minutes to read,
+  long enough for the service to drop the connection ("Operation too slow",
+  "Transferred a partial file"). Consecutive text deltas are now merged as they
+  arrive, and the same answer reads in under 10 seconds.
+
 # ellmercodex 0.2.2
 
 * `chat_codex()` now works with S7 1.0.0.
